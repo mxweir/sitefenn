@@ -76,11 +76,9 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
       ...init?.headers,
     },
   });
-  const payload = await response
-    .json()
-    .catch(() => ({
-      error: `Serverantwort nicht lesbar (${response.status}).`,
-    }));
+  const payload = await response.json().catch(() => ({
+    error: `Serverantwort nicht lesbar (${response.status}).`,
+  }));
   if (!response.ok)
     throw new Error(
       payload.error || `Anfrage fehlgeschlagen (${response.status}).`,
@@ -98,6 +96,7 @@ export default function App() {
   const [busy, setBusy] = useState("");
   const [screen, setScreen] = useState<"projects" | "system">("projects");
   const [imageError, setImageError] = useState(false);
+  const [guideOpen, setGuideOpen] = useState(true);
   const addButton = useRef<HTMLButtonElement>(null);
   const refresh = useCallback(async () => {
     try {
@@ -173,17 +172,19 @@ export default function App() {
             e.preventDefault();
             setScreen("projects");
           }}
-          aria-label="Website Audit Hub Startseite"
+          aria-label="SiteFenn Startseite"
         >
-          <span className="brand-mark">
-            <ScanLine size={23} />
+          <span className="brand-mark" aria-hidden="true">
+            <FennMark />
           </span>
           <span className="brand-name">
-            Website<small>AUDIT HUB · LOCAL FIRST</small>
+            SiteFenn<small>DEIN WEBSITE-BEGLEITER</small>
           </span>
         </a>
         <div className="workspace">
-          <span className="workspace-avatar">M</span>
+          <span className="workspace-avatar">
+            <FolderOpen size={18} />
+          </span>
           <div>
             Mein Workspace<small>Lokal auf diesem Gerät</small>
           </div>
@@ -262,27 +263,48 @@ export default function App() {
           )}
           {screen === "projects" ? (
             <>
-              <section className="page-heading">
-                <div>
-                  <p className="eyebrow">DEINE WEBSITES. KLAR IM BLICK.</p>
+              <section className="page-heading poster-heading">
+                <div className="hero-copy">
+                  <p className="eyebrow">
+                    LOKAL. AUFMERKSAM. AUF DEINER SEITE.
+                  </p>
                   <h1>
-                    Gute Websites beginnen
-                    <br className="desktop-break" /> mit einem genauen Blick
-                    <span className="accent">.</span>
+                    DEINE SITE.
+                    <br />
+                    <span>KLARER BLICK.</span>
                   </h1>
                   <p className="subtitle">
-                    Prüfe deine Seiten. Sieh die Belege. Mach den nächsten
-                    Schritt.
+                    Weniger Rätselraten. Mehr Aha.
+                    <br />
+                    Deine Websites, echte Belege und der nächste klare Schritt.
                   </p>
+                  <div className="hero-actions">
+                    <button
+                      ref={addButton}
+                      className="button primary"
+                      onClick={() => setModal(true)}
+                    >
+                      <Plus size={18} />
+                      Website hinzufügen
+                    </button>
+                    <span className="hero-caption">
+                      PRIVATER WORKSPACE / FOUNDATION 0.1
+                    </span>
+                  </div>
                 </div>
-                <button
-                  ref={addButton}
-                  className="button primary"
-                  onClick={() => setModal(true)}
-                >
-                  <Plus size={18} />
-                  Website hinzufügen
-                </button>
+                <div className="hero-character">
+                  <span className="character-stamp">HI, ICH BIN FENN.</span>
+                  <img
+                    src="/brand/fenn-flat-v2.png"
+                    alt="Fenn, der aufmerksame Wüstenfuchs von SiteFenn"
+                    width="420"
+                    height="480"
+                    fetchPriority="high"
+                  />
+                  <span className="character-caption">
+                    KLEINER FUCHS. GENAUER BLICK.
+                  </span>
+                </div>
               </section>
               <div className="foundation-note">
                 <span className="note-icon">
@@ -320,6 +342,43 @@ export default function App() {
                   }
                 />
               </section>
+              <section
+                className={`fenn-guide ${guideOpen ? "" : "collapsed"}`}
+                aria-label="Hinweis von Fenn"
+              >
+                <span className="guide-avatar" aria-hidden="true">
+                  <FennMark />
+                </span>
+                <div>
+                  <span className="eyebrow">
+                    FENN HAT EINEN HINWEIS{" "}
+                    <span className="static-label">
+                      STATISCHER TIPP · KEINE KI
+                    </span>
+                  </span>
+                  {guideOpen && (
+                    <p>
+                      {running
+                        ? "Der Prüf-Browser ist unterwegs. Sobald er fertig ist, findest du hier den Screenshot und die gemessenen Basisbefunde."
+                        : data.projects.length
+                          ? "Ein Screenshot sagt mehr als ein Bauchgefühl. Wähle eine Website und starte den Desktop-Check. Den genauen Prüfumfang findest du bei jedem Ergebnis."
+                          : "Noch keine Website? Probier die lokale Demo. Sie enthält einen absichtlichen Fehler – damit du siehst, wie aus einer Beobachtung ein Beleg wird."}
+                    </p>
+                  )}
+                </div>
+                <button
+                  className="guide-toggle"
+                  aria-expanded={guideOpen}
+                  onClick={() => setGuideOpen(!guideOpen)}
+                  aria-label={
+                    guideOpen
+                      ? "Fenns Hinweis einklappen"
+                      : "Fenns Hinweis anzeigen"
+                  }
+                >
+                  {guideOpen ? <X size={17} /> : <Plus size={17} />}
+                </button>
+              </section>
               {loading ? (
                 <div className="loading-state" role="status">
                   <LoaderCircle className="spin" />
@@ -327,12 +386,9 @@ export default function App() {
                 </div>
               ) : data.projects.length === 0 ? (
                 <section className="empty-card">
-                  <div className="empty-art">
-                    <Monitor size={50} />
-                    <span className="art-badge">
-                      <ScanLine size={24} />
-                    </span>
-                  </div>
+                  <span className="empty-index" aria-hidden="true">
+                    01 / LOS GEHT’S
+                  </span>
                   <p className="eyebrow">DEIN ERSTER KLARER BLICK</p>
                   <h2>Welche Website nehmen wir uns vor?</h2>
                   <p>
@@ -636,7 +692,7 @@ export default function App() {
               <ShieldCheck size={13} />
               Belege statt Bauchgefühl.
             </span>
-            <span>Website Audit Hub · Foundation v{data.version}</span>
+            <span>SiteFenn · Foundation v{data.version}</span>
           </footer>
         </main>
       </div>
@@ -663,6 +719,35 @@ export default function App() {
         />
       )}
     </div>
+  );
+}
+
+function FennMark() {
+  return (
+    <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
+      <path
+        d="M11 31 8 6l18 15a32 32 0 0 1 12 0L56 6l-3 25c5 17-8 28-21 28S6 48 11 31Z"
+        fill="currentColor"
+        stroke="#1a1a1a"
+        strokeWidth="3"
+        strokeLinejoin="round"
+      />
+      <path
+        d="m15 17 2 12 6-5m26-7-2 12-6-5"
+        stroke="#1a1a1a"
+        strokeWidth="2.5"
+        strokeLinecap="round"
+      />
+      <ellipse cx="24" cy="36" rx="2.5" ry="4" fill="#1a1a1a" />
+      <ellipse cx="40" cy="36" rx="2.5" ry="4" fill="#1a1a1a" />
+      <path d="m28 45 4 4 4-4Z" fill="#1a1a1a" />
+      <path
+        d="M27 52q5 3 10 0"
+        stroke="#1a1a1a"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+    </svg>
   );
 }
 

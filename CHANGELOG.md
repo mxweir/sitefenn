@@ -2,6 +2,17 @@
 
 This file describes shipped scope, not the entire product roadmap. Version plans and release dates must not be presented as completed features.
 
+## Branding update — before 0.2
+
+- Introduced the SiteFenn display identity and Fenn mascot in the existing 0.1 application.
+- Rebuilt the UI around a violet/cream, flat cartoon and editorial type direction, following the user's style reference.
+- Added an original transparent mascot illustration, SVG signet/favicon, local Archivo Black/DM Sans fonts and their licenses.
+- Added collapsible static guidance, clearly distinguished from future AI analysis and speech.
+- Updated the brand guide and actual desktop/mobile screenshots.
+- Preserved the existing repository/package name, data paths and stored projects. No crawler, LLM inference, speech, score or other 0.2 feature is implied by this update.
+
+![Actual SiteFenn workspace](docs/screenshots/sitefenn-workspace-v2.jpg)
+
 ## 0.1.0 — Foundation
 
 ### Added

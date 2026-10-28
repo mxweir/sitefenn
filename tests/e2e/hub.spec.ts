@@ -6,9 +6,8 @@ test("demo executes a real browser scan, shows metadata and screenshot, and surv
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: /Gute Websites beginnen/ }),
-  ).toBeVisible();
+  await expect(page).toHaveTitle(/SiteFenn/);
+  await expect(page.getByRole("heading", { name: /DEINE SITE/ })).toBeVisible();
   await page.getByRole("button", { name: "Demo ausprobieren" }).click();
   await expect(page.getByText("Basisbefunde", { exact: true })).toBeVisible({
     timeout: 65_000,
@@ -33,6 +32,31 @@ test("demo executes a real browser scan, shows metadata and screenshot, and surv
     page.getByText("Chromium installiert", { exact: true }),
   ).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test("Fenn is a loaded local asset and its static guidance can be collapsed", async ({
+  page,
+}) => {
+  await page.goto("/");
+  const mascot = page.getByAltText(
+    "Fenn, der aufmerksame Wüstenfuchs von SiteFenn",
+  );
+  await expect(mascot).toBeVisible();
+  await expect
+    .poll(() =>
+      mascot.evaluate((img) => (img as HTMLImageElement).naturalWidth),
+    )
+    .toBeGreaterThan(0);
+  const guide = page.getByRole("region", { name: "Hinweis von Fenn" });
+  await expect(guide).toContainText("STATISCHER TIPP · KEINE KI");
+  await page.getByRole("button", { name: "Fenns Hinweis einklappen" }).click();
+  await expect(
+    page.getByRole("button", { name: "Fenns Hinweis anzeigen" }),
+  ).toHaveAttribute("aria-expanded", "false");
+  await page.getByRole("button", { name: "Fenns Hinweis anzeigen" }).click();
+  await expect(
+    page.getByRole("button", { name: "Fenns Hinweis einklappen" }),
+  ).toHaveAttribute("aria-expanded", "true");
 });
 
 test("project dialog enforces consent and explains blocked private target", async ({
@@ -66,9 +90,7 @@ test("mobile workspace fits viewport and setup remains reachable", async ({
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/");
-  await expect(
-    page.getByRole("heading", { name: /Gute Websites beginnen/ }),
-  ).toBeVisible();
+  await expect(page.getByRole("heading", { name: /DEINE SITE/ })).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= window.innerWidth,

@@ -1,10 +1,16 @@
-# Website Audit Hub
+# SiteFenn
+
+**Deine Site. Klarer Blick.** A local website audit companion, with Fenn the fennec fox.
+
+Previously presented as Website Audit Hub. The repository/package name and existing data directory are unchanged; this branding update does not migrate or reset projects. Name/domain clearance is still pending.
 
 A local-first workspace for inspecting websites you own or administer. Save projects, run a small browser-based check, and keep the evidence locally.
 
 **Version 0.1 is a foundation release, not a complete website auditor.** It captures one desktop screenshot and checks basic page metadata. The planned responsive audit, live browser view, explainable scores, scan comparisons, local AI recommendations, and Google Search Console integration are not implemented in this release.
 
-![Actual local workspace with a completed demo scan](docs/screenshots/workspace.jpg)
+![SiteFenn: actual local workspace with its original flat cartoon mascot](docs/screenshots/sitefenn-workspace-v2.jpg)
+
+The visual identity uses a violet canvas, flat ink outlines, warm accent colors, and locally bundled open fonts. Fenn currently provides clearly labelled, collapsible **static guidance**. It does not speak or run an LLM yet. See the [brand guide](docs/branding/BRAND.md).
 
 ## What 0.1 does
 
@@ -38,7 +44,7 @@ npm run dev
 
 Open [http://127.0.0.1:4310](http://127.0.0.1:4310) and choose **Demo ausprobieren** for a self-contained first scan. Alternatively, add a trusted public website you own or administer and start a scan from its project view. Private/local addresses and nonstandard ports are blocked in 0.1; the built-in demo is the only local-target exception.
 
-![Actual desktop capture and basic metadata findings](docs/screenshots/desktop-check.jpg)
+![Actual desktop capture in the SiteFenn workspace](docs/screenshots/sitefenn-desktop-check-v2.jpg)
 
 The application is intended to run locally. Do not expose its port through a reverse proxy, public tunnel, shared network binding, or Internet-facing deployment. It is not a multi-user service.
 
@@ -99,3 +105,5 @@ End-to-end tests start an isolated production-mode server and execute a real Chr
 ## License
 
 MIT. See [LICENSE](LICENSE). Dependency and browser licenses remain their own. The application license does not grant rights to republish scanned website content or screenshots.
+
+Archivo Black and DM Sans are bundled locally under SIL OFL 1.1; full notices are included in [public/licenses](public/licenses). No proprietary font files or existing mascot artwork from the style reference are included. The current Fenn illustration was generated with the built-in image tool; its prompt and provenance are documented in [docs/branding](docs/branding).
