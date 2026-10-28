@@ -105,7 +105,11 @@ test(
         });
         child.send(job);
       });
-      assert.equal(paused, true);
+      assert.equal(
+        paused,
+        true,
+        `Worker never reached pause checkpoint: ${terminalError || "no terminal error received"}`,
+      );
       assert.equal(cancelled, true);
       assert.match(terminalError, /abgebrochen/);
       assert.ok(partial?.audit);

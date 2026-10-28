@@ -445,6 +445,14 @@ test("AI calls fixed local endpoint with bounded schema and validated evidence r
   assert.equal(body.stream, false);
   assert.equal(body.think, false);
   assert.ok(body.format);
+  assert.deepEqual(
+    body.format.properties.recommendations.items.properties.findingId.enum,
+    ["f-1"],
+  );
+  assert.deepEqual(
+    body.format.properties.recommendations.items.properties.evidenceId.enum,
+    ["ev-1"],
+  );
   assert.equal(body.tools, undefined);
   assert.doesNotMatch(body.messages[1].content, /evidence\/scan-fixture\.png/);
   const tags = await listOllamaModels(undefined, {

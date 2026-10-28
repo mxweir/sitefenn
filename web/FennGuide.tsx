@@ -76,24 +76,51 @@ export default function FennGuide({
       <div className="fenn-chat-content">
         {plan ? (
           <>
-            <p>{plan.summary}</p>
-            {plan.recommendations.map((recommendation) => (
-              <div className="plan-note" key={recommendation.findingId}>
-                <span className="small-label">
-                  BELEG {recommendation.findingId}
-                </span>
-                <p>{recommendation.explanation}</p>
-                <p>
-                  <strong>Maßnahme:</strong> {recommendation.action}
-                </p>
-                <p>
-                  <strong>Abnahme:</strong> {recommendation.acceptance}
-                </p>
-                <p>
-                  <strong>Unsicherheit:</strong> {recommendation.uncertainty}
-                </p>
-              </div>
-            ))}
+            <Notice>
+              KI-Vorschläge sind ungeprüft und können den Messungen
+              widersprechen. Maßgeblich sind die regelbasierten Befunde und ihre
+              Nachweise.
+            </Notice>
+            <details className="plan-note">
+              <summary>Ungeprüfte KI-Zusammenfassung</summary>
+              <p>{plan.summary}</p>
+            </details>
+            {plan.recommendations.map((recommendation) => {
+              const observed = scan?.result?.audit?.findings.find(
+                (item) => item.id === recommendation.findingId,
+              );
+              return (
+                <div className="plan-note" key={recommendation.findingId}>
+                  <span className="small-label">
+                    BELEG {recommendation.findingId}
+                  </span>
+                  {observed && (
+                    <div>
+                      <strong>
+                        {observed.evidenceStatus === "measured"
+                          ? "Gemessener Befund"
+                          : "Prüfkandidat"}
+                        : {observed.title}
+                      </strong>
+                      <p>{observed.detail}</p>
+                    </div>
+                  )}
+                  <span className="small-label">KI-EINORDNUNG · UNGEPRÜFT</span>
+                  <p>{recommendation.explanation}</p>
+                  <p>
+                    <strong>Vorgeschlagene Maßnahme:</strong>{" "}
+                    {recommendation.action}
+                  </p>
+                  <p>
+                    <strong>Vorgeschlagenes Abnahmekriterium:</strong>{" "}
+                    {recommendation.acceptance}
+                  </p>
+                  <p>
+                    <strong>Unsicherheit:</strong> {recommendation.uncertainty}
+                  </p>
+                </div>
+              );
+            })}
             {plan.warnings.map((warning, i) => (
               <p className="hint" key={i}>
                 {warning}
@@ -191,12 +218,12 @@ export default function FennGuide({
             <button
               className="tiny-button"
               onClick={() =>
-                void post("/api/speech", { text: plan.summary }).catch((err) =>
-                  setError(message(err)),
-                )
+                void post("/api/speech", {
+                  text: `Ungeprüfte KI-Zusammenfassung. ${plan.summary}`,
+                }).catch((err) => setError(message(err)))
               }
             >
-              <Volume2 size={14} /> Vorlesen
+              <Volume2 size={14} /> KI-Zusammenfassung vorlesen
             </button>
             <button
               className="tiny-button"

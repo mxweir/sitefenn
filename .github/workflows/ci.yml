@@ -28,6 +28,11 @@ jobs:
         run: npm ci
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
+      # Ubuntu restricts user namespaces for downloaded binaries without a named AppArmor profile.
+      # Grant them only to our exact Chromium paths on this ephemeral hosted runner; retain Chromium's sandbox.
+      - name: Configure sandbox namespaces for Chromium (Linux)
+        if: runner.os == 'Linux'
+        run: node .github/scripts/setup-browser-sandbox.mjs
       - name: Static checks
         run: npm run check
       - name: Tests

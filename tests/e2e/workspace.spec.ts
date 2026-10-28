@@ -416,6 +416,17 @@ test("optional CSV visibility and explicit local model selection work without cl
     page.getByRole("region", { name: "Hinweis von Fenn" }),
   ).toContainText("LOKALE KI · local-test:8b");
   await expect(
+    page.getByText(
+      "KI-Vorschläge sind ungeprüft und können den Messungen widersprechen. Maßgeblich sind die regelbasierten Befunde und ihre Nachweise.",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Hinweis von Fenn" }),
+  ).toContainText(`Gemessener Befund: ${finding.title}`);
+  await page
+    .getByText("Ungeprüfte KI-Zusammenfassung", { exact: true })
+    .click();
+  await expect(
     page.getByText("Der Seitentitel ist ein belegter nächster Schritt."),
   ).toBeVisible();
 });

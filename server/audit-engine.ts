@@ -1118,7 +1118,7 @@ export async function runAudit(
                 "Meta Description fehlt",
                 metadata.description
                   ? "Nicht-leere Meta Description vorhanden."
-                  : "Keine nicht-leere Meta Description. Dies belegt keinen Rankingverlust.",
+                  : "Die Meta Description fehlt oder ist leer. Dies belegt keinen Rankingverlust.",
                 "Eine passende Zusammenfassung für diese Seite ergänzen, falls sie indexiert werden soll.",
                 "Eine redaktionell passende Meta Description ist im HTML vorhanden.",
                 "nice-to-have",

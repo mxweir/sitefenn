@@ -36,6 +36,14 @@ Ollama was installed from its official macOS release and run on loopback with cl
 
 An actual **qwen3:4b** request with synthetic evidence failed structured-output validation after approximately 60 seconds. The thinking-only variant did not deliver a usable JSON plan within the bounded generation budget. The failure was surfaced; no successful plan was saved. Availability alone is not treated as a model quality test.
 
+An actual **qwen2.5:3b Q4_K_M** request with one synthetic finding produced validated JSON and correct finding/evidence references in 2.902 seconds (219 output tokens). A subsequent request through the built application's UI used nine findings from a real run of the owned demo and saved a structurally valid response. That response incorrectly described missing meta descriptions as non-empty. **Reference validation does not establish factual correctness.** The UI therefore places canonical rule observations beside each explanation, warns before the advice, labels generated content unverified, and collapses the model's free-form summary. The audit score and repair checklist remain rule-based. The underlying observation's double-negative wording was also simplified for future scans. Every model suggestion still requires review.
+
+Two model downloads total approximately 4.43 GB. Model weights are not in the repository and have separate licenses; Qwen2.5 3B uses the Qwen Research License. Local speech remains off in the saved settings.
+
+## CI integration corrections
+
+The first CI run exposed two environment/timing issues: Ubuntu's AppArmor policy refused downloaded Chromium user namespaces, and an end-to-end test treated a partial-report button as scan completion. The CI now grants user namespaces only to the exact downloaded Chromium executable paths on an ephemeral GitHub-hosted Linux runner, following Chromium's documented AppArmor approach. The global restriction and Chromium sandbox remain enabled. This script refuses execution on user machines. The test waits for the actual completed evidence view within the scan budget.
+
 ## Remaining external validation
 
 Not completed: an external developer pilot, independent held-out precision/recall study, full screenreader audit, Windows stability testing, resource/latency benchmark or hostile-site isolation assessment. These remain follow-up work. No external security certification, complete accessibility compliance or Google ranking improvement is claimed.

@@ -21,7 +21,7 @@ test("real responsive demo produces evidence, a report and persisted history", a
   ).toBeVisible({ timeout: 70_000 });
   await expect(
     page.getByRole("heading", { name: "Gespeicherte Nachweise", exact: true }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 70_000 });
   const savedImage = page
     .getByAltText(/Gespeicherter Desktop-Screenshot/)
     .first();

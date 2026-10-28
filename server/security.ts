@@ -21,7 +21,7 @@ export function parseTarget(
     throw new Error("Nur HTTP(S)-URLs ohne Zugangsdaten sind erlaubt.");
   if (!options.allowLocal && url.port && !["80", "443"].includes(url.port))
     throw new Error(
-      "0.1 unterstützt öffentliche Ziele nur auf Port 80 oder 443.",
+      "Öffentliche Ziele werden nur auf Port 80 oder 443 unterstützt.",
     );
   url.hash = "";
   return url;
@@ -66,7 +66,7 @@ export async function assertPublicTarget(url: URL) {
     hostname.endsWith(".local")
   )
     throw new Error(
-      "Private und lokale Ziele sind in 0.1 gesperrt. Nutze die integrierte Demo.",
+      "Private und lokale Ziele benötigen ein ausdrücklich freigegebenes lokales Projekt.",
     );
   const addresses = isIP(hostname)
     ? [{ address: hostname }]

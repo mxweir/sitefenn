@@ -79,9 +79,9 @@ export default function Settings({
             {available ? "Ollama erreichbar" : "Ollama nicht erreichbar"}
           </span>
           <p className="hint">
-            Keine automatischen Modelldownloads. Auf deinem Mac mit 24 GB RAM
-            zunächst ein kleines quantisiertes Modell testen; Browser und
-            Kontext brauchen ebenfalls Speicher.
+            Keine automatischen Modelldownloads. Teste zunächst ein kleines
+            quantisiertes Modell; Browser und Modellkontext benötigen zusätzlich
+            Arbeitsspeicher.
           </p>
           <label htmlFor="local-model">Installiertes Modell</label>
           <select

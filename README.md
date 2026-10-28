@@ -71,6 +71,8 @@ npm run dev
 
 Open [http://127.0.0.1:4310](http://127.0.0.1:4310) and choose **Demo laden**, or add a trusted website you are authorized to test. Linux may require `npx playwright install --with-deps chromium` with appropriate OS privileges.
 
+On recent Ubuntu versions, downloaded Chromium may also need a suitable AppArmor user-namespace profile. If startup reports `No usable sandbox`, follow the [official Chromium sandbox guidance](https://github.com/chromium/chromium/blob/main/docs/security/apparmor-userns-restrictions.md) for your system. SiteFenn keeps Chromium's sandbox enabled and does not change your host policy automatically. The repository's sandbox setup script is exclusively for ephemeral GitHub-hosted CI runners.
+
 For the built local application:
 
 ```sh
@@ -83,6 +85,16 @@ Stop the development process first if it uses the same port. `PORT` defaults to 
 ## Optional local AI and speech
 
 Install/run Ollama separately, explicitly download a suitable model, and select it in settings. The hub does not download or train models, change global Ollama settings, or enable cloud inference automatically.
+
+A tested small starting point is `qwen2.5:3b` (approximately 1.9 GB, Q4_K_M). If its separate license fits your use, download it explicitly:
+
+```sh
+ollama pull qwen2.5:3b
+```
+
+The 3B model uses the **Qwen Research License, not this app's MIT license or Apache 2.0**; read the [official model information and license](https://ollama.com/library/qwen2.5:3b). Model weights are not bundled with SiteFenn.
+
+On 2026-10-28, one real local service request on an M5 Pro/24 GiB returned validated JSON with correct evidence references in about 2.9 seconds for **one synthetic finding**. This verifies that integration path, not website-audit accuracy, language consistency or general response speed. The tested `qwen3:4b` thinking-only variant instead failed structured-output validation after about 60 seconds; it is not the recommended starting model. Review every model suggestion.
 
 - Fixed endpoint: `http://127.0.0.1:11434`.
 - Model metadata is checked before sharing observations; remote-backed aliases, cloud tags and unverifiable locality are rejected.
