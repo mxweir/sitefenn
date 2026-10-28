@@ -1,8 +1,8 @@
 # Changelog
 
-Implementation changes are distinguished from release publication and CI status. A prepared version heading does not claim a published GitHub release or completed external pilot.
+Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/website-audit-hub/releases) for publication details.
 
-## 1.0.0 — Prepared for release validation
+## 1.0.0 — 2026-10-28
 
 ### Workspace and checks
 
@@ -26,6 +26,22 @@ Implementation changes are distinguished from release publication and CI status.
 - Local-backing preflight rejects remote/cloud aliases before transmitting website data.
 - Schema/evidence validation, thinking-capability handling, cancellation and resource limits.
 - Optional macOS system speech using Anna after explicit activation.
+- Real Qwen2.5 integration tested through the built hub; canonical observations remain visible beside unverified model advice. Qwen3 thinking-only validation failure is documented.
+
+### Validation and actual screens
+
+65 Node tests and nine browser tests passed locally, including real Chromium fixtures, Lighthouse and portable restore. See the [verification record](docs/RELEASE-1.0.md) for model failures, fixture scope and external validation still pending.
+
+![Actual 1.0 audit report](docs/screenshots/1.0-report.jpg)
+
+<details>
+<summary>Check, checklist and local assistant</summary>
+
+![Actual paused check](docs/screenshots/1.0-live-paused.jpg)
+![Actual repair checklist](docs/screenshots/1.0-tasks.jpg)
+![Actual local model response](docs/screenshots/1.0-local-ai.jpg)
+
+</details>
 
 ### Limits
 

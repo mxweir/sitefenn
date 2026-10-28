@@ -15,6 +15,8 @@ Date: 2026-10-28. This records tests actually run, not an independent certificat
 
 Local result: **65/65 Node tests**, **9/9 browser tests**, typecheck and production build passed. `npm audit --omit=dev --audit-level=high` reported zero production vulnerabilities. CI results are available in the repository Actions history; they are separate from this local test record.
 
+The complete code at `d6caa7b` passed both macOS and Ubuntu CI, including the sandbox namespace setup, Node tests, build and browser end-to-end tests: [CI run](https://github.com/mxweir/website-audit-hub/actions/runs/40742478088).
+
 Coverage includes URL/origin restrictions, DNS-pinned proxy behavior, excluded redirects, local API session/CSRF protection, schema migration and backup/restore corruption checks, deterministic scoring and unknown bounds, conservative comparison, report export privacy, Search Console parsing, model locality/output validation, worker pause/resume/cancel and checkpoint reuse.
 
 The engine runs **20 labelled browser fixtures**. A narrow internal layout regression matrix contains eight pages × two rules: two true positives, fourteen true negatives, zero false positives and zero false negatives. These cases were used during implementation; they are **not a held-out benchmark**, and do not establish 95% accuracy on real websites.
@@ -39,6 +41,8 @@ An actual **qwen3:4b** request with synthetic evidence failed structured-output 
 An actual **qwen2.5:3b Q4_K_M** request with one synthetic finding produced validated JSON and correct finding/evidence references in 2.902 seconds (219 output tokens). A subsequent request through the built application's UI used nine findings from a real run of the owned demo and saved a structurally valid response. That response incorrectly described missing meta descriptions as non-empty. **Reference validation does not establish factual correctness.** The UI therefore places canonical rule observations beside each explanation, warns before the advice, labels generated content unverified, and collapses the model's free-form summary. The audit score and repair checklist remain rule-based. The underlying observation's double-negative wording was also simplified for future scans. Every model suggestion still requires review.
 
 Two model downloads total approximately 4.43 GB. Model weights are not in the repository and have separate licenses; Qwen2.5 3B uses the Qwen Research License. Local speech remains off in the saved settings.
+
+A final demo rerun with the clearer observation text completed all nine page/profile steps. A new request from the rebuilt UI returned validated explanations for all nine supplied findings. Its missing-description explanation retained the correct observation; this is one successful regression check, not a guarantee against other semantic errors. The saved screenshot `1.0-local-ai.jpg` shows that actual response with the facts/advice separation enabled.
 
 ## CI integration corrections
 

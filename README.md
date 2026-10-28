@@ -36,6 +36,10 @@ The built-in demo is an authorized fixture for trying the workflow without an ex
 
 ![Actual grouped repair checklist](docs/screenshots/1.0-tasks.jpg)
 
+**Ask a local model, with measured observations beside unverified advice:**
+
+![Actual Qwen2.5 response through Ollama](docs/screenshots/1.0-local-ai.jpg)
+
 </details>
 
 ## What gets checked
