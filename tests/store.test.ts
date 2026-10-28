@@ -5,6 +5,53 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { Store } from "../server/store.js";
 import { defaultDataDir } from "../server/config.js";
+import type { AuditTask } from "../shared/types.js";
+
+test("refreshing a resumed task group updates all findings while preserving the user's workflow", () => {
+  const dir = mkdtempSync(join(tmpdir(), "hub-task-refresh-"));
+  const store = new Store(dir);
+  try {
+    const project = store.createProject(
+      "Owned",
+      "https://example.com",
+      "production",
+    );
+    const scan = store.createScan(project.id);
+    const task: AuditTask = {
+      id: "task",
+      scanId: scan.id,
+      projectId: project.id,
+      title: "Description",
+      category: "seo",
+      priority: "nice-to-have",
+      status: "open",
+      findingIds: ["first"],
+      summary: "One observation",
+      recommendation: "Add description",
+      acceptance: "Description present",
+      updatedAt: new Date().toISOString(),
+    };
+    store.saveTasks([task]);
+    store.updateTask(task.id, "review");
+    store.saveTasks([
+      {
+        ...task,
+        findingIds: ["first", "second", "third"],
+        summary: "Three observations",
+      },
+    ]);
+    assert.equal(store.task(task.id)?.status, "review");
+    assert.deepEqual(store.task(task.id)?.findingIds, [
+      "first",
+      "second",
+      "third",
+    ]);
+    assert.equal(store.task(task.id)?.summary, "Three observations");
+  } finally {
+    store.close();
+    rmSync(dir, { recursive: true, force: true });
+  }
+});
 
 test("projects and completed evidence metadata survive restart; unfinished jobs become interrupted", () => {
   const dir = mkdtempSync(join(tmpdir(), "hub-store-"));

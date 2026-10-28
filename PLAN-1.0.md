@@ -1,6 +1,14 @@
 # Website Audit Hub – Plan bis 1.0
 
-Stand: 28. Oktober 2026. Arbeitstitel, Name und Markenrechte noch ungeprüft. Dies ist ein Produkt- und Umsetzungsplan, keine bereits implementierte Software.
+Stand: 28. Oktober 2026. Ursprünglicher Produktplan; die Anwendung heißt inzwischen **SiteFenn**. Name und Markenrechte sind noch ungeprüft. Die folgenden Abschnitte bewahren die ursprünglichen Ziele; sie sind keine Behauptung, dass jede Idee umgesetzt oder unabhängig validiert wurde.
+
+## Gelieferter Umfang von 1.0
+
+Der lokale Ablauf Projekt → Seitenauswahl → drei Chromium-Profile → Live-Bild/Nachweis → Report/Aufgaben → Export → Nachtest ist implementiert. Dazu kommen optionale Lighthouse-Messungen, lokale Ollama-Erklärungen, GSC-CSV-Import und Backup/Wiederherstellung. Der technische Repository- und Datenname bleibt `website-audit-hub`.
+
+Die tatsächlichen Fähigkeiten und Grenzen stehen in [README](README.md), [Changelog](CHANGELOG.md) und [Release-Prüfung](docs/RELEASE-1.0.md). Die folgenden ursprünglichen Ziele bleiben **offen**: externer Pilot mit fünf bis acht Entwicklern, unabhängiges gehaltenes Layout-Testset mit belastbaren Präzisions-/Recallzahlen, vollständiger Screenreader-Test und Hardware-Ressourcenbenchmark. Interne Regressionstests ersetzen diese Prüfungen nicht. Der Release ist deshalb ausdrücklich für vertrauenswürdige, eigene Websites begrenzt.
+
+Weitere nicht gelieferte Planideen: eigene Viewportgrößen, Sitemap-Import, frei konfigurierte Interaktionszustände, Bildanalyse durch das Modell, automatische Aufbewahrung/Löschung und Quellcode-Anbindung. GSC arbeitet mit CSV, nicht OAuth. Die lokale KI erklärt gemessene Befunde anhand strukturierter Texte und sieht keine Screenshots.
 
 ## 1. Produktentscheidung
 
@@ -22,20 +30,20 @@ Die lokale KI ist ein erklärender Analyst, kein autonomer Administrator. Regeln
 
 Die zwölf Rollen wurden in drei virtuellen Arbeitsgruppen konsultiert. Es handelt sich nicht um zwölf real beauftragte Fachpersonen oder eine unabhängige Zertifizierung.
 
-| Rolle | Verantwortungsbereich und zentrale Entscheidung |
-| --- | --- |
-| 1. Produktmanager | Ein Hub mit geschlossenem Ablauf: Projekt → Scan → Befund → Aufgabe → Nachtest. |
-| 2. UX-/Interaction-Designer | Eine klare nächste Aktion; Live-Befunde dürfen den Arbeitsbereich nicht überladen. |
-| 3. Frontend-/Visualisierungsarchitekt | Prüf-Browser als Bildstream mit separaten, koordinatentreuen Overlays darstellen. |
-| 4. Open-Source-/Marketing-Lead | Belegbare Ergebnisse und echter Demo-Modus statt „KI findet alles“-Werbung. |
-| 5. Browser-Automation-Engineer | Kontrollierte Seiten- und Zustandsprüfung statt wahllosem autonomen Durchklicken. |
-| 6. Backend-/Datenarchitekt | Dauerhafte Scan-Jobs, unveränderliche Nachweise, versionierte Regeln und vergleichbare Läufe. |
-| 7. Security-/Privacy-Engineer | Browser isolieren, lokale API schützen, private Ziele nur ausdrücklich freigeben. |
-| 8. Local-LLM-/ML-Engineer | Kleine beleggebundene Anfragen, strukturierte Ausgabe, kein Training ohne Daten und Evaluation. |
-| 9. Technical-SEO-/Search-Console-Spezialist | Technische Prüfbarkeit und tatsächliche Google-Sichtbarkeit getrennt anzeigen. |
-| 10. Accessibility-Engineer | Automatische Befunde von manuellen Prüfpunkten und unvollständigen Ergebnissen trennen. |
-| 11. QA-/Performance-Engineer | Bekannte Fehlerseiten, saubere Negativfälle und getrennte Performance-Läufe. |
-| 12. Scoring-/Evaluation-Spezialist | Deterministische Scores mit Abdeckung und Versionsbindung, keine KI-Note. |
+| Rolle                                       | Verantwortungsbereich und zentrale Entscheidung                                                 |
+| ------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 1. Produktmanager                           | Ein Hub mit geschlossenem Ablauf: Projekt → Scan → Befund → Aufgabe → Nachtest.                 |
+| 2. UX-/Interaction-Designer                 | Eine klare nächste Aktion; Live-Befunde dürfen den Arbeitsbereich nicht überladen.              |
+| 3. Frontend-/Visualisierungsarchitekt       | Prüf-Browser als Bildstream mit separaten, koordinatentreuen Overlays darstellen.               |
+| 4. Open-Source-/Marketing-Lead              | Belegbare Ergebnisse und echter Demo-Modus statt „KI findet alles“-Werbung.                     |
+| 5. Browser-Automation-Engineer              | Kontrollierte Seiten- und Zustandsprüfung statt wahllosem autonomen Durchklicken.               |
+| 6. Backend-/Datenarchitekt                  | Dauerhafte Scan-Jobs, unveränderliche Nachweise, versionierte Regeln und vergleichbare Läufe.   |
+| 7. Security-/Privacy-Engineer               | Browser isolieren, lokale API schützen, private Ziele nur ausdrücklich freigeben.               |
+| 8. Local-LLM-/ML-Engineer                   | Kleine beleggebundene Anfragen, strukturierte Ausgabe, kein Training ohne Daten und Evaluation. |
+| 9. Technical-SEO-/Search-Console-Spezialist | Technische Prüfbarkeit und tatsächliche Google-Sichtbarkeit getrennt anzeigen.                  |
+| 10. Accessibility-Engineer                  | Automatische Befunde von manuellen Prüfpunkten und unvollständigen Ergebnissen trennen.         |
+| 11. QA-/Performance-Engineer                | Bekannte Fehlerseiten, saubere Negativfälle und getrennte Performance-Läufe.                    |
+| 12. Scoring-/Evaluation-Spezialist          | Deterministische Scores mit Abdeckung und Versionsbindung, keine KI-Note.                       |
 
 ## 3. Zielgruppe und Grenzen
 
@@ -82,11 +90,11 @@ Fehlendes Ollama blockiert keinen regelbasierten Scan. Die Anwendung erklärt, w
 
 Standardprofil als versionierter Entwurf:
 
-| Profil | Viewport in CSS-Pixeln | Eingabemodus |
-| --- | --- | --- |
-| Desktop | 1440 × 900 | Maus/Tastatur |
-| Tablet | 768 × 1024 | Touch-Emulation |
-| Mobil | 390 × 844 | Touch-Emulation |
+| Profil  | Viewport in CSS-Pixeln | Eingabemodus    |
+| ------- | ---------------------- | --------------- |
+| Desktop | 1440 × 900             | Maus/Tastatur   |
+| Tablet  | 768 × 1024             | Touch-Emulation |
+| Mobil   | 390 × 844              | Touch-Emulation |
 
 Das sind Browserprofile, keine Garantie für alle realen Geräte. DPR, User Agent, Touch-Einstellungen und Ausrichtung gehören zur gespeicherten Konfiguration. In 1.0 wird Chromium verwendet; Safari-/Firefox-Kompatibilität ist damit nicht zertifiziert.
 
@@ -104,14 +112,14 @@ Fonts, Bilder und relevante Seitenelemente erhalten begrenzte Bereitschaftsprüf
 
 ### Was automatisch geprüft wird
 
-| Bereich | Erstumfang | Grenzen |
-| --- | --- | --- |
-| Responsive/Layout | Horizontales Überlaufen, abgeschnittene Inhalte, verdächtige Überdeckungen, unerreichbare zentrale Bedienelemente | Bounding-Box-Überlappung allein ist kein Fehlerbeweis. |
-| Funktion/Technik | Dokumentstatus, defekte interne Links, fehlgeschlagene eigene Ressourcen, Browserfehler | Ein Konsolenfehler ist nicht automatisch ein kritischer Funktionsausfall. |
-| Accessibility | axe-core-Regeln, zugängliche Namen, bestimmte Kontraste, zusätzliche begrenzte Fokusprüfungen | Keine vollständige WCAG-Konformitätsaussage. |
-| Technisches SEO | Title/Description, Canonical, Robots-Angaben, grundlegende Verlinkung, Kontext der Überschriften, grundlegende strukturierte Daten | Kein Google-Indexierungsbeweis und keine Ranking-Garantie. |
-| Performance | Lokale Lighthouse-Labormessung auf wenigen gewählten Referenzseiten | Keine Gleichsetzung mit realem Nutzerverhalten. |
-| UX/visuelle Qualität | Begründete lokale Modellvorschläge zu Hierarchie, Lesbarkeit und Orientierung | Empfehlungen, kein objektiver Geschmacks- oder Conversion-Score. |
+| Bereich              | Erstumfang                                                                                                                         | Grenzen                                                                   |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| Responsive/Layout    | Horizontales Überlaufen, abgeschnittene Inhalte, verdächtige Überdeckungen, unerreichbare zentrale Bedienelemente                  | Bounding-Box-Überlappung allein ist kein Fehlerbeweis.                    |
+| Funktion/Technik     | Dokumentstatus, defekte interne Links, fehlgeschlagene eigene Ressourcen, Browserfehler                                            | Ein Konsolenfehler ist nicht automatisch ein kritischer Funktionsausfall. |
+| Accessibility        | axe-core-Regeln, zugängliche Namen, bestimmte Kontraste, zusätzliche begrenzte Fokusprüfungen                                      | Keine vollständige WCAG-Konformitätsaussage.                              |
+| Technisches SEO      | Title/Description, Canonical, Robots-Angaben, grundlegende Verlinkung, Kontext der Überschriften, grundlegende strukturierte Daten | Kein Google-Indexierungsbeweis und keine Ranking-Garantie.                |
+| Performance          | Lokale Lighthouse-Labormessung auf wenigen gewählten Referenzseiten                                                                | Keine Gleichsetzung mit realem Nutzerverhalten.                           |
+| UX/visuelle Qualität | Begründete lokale Modellvorschläge zu Hierarchie, Lesbarkeit und Orientierung                                                      | Empfehlungen, kein objektiver Geschmacks- oder Conversion-Score.          |
 
 SEO-Regeln berücksichtigen Projektabsicht: Ein beabsichtigtes `noindex` auf Staging ist nicht derselbe Fehler wie ein versehentliches `noindex` auf einer zu indexierenden Produktseite. Mehrere H1 oder eine bestimmte Meta-Description-Länge werden nicht pauschal als kritische Ranking-Verstöße behauptet.
 
@@ -144,11 +152,11 @@ Jeder Befund enthält:
 
 Erkenntnisstatus: **gemessen/bestätigt · heuristischer Kandidat · KI-Empfehlung · manuell bestätigt · nicht prüfbar**. Ein modellgenerierter Prozentsatz ist kein kalibrierter Sicherheitsnachweis.
 
-| Priorität | Bedeutung | Beispiel |
-| --- | --- | --- |
-| Kritisch | Nachgewiesener erheblicher Blocker im definierten Nutzungskontext | Hauptaktion auf Mobil durch ein Element nicht erreichbar. |
-| Wichtig | Relevante Einschränkung ohne vollständigen Blocker | Bestätigter Kontrastfehler oder defekter wichtiger interner Link. |
-| Nice to have | Nicht blockierende Verbesserung oder begründete Gestaltungsempfehlung | Präzisere CTA-Beschriftung als UX-Vorschlag. |
+| Priorität    | Bedeutung                                                             | Beispiel                                                          |
+| ------------ | --------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Kritisch     | Nachgewiesener erheblicher Blocker im definierten Nutzungskontext     | Hauptaktion auf Mobil durch ein Element nicht erreichbar.         |
+| Wichtig      | Relevante Einschränkung ohne vollständigen Blocker                    | Bestätigter Kontrastfehler oder defekter wichtiger interner Link. |
+| Nice to have | Nicht blockierende Verbesserung oder begründete Gestaltungsempfehlung | Präzisere CTA-Beschriftung als UX-Vorschlag.                      |
 
 Nicht jeder Title-Fehler wird kritisch, nicht jede fehlende Meta Description kostet Ranking. Wirkung, Reichweite und Kontext bestimmen die Arbeitsreihenfolge. Vermutungen werden nicht allein durch dramatische Formulierung kritisch.
 
@@ -164,6 +172,7 @@ Aufgabenstatus: **Offen · In Arbeit · Zur Prüfung · Verifiziert behoben · A
 
 ```markdown
 # Maßnahmenplan – Beispielprojekt
+
 Scan: scan-123 | Profil: responsive-v1 | Regeln: rules-v1
 Geprüfter Bereich: /, /angebote, /kontakt
 
@@ -189,13 +198,13 @@ Der Wert heißt **Audit-Score für den geprüften Umfang**, nicht Website-Gesamt
 
 Vorgeschlagene feste Kategoriengewichte für Profil v1:
 
-| Kategorie | Gewicht |
-| --- | ---: |
-| Responsive/Layout | 25 % |
-| Automatisiert prüfbare Accessibility | 20 % |
-| Technisches SEO | 25 % |
-| Funktion/Technik | 15 % |
-| Performance auf definierten Referenzseiten | 15 % |
+| Kategorie                                  | Gewicht |
+| ------------------------------------------ | ------: |
+| Responsive/Layout                          |    25 % |
+| Automatisiert prüfbare Accessibility       |    20 % |
+| Technisches SEO                            |    25 % |
+| Funktion/Technik                           |    15 % |
+| Performance auf definierten Referenzseiten |    15 % |
 
 Gewichte und Regelrelevanz werden an Testfällen kalibriert und vor 1.0 eingefroren. Subjektive UX-Vorschläge und Google-Sichtbarkeit verändern diesen Score nicht. Bekannte kritische Blocker werden unabhängig vom Durchschnitt prominent angezeigt.
 
@@ -277,16 +286,16 @@ Training erst nach belegtem Bedarf: kuratierte Beispiele mit menschlicher Bewert
 
 ## 13. Technischer Aufbau
 
-| Schicht | Vorschlag |
-| --- | --- |
-| Oberfläche | React, TypeScript, Vite; lokale Web-App, keine Streamlit-Oberfläche. |
-| API/Orchestrierung | Node.js LTS und Fastify; Schema-Validierung. |
-| Scan-Worker | Eigener Prozess mit gepinntem Playwright/Chromium. |
-| Prüfwerkzeuge | axe-core, Lighthouse, eigene kleine versionierte Layout-/SEO-Regeln. |
-| Live-Ereignisse | SSE für Status/Befunde; WebSocket oder abgegrenzter Frame-Endpunkt für Vorschau. |
-| Daten | SQLite mit Migrationen; Evidenzdateien im eigenen App-Datenverzeichnis. |
-| Modell | Ollama-Adapter mit lokalem Endpoint und validierten Schemas. |
-| Export | Markdown, JSON und optionales Evidenz-ZIP. |
+| Schicht            | Vorschlag                                                                        |
+| ------------------ | -------------------------------------------------------------------------------- |
+| Oberfläche         | React, TypeScript, Vite; lokale Web-App, keine Streamlit-Oberfläche.             |
+| API/Orchestrierung | Node.js LTS und Fastify; Schema-Validierung.                                     |
+| Scan-Worker        | Eigener Prozess mit gepinntem Playwright/Chromium.                               |
+| Prüfwerkzeuge      | axe-core, Lighthouse, eigene kleine versionierte Layout-/SEO-Regeln.             |
+| Live-Ereignisse    | SSE für Status/Befunde; WebSocket oder abgegrenzter Frame-Endpunkt für Vorschau. |
+| Daten              | SQLite mit Migrationen; Evidenzdateien im eigenen App-Datenverzeichnis.          |
+| Modell             | Ollama-Adapter mit lokalem Endpoint und validierten Schemas.                     |
+| Export             | Markdown, JSON und optionales Evidenz-ZIP.                                       |
 
 Zunächst natives lokales Startpaket auf macOS, damit Browser und Ollama nicht unnötig durch unterschiedliche Container-Netzwerke getrennt werden. Abhängigkeiten sind gesperrt und reproduzierbar installierbar. Ein Desktop-Wrapper oder Docker-Paket kann später folgen; keine Paketvielfalt vor funktionierendem Kern.
 
@@ -322,18 +331,18 @@ Authentisierte Bereiche, Session-Import und allgemeine Fernsteuerung werden aus 
 
 Versionen sind Lieferpakete, keine Kalenderwochen. Jeder Schritt hat einen prüfbaren Ausgang und kann bei Qualitätsproblemen überarbeitet werden.
 
-| Version | Lieferpaket | Abnahmekriterium |
-| --- | --- | --- |
-| **0.1 – Fundament** | Lokaler Start, Dependency-Check, Projekte, SQLite, Beispielwebsite, Scan-Jobs | Ein Projekt und ein einfacher Scan überstehen App-Neustart; Daten liegen nicht im Git-Checkout. |
-| **0.2 – Crawler** | Host-/Pfadgrenzen, Sitemap-/Linkentdeckung, Seitenauswahl, Status-/Ressourcenfehler, Limits | Kontrollierter Scan ohne Verlassen des Zielbereichs; Abbrüche und Schleifenfälle getestet. |
-| **0.3 – Responsive Engine** | Drei Viewports, Geometrie/Hit-Tests, erste Layoutregeln, axe-core, Screenshots | Absichtlich defekte UND korrekt überlappende Beispiele werden sinnvoll unterschieden. |
-| **0.4 – Live Workspace** | Browserbild, Fortschrittsereignisse, synchronisierte Overlays, Pause/Stop, Screenshot-Fallback | Ein angeklickter Befund zeigt exakt seinen eingefrorenen Nachweis; keine Markierungsdrifts. |
-| **0.5 – Reports und Aufgaben** | Kategorien, Prioritäten, Komponenten-Deduplikation, Checkliste, Markdown/JSON/ZIP | Jede bestätigte Aufgabe hat Beleg und Abnahme; Export funktioniert ohne laufenden Hub. |
-| **0.6 – Lokale KI** | Ollama-Setup, beleggebundene Erklärungen, strukturierter Plan, optionale Bildanalyse | Modell-Ausfall blockiert keine Messung; erfundene Evidence-IDs und Prompt-Injection-Tests werden abgefangen. |
-| **0.7 – Score und Verlauf** | Versionierte Scoring-Regeln, Abdeckung, Referenz-Performance, Befund-Lebenszyklus, Vergleich | Gleiche Rohdaten ergeben identische Werte; fehlende Ergebnisse verbessern keinen Score. |
-| **0.8 – Sichtbarkeit** | Dokumentierter GSC-CSV-Import, Zeitvergleich, Seiten-/Query-Ansichten; OAuth optional | Filter/Zeiträume transparent; keine falschen Summen oder erfundenen Rankingwerte. |
-| **0.9 – Release Candidate** | Sicherheitshärtung, reale Websites, UX-/Accessibility-Prüfung, Backup, Ressourcenmessung | Pflicht-Testmatrix grün, bekannte Grenzen dokumentiert, keine offenen kritischen Produktfehler. |
-| **1.0 – Öffentlicher Release** | Reproduzierbare Installation, Demo, echte Screens/GIFs, Dokumentation, Lizenzen und getaggtes Release | Alle nachstehenden Freigabekriterien erfüllt; keine versteckte Pflicht-Cloud. |
+| Version                        | Lieferpaket                                                                                           | Abnahmekriterium                                                                                             |
+| ------------------------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| **0.1 – Fundament**            | Lokaler Start, Dependency-Check, Projekte, SQLite, Beispielwebsite, Scan-Jobs                         | Ein Projekt und ein einfacher Scan überstehen App-Neustart; Daten liegen nicht im Git-Checkout.              |
+| **0.2 – Crawler**              | Host-/Pfadgrenzen, Sitemap-/Linkentdeckung, Seitenauswahl, Status-/Ressourcenfehler, Limits           | Kontrollierter Scan ohne Verlassen des Zielbereichs; Abbrüche und Schleifenfälle getestet.                   |
+| **0.3 – Responsive Engine**    | Drei Viewports, Geometrie/Hit-Tests, erste Layoutregeln, axe-core, Screenshots                        | Absichtlich defekte UND korrekt überlappende Beispiele werden sinnvoll unterschieden.                        |
+| **0.4 – Live Workspace**       | Browserbild, Fortschrittsereignisse, synchronisierte Overlays, Pause/Stop, Screenshot-Fallback        | Ein angeklickter Befund zeigt exakt seinen eingefrorenen Nachweis; keine Markierungsdrifts.                  |
+| **0.5 – Reports und Aufgaben** | Kategorien, Prioritäten, Komponenten-Deduplikation, Checkliste, Markdown/JSON/ZIP                     | Jede bestätigte Aufgabe hat Beleg und Abnahme; Export funktioniert ohne laufenden Hub.                       |
+| **0.6 – Lokale KI**            | Ollama-Setup, beleggebundene Erklärungen, strukturierter Plan, optionale Bildanalyse                  | Modell-Ausfall blockiert keine Messung; erfundene Evidence-IDs und Prompt-Injection-Tests werden abgefangen. |
+| **0.7 – Score und Verlauf**    | Versionierte Scoring-Regeln, Abdeckung, Referenz-Performance, Befund-Lebenszyklus, Vergleich          | Gleiche Rohdaten ergeben identische Werte; fehlende Ergebnisse verbessern keinen Score.                      |
+| **0.8 – Sichtbarkeit**         | Dokumentierter GSC-CSV-Import, Zeitvergleich, Seiten-/Query-Ansichten; OAuth optional                 | Filter/Zeiträume transparent; keine falschen Summen oder erfundenen Rankingwerte.                            |
+| **0.9 – Release Candidate**    | Sicherheitshärtung, reale Websites, UX-/Accessibility-Prüfung, Backup, Ressourcenmessung              | Pflicht-Testmatrix grün, bekannte Grenzen dokumentiert, keine offenen kritischen Produktfehler.              |
+| **1.0 – Öffentlicher Release** | Reproduzierbare Installation, Demo, echte Screens/GIFs, Dokumentation, Lizenzen und getaggtes Release | Alle nachstehenden Freigabekriterien erfüllt; keine versteckte Pflicht-Cloud.                                |
 
 ### Was den Release nicht blockieren soll
 
@@ -390,4 +399,4 @@ Nicht alles vorziehen: Ohne verlässliche Erkennung, sinnvolle Aufgaben und fair
 
 Zuerst 0.1–0.3 als vertikalen Kern entwickeln: **ein Projekt, drei Viewports, wenige verlässliche Regeln und belastbare Nachweise**. Danach Live-Ansicht und Aufgabenfluss, dann lokale KI. Damit entsteht früh überprüfbarer Nutzen und die KI muss keine fehlende Prüftechnik verdecken.
 
-Die Entwicklung selbst ist mit diesem Plan noch nicht gestartet; es wurden weder ein neues GitHub-Repository noch ein Release erstellt.
+Dieser Abschnitt dokumentiert die ursprüngliche Startempfehlung. Den heutigen Stand beschreibt die Lieferübersicht am Anfang des Dokuments.

@@ -1,6 +1,6 @@
 {
   "name": "website-audit-hub",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -13,13 +13,17 @@
     "check": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
-    "browser:install": "playwright install chromium"
+    "browser:install": "playwright install chromium",
+    "restore": "tsx scripts/restore-backup.ts"
   },
   "dependencies": {
     "@fastify/static": "10.1.8",
     "@fontsource-variable/dm-sans": "5.3.0",
     "@fontsource/archivo-black": "5.3.0",
+    "axe-core": "4.14.0",
     "fastify": "5.12.7",
+    "fflate": "0.8.3",
+    "lighthouse": "13.6.0",
     "lucide-react": "1.63.0",
     "playwright": "1.64.1",
     "react": "19.3.1",

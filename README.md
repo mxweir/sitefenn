@@ -1,90 +1,143 @@
+<p align="center"><img src="public/brand/fenn-flat-v2.png" width="140" alt="Fenn, the SiteFenn fennec companion"></p>
+
 # SiteFenn
 
-**Deine Site. Klarer Blick.** A local website audit companion, with Fenn the fennec fox.
+**Deine Site. Klarer Blick.** A local-first website audit workspace with Fenn, your fennec companion.
 
-Previously presented as Website Audit Hub. The repository/package name and existing data directory are unchanged; this branding update does not migrate or reset projects. Name/domain clearance is still pending.
+Manage websites you own, inspect desktop/tablet/mobile layouts, collect evidence, and turn observations into a practical repair checklist. The rule-based workflow works without AI. Optional Ollama explanations require a verified locally backed model, not a cloud alias.
 
-A local-first workspace for inspecting websites you own or administer. Save projects, run a small browser-based check, and keep the evidence locally.
+The repository/package name and existing data directory remain `website-audit-hub`; branding does not reset projects. Name/domain clearance is still pending.
 
-**Version 0.1 is a foundation release, not a complete website auditor.** It captures one desktop screenshot and checks basic page metadata. The planned responsive audit, live browser view, explainable scores, scan comparisons, local AI recommendations, and Google Search Console integration are not implemented in this release.
+![SiteFenn 1.0 report with score bounds and test coverage](docs/screenshots/1.0-report.jpg)
 
-![SiteFenn: actual local workspace with its original flat cartoon mascot](docs/screenshots/sitefenn-workspace-v2.jpg)
+_Actual application, owned synthetic demo. Missing measurements remain unknown._
 
-The visual identity uses a violet canvas, flat ink outlines, warm accent colors, and locally bundled open fonts. Fenn currently provides clearly labelled, collapsible **static guidance**. It does not speak or run an LLM yet. See the [brand guide](docs/branding/BRAND.md).
+[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.0.md) · [Changelog](CHANGELOG.md)
 
-## What 0.1 does
+## The 1.0 workflow
 
-- Create and list website projects in a local dashboard.
-- Run a single-page Chromium check for a saved project.
-- Capture a desktop screenshot and inspect the page title, meta description, and H1 headings.
-- Persist projects, scan status, and findings in SQLite; keep screenshot files locally.
-- Mark unfinished work as interrupted after an application restart instead of claiming it completed.
-- Optionally check whether Ollama is available at its local endpoint. No model download, training, or AI analysis is performed.
+1. **Add a project:** production, staging, or an explicitly authorized local target.
+2. **Choose scope:** discover same-origin links, select pages and exclusions, and choose up to three versioned viewport profiles.
+3. **Watch the check:** streamed browser frames show bounded scroll samples and finding overlays. This is a preview, not an interactive remote browser or target iframe.
+4. **Review evidence:** measured observations, heuristic candidates and optional AI suggestions are separate.
+5. **Work the checklist:** related findings are grouped into tasks with acceptance criteria. Export Markdown/JSON or an optional evidence ZIP.
+6. **Retest:** compatible scans show changes. A manual checkbox means ready for review; a matching passing check verifies a fix.
 
-A missing metadata field is a basic observation, not a ranking prediction. Screenshots and checks cover the captured state only. This release does not certify SEO quality, usability, accessibility, or security.
+The built-in demo is an authorized fixture for trying the workflow without an external website. No external user pilot or security certification is implied; [release verification](docs/RELEASE-1.0.md) lists the actual checks and remaining validation.
 
-## Requirements
+<details>
+<summary>See the real check and repair workflow</summary>
 
-- Node.js 24 and npm.
-- A supported desktop environment for Playwright's Chromium browser.
-- Internet access for initial dependency/browser installation and for visiting remote websites.
-- Ollama is optional. A running model is not required to use the application.
+**Pause between steps and inspect the captured browser state:**
 
-The local dashboard and stored reports do not require a cloud AI API. Visiting a website still sends normal browser requests to that website and its resources.
+![Actual paused browser check](docs/screenshots/1.0-live-paused.jpg)
+
+**Turn related observations into a checklist with acceptance criteria:**
+
+![Actual grouped repair checklist](docs/screenshots/1.0-tasks.jpg)
+
+</details>
+
+## What gets checked
+
+| Area              | Implemented scope                                                                                            | Limit                                                                                      |
+| ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| Layout            | Desktop 1440×900, tablet 768×1024, mobile 390×844; bounded scrolling; overflow and covered-control hit tests | A few captured positions, not every interaction. Clipped-text candidates need review.      |
+| Accessibility     | axe automated WCAG-tagged checks and affected elements                                                       | Not a complete WCAG audit; semantic and incomplete cases need human judgement.             |
+| Technical SEO     | Title/description presence, production noindex indication, canonical syntax, JSON-LD parseability            | Not a ranking prediction, full SEO crawler, schema-eligibility test, or proof of indexing. |
+| Runtime           | Document status, observed script errors and failed own-origin resources                                      | Not a comprehensive functional/security test.                                              |
+| Performance       | Optional separate Lighthouse desktop/mobile reference runs, one or three repetitions                         | Local lab data, not field Core Web Vitals. Tablet is a layout profile.                     |
+| Google visibility | German/English Search Console CSV with provenance and conservative comparisons                               | Historical exported rows, not a universal live Google rank.                                |
+
+### An explainable score
+
+The **audit score for the captured scope** uses versioned rules: layout 25%, automated accessibility 20%, technical SEO 25%, runtime 15%, performance 15%. The LLM does not assign points.
+
+Passed checks add known credit; failures do not; missing checks stay unknown. Incomplete runs show a range and coverage, not a pretend final score. Disabled performance does not give free points. Ignoring a finding or accepting its risk does not improve the raw score.
+
+Score deltas require compatible rules, browser/profiles and page-state cohorts. Missing pages are not fixed pages. Critical measured findings remain visible separately. A 100 score does not certify accessibility, SEO success, or untested pages.
 
 ## Quick start
+
+Requirements: **Node.js 24**, npm and Playwright Chromium. Ollama is optional.
 
 ```sh
 git clone https://github.com/mxweir/website-audit-hub.git
 cd website-audit-hub
-npm install
+npm ci
 npm run browser:install
 npm run dev
 ```
 
-Open [http://127.0.0.1:4310](http://127.0.0.1:4310) and choose **Demo ausprobieren** for a self-contained first scan. Alternatively, add a trusted public website you own or administer and start a scan from its project view. Private/local addresses and nonstandard ports are blocked in 0.1; the built-in demo is the only local-target exception.
+Open [http://127.0.0.1:4310](http://127.0.0.1:4310) and choose **Demo laden**, or add a trusted website you are authorized to test. Linux may require `npx playwright install --with-deps chromium` with appropriate OS privileges.
 
-![Actual desktop capture in the SiteFenn workspace](docs/screenshots/sitefenn-desktop-check-v2.jpg)
-
-The application is intended to run locally. Do not expose its port through a reverse proxy, public tunnel, shared network binding, or Internet-facing deployment. It is not a multi-user service.
-
-### Production-mode local run
+For the built local application:
 
 ```sh
 npm run build
 npm start
 ```
 
-The built application uses the same local address and port. Stop the development process before starting production mode on that port.
+Stop the development process first if it uses the same port. `PORT` defaults to `4310`; binding remains loopback. Never expose this single-user app through a public tunnel or reverse proxy.
 
-## Local data
+## Optional local AI and speech
 
-By default, application data lives outside the repository:
+Install/run Ollama separately, explicitly download a suitable model, and select it in settings. The hub does not download or train models, change global Ollama settings, or enable cloud inference automatically.
 
-| Platform | Default directory |
-| --- | --- |
-| macOS | `~/Library/Application Support/website-audit-hub` |
-| Linux | `$XDG_DATA_HOME/website-audit-hub`, or `~/.local/share/website-audit-hub` when unset |
-| Windows | `%LOCALAPPDATA%/website-audit-hub` |
+- Fixed endpoint: `http://127.0.0.1:11434`.
+- Model metadata is checked before sharing observations; remote-backed aliases, cloud tags and unverifiable locality are rejected.
+- At most **12 selected screenshot-backed findings** per UI request are sent as bounded structured text. No screenshot images, raw page dump, source repository, cookies or browser-control tools are provided.
+- Numeric-only performance findings remain in the deterministic report.
+- Replies must validate against a schema and existing finding/evidence IDs. Cancelled, timed-out or invalid output is not saved as a successful plan.
+- Advice is fallible and does not modify facts, scores or source files. Model speed and structured-output reliability depend on the selected model and hardware; no fixed performance is guaranteed.
 
-Set `HUB_DATA_DIR` to choose another location. `PORT` can change the default port, `4310`; the server remains bound to loopback. Ollama status checks use `http://127.0.0.1:11434`.
+The integration is text-based; screenshot vision analysis is not implemented. Thinking-only models can require much larger inference budgets and may fail validation within the bounded request. Do not interpret model availability as a quality benchmark.
 
-Screenshots may contain confidential page content. Choose a private storage location, keep reports out of public repositories, and review artifacts before sharing them. Local storage is not a promise of encryption at rest. To make a consistent manual backup, stop the application and copy its entire data directory, including the database and screenshot files.
+On macOS, selected text can be read through system `say` using Anna after explicit activation. The voice must be available on your system. Speech is off by default and can be stopped; this is not a cloud voice service. Other platforms currently lack this integration.
 
-## Safe use and current limits
+## Google visibility: bring your own CSV
 
-**Scan only trusted websites that you own or are authorized to test.** An automated browser executes page JavaScript. This early release is not hardened for arbitrary hostile URLs, and full browser/network egress isolation is not implemented. Do not use it to scan unknown sites or sensitive internal applications.
+Export a supported Search Console performance table and specify its property, inclusive ISO date range, dimension and filters. Supported dimensions: date, page, query, country, device. Each import is one table, not a join across independent exports. UI file limit: 2 MiB.
 
-- One desktop page capture; no multi-resolution crawl or live video stream yet.
-- No login-flow automation, form submission, purchasing, or autonomous repair.
-- No overall score or claim that every issue has been detected.
-- No Google rankings, Search Console data, or cloud synchronization yet.
-- No source-repository analysis or exact source-file repair suggestions yet.
-- Basic local operation does not imply immunity to malicious content or browser vulnerabilities.
+Common German/English headers, decimal formats and quoted comma/semicolon CSV are supported. Unknown filters remain unknown. Totals are explicitly labelled exported-row subsets; average position is not incorrectly averaged into a fake property rank. Comparable daily exports can show equal-length period changes.
 
-Read [SECURITY.md](SECURITY.md) before running scans.
+No Google OAuth, automatic SERP scraping, paid rank tracker or CrUX integration is included. Google visibility is separate from the audit score. CSV processing itself does not contact Google.
 
-## Development
+## Reports and privacy
+
+Markdown/JSON reports work without the hub. ZIP screenshots are **opt-in**. Locations omit URL queries/fragments, but arbitrary page-derived text can still reveal secrets; review all text and images before sharing with another person or AI.
+
+Exports distinguish observations, recommendations, acceptance criteria and limits. With no source repository attached, exact filenames, line numbers and root causes are not verified. Website-derived strings are untrusted data, not instructions for another AI to execute.
+
+## Local data and backups
+
+| Platform | Default directory                                                                |
+| -------- | -------------------------------------------------------------------------------- |
+| macOS    | `~/Library/Application Support/website-audit-hub`                                |
+| Linux    | `$XDG_DATA_HOME/website-audit-hub`, otherwise `~/.local/share/website-audit-hub` |
+| Windows  | `%LOCALAPPDATA%/website-audit-hub`                                               |
+
+`HUB_DATA_DIR` selects another directory. Projects, scans, evidence, tasks, settings and imported search data stay local, but are not encrypted by this app.
+
+The UI can create a portable backup while no scan/analysis is active: database snapshot, evidence and checksum manifest. Limits: 250 MiB and 2,000 evidence files. For larger workspaces, stop the app and back up the full data directory normally.
+
+Restore into a **new, nonexistent directory**:
+
+```sh
+npm run restore -- /absolute/path/sitefenn-backup.zip /absolute/path/NEW-workspace
+```
+
+Stop the old hub before starting with `HUB_DATA_DIR` pointing at the restored directory. Paths, limits, checksums and database integrity are validated. Hashes detect corruption, not trustworthy authorship. Restore only trusted backups and keep the old workspace until the restored copy is checked.
+
+## Safe use and boundaries
+
+**Trusted websites you own/administer only.** Proxy/DNS checks, local session protections and bounded jobs reduce risk but are not kernel isolation or a guarantee against hostile websites and browser vulnerabilities. Loading a page can itself cause side effects.
+
+Public targets use standard HTTP(S) ports. Local mode explicitly authorizes one origin, not the private network in general; the hub and Ollama ports are not valid local project targets. No authenticated sessions, autonomous form submissions, purchases, destructive actions or automatic repairs are provided.
+
+Live checks do not explore every menu, dialog, login or user journey. Chromium emulation is not a Safari/iPhone test. macOS/Linux automation does not establish Windows stability. Read [SECURITY.md](SECURITY.md).
+
+## Development and contribution
 
 ```sh
 npm run check
@@ -93,17 +146,17 @@ npm run build
 npm run test:e2e
 ```
 
-Keep tests and documentation aligned with the actual release scope. New findings should distinguish observed facts from inferred causes and suggestions. Do not add scores or claims of automatic compliance without documented rules and tests.
+Tests cover pure services, API/persistence/security, owned browser fixtures and end-to-end flows. Fixture success is not proof that every website works. Mocked model adapters and real-model checks must be reported separately.
 
-End-to-end tests start an isolated production-mode server and execute a real Chromium scan of the built-in fixture. Unit/API tests cover persistence, interrupted scans, local session/CSRF checks, target validation, and malformed requests. CI runs checks on Linux and macOS; Windows stability is not yet verified.
-
+- [Contributing](CONTRIBUTING.md)
 - [Stack](docs/STACK.md)
-- [Architecture and trust boundaries](docs/ARCHITECTURE.md)
-- [Plan through 1.0](PLAN-1.0.md)
+- [Architecture](docs/ARCHITECTURE.md)
 - [Changelog](CHANGELOG.md)
+- [Original 1.0 plan](PLAN-1.0.md) — design intent, not evidence every aspiration shipped
+- [Brand guide](docs/branding/BRAND.md)
 
-## License
+## License and attribution
 
-MIT. See [LICENSE](LICENSE). Dependency and browser licenses remain their own. The application license does not grant rights to republish scanned website content or screenshots.
+MIT; see [LICENSE](LICENSE). Dependencies, Chromium, local models and website content retain their own licenses. The app license grants no rights to republish someone else's website screenshots.
 
-Archivo Black and DM Sans are bundled locally under SIL OFL 1.1; full notices are included in [public/licenses](public/licenses). No proprietary font files or existing mascot artwork from the style reference are included. The current Fenn illustration was generated with the built-in image tool; its prompt and provenance are documented in [docs/branding](docs/branding).
+Archivo Black and DM Sans are locally bundled under SIL OFL 1.1; see [public/licenses](public/licenses). Fenn's generated illustration and provenance are documented in [docs/branding](docs/branding). No proprietary font files or existing mascot artwork from the style reference are included.

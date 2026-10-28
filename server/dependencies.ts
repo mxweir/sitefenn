@@ -33,7 +33,7 @@ export async function dependencies(): Promise<Dependency[]> {
       id: "storage",
       label: "SQLite",
       status: "ready",
-      detail: "Lokale Datenbank verbunden · Schema 1",
+      detail: "Lokale Datenbank verbunden · Schema 2 · Migration mit Sicherung",
     },
     {
       id: "browser",
@@ -47,11 +47,11 @@ export async function dependencies(): Promise<Dependency[]> {
       label: "Lokale KI · optional",
       status: ollamaReady ? "ready" : "optional",
       detail: ollamaReady
-        ? `${models} lokale Modelle erkannt · Analyse ab 0.6 geplant`
-        : "Ollama nicht erreichbar · für 0.1 nicht erforderlich",
+        ? `${models} Modelle erkannt · lokales Modell ausdrücklich in den Einstellungen wählen`
+        : "Ollama nicht erreichbar · regelbasierte Prüfungen funktionieren ohne KI",
       instruction: ollamaReady
         ? undefined
-        : "Optional später: Ollama installieren und starten. Der Basis-Scan funktioniert ohne KI.",
+        : "Optional: Ollama installieren und bewusst ein lokales Modell laden. Keine Cloud-Ausweichlösung; der Report funktioniert auch ohne KI.",
     },
   ];
   cached = { data, expires: Date.now() + 5000 };

@@ -38,6 +38,6 @@ test("mascot is a transparent PNG and font license notices ship with the app", (
   );
   assert.ok(existsSync("public/licenses/Archivo-Black-OFL.txt"));
   assert.ok(existsSync("public/licenses/DM-Sans-OFL.txt"));
-  assert.equal(tokens.hasLLMInference, false);
-  assert.equal(tokens.hasSpeech, false);
+  assert.equal(tokens.hasLLMInference, true);
+  assert.equal(tokens.hasSpeech, true);
 });

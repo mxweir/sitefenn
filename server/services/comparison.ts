@@ -1,0 +1,203 @@
+import type {
+  AuditReport,
+  Scan,
+  ScanComparison,
+  Finding,
+  RuleResult,
+} from "../../shared/types.js";
+import { calculateScore } from "./scoring.js";
+
+function canonical(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+  if (value && typeof value === "object")
+    return `{${Object.entries(value)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, item]) => `${JSON.stringify(key)}:${canonical(item)}`)
+      .join(",")}}`;
+  return JSON.stringify(value) ?? "null";
+}
+function normalizedUrl(value: string): string {
+  const url = new URL(value);
+  url.hash = "";
+  return url.href;
+}
+function scopeKey(value: {
+  pageUrl: string;
+  viewportId: string;
+  state: string;
+}): string {
+  return canonical([
+    normalizedUrl(value.pageUrl),
+    value.viewportId,
+    value.state,
+  ]);
+}
+function ruleKey(rule: RuleResult): string {
+  return canonical([rule.ruleId, rule.category, scopeKey(rule), rule.weight]);
+}
+function samePageViewport(
+  a: { pageUrl: string; viewportId: string },
+  b: { pageUrl: string; viewportId: string },
+): boolean {
+  return (
+    normalizedUrl(a.pageUrl) === normalizedUrl(b.pageUrl) &&
+    a.viewportId === b.viewportId
+  );
+}
+function compatible(a: AuditReport, b: AuditReport): boolean {
+  return (
+    a.ruleVersion === b.ruleVersion &&
+    a.profileVersion === b.profileVersion &&
+    a.browserVersion === b.browserVersion &&
+    canonical(a.options) === canonical(b.options) &&
+    canonical(a.pages.map(scopeKey).sort()) ===
+      canonical(b.pages.map(scopeKey).sort()) &&
+    canonical(a.rules.map(ruleKey).sort()) ===
+      canonical(b.rules.map(ruleKey).sort())
+  );
+}
+
+export function compareScans(before: Scan, after: Scan): ScanComparison {
+  const a = before.result?.audit,
+    b = after.result?.audit;
+  if (!a || !b)
+    throw new Error("Both scans need persisted audit reports for comparison.");
+  if (before.projectId !== after.projectId)
+    throw new Error("Only scans of the same project may be compared.");
+  const comparable = compatible(a, b);
+  const beforeScore = calculateScore(a),
+    afterScore = calculateScore(b);
+  const beforeByFingerprint = new Map(
+    a.findings.map((finding) => [finding.fingerprint, finding]),
+  );
+  const afterByFingerprint = new Map(
+    b.findings.map((finding) => [finding.fingerprint, finding]),
+  );
+  const keys = [
+    ...new Set([...beforeByFingerprint.keys(), ...afterByFingerprint.keys()]),
+  ].sort();
+  const isVerifiedPass = (finding: Finding): boolean => {
+    // Lab performance uses its numeric sample, not a page screenshot, as evidence.
+    if (
+      finding.category === "performance" &&
+      /^performance-(lcp|cls|tbt)$/.test(finding.ruleId)
+    ) {
+      const metric = finding.ruleId.slice("performance-".length) as
+        | "lcp"
+        | "cls"
+        | "tbt";
+      return (
+        b.rules.some(
+          (rule) =>
+            rule.ruleId === finding.ruleId &&
+            rule.category === "performance" &&
+            scopeKey(rule) === scopeKey(finding) &&
+            rule.status === "pass",
+        ) &&
+        b.performance.some(
+          (sample) =>
+            normalizedUrl(sample.pageUrl) === normalizedUrl(finding.pageUrl) &&
+            sample.device === finding.viewportId &&
+            sample.runs > 0 &&
+            !sample.error &&
+            sample.metrics[metric] !== null,
+        )
+      );
+    }
+    if (
+      !b.pages.some(
+        (page) =>
+          samePageViewport(page, finding) &&
+          page.state === "initial" &&
+          page.status === "completed",
+      )
+    )
+      return false;
+    if (
+      finding.category === "layout" &&
+      ["horizontal-overflow", "covered-control"].includes(finding.ruleId)
+    ) {
+      // Layout scoring aggregates a fixed budget across bounded scroll samples.
+      // The old captured scroll coordinate must actually have been sampled again;
+      // scroll-2 may point somewhere else after a document-height change.
+      const previousEvidence = a.evidence.find(
+        (evidence) =>
+          evidence.id === finding.evidenceId &&
+          samePageViewport(evidence, finding) &&
+          evidence.state === finding.state,
+      );
+      const resampled =
+        previousEvidence &&
+        b.evidence.some(
+          (evidence) =>
+            samePageViewport(evidence, finding) &&
+            evidence.state === finding.state &&
+            evidence.width === previousEvidence.width &&
+            evidence.height === previousEvidence.height &&
+            Math.abs(evidence.scrollX - previousEvidence.scrollX) <= 1 &&
+            Math.abs(evidence.scrollY - previousEvidence.scrollY) <= 1,
+        );
+      return (
+        !!resampled &&
+        b.rules.some(
+          (rule) =>
+            samePageViewport(rule, finding) &&
+            rule.ruleId === finding.ruleId &&
+            rule.category === "layout" &&
+            rule.state === "initial" &&
+            rule.status === "pass",
+        )
+      );
+    }
+    // axe sub-rule findings are represented by one measured aggregate rule.
+    const ruleId =
+      finding.category === "accessibility" && finding.ruleId.startsWith("axe-")
+        ? "axe-automated"
+        : finding.ruleId;
+    return b.rules.some(
+      (rule) =>
+        rule.ruleId === ruleId &&
+        rule.category === finding.category &&
+        scopeKey(rule) === scopeKey(finding) &&
+        rule.status === "pass",
+    );
+  };
+  return {
+    beforeId: before.id,
+    afterId: after.id,
+    comparable,
+    reason: comparable
+      ? "Gleiche Regeln, Profile, Browser-Version, Optionen, geplante Regelinstanzen und Seitenzustände."
+      : "Prüfumfang oder Ausführungsprofil haben sich geändert. Kein Score-Delta; fehlende oder nicht vergleichbare Belege bestätigen keine Behebung.",
+    scoreDelta:
+      comparable &&
+      beforeScore.final &&
+      afterScore.final &&
+      beforeScore.lower !== null &&
+      afterScore.lower !== null
+        ? afterScore.lower - beforeScore.lower
+        : null,
+    beforeScore,
+    afterScore,
+    entries: keys.map((fingerprint) => {
+      const previous = beforeByFingerprint.get(fingerprint),
+        current = afterByFingerprint.get(fingerprint);
+      const state = !comparable
+        ? "not-comparable"
+        : previous && current
+          ? "persistent"
+          : !previous
+            ? "new"
+            : previous.evidenceStatus === "measured" && isVerifiedPass(previous)
+              ? "resolved"
+              : "not-retested";
+      return {
+        fingerprint,
+        title: (current ?? previous)!.title,
+        state,
+        beforeFindingId: previous?.id,
+        afterFindingId: current?.id,
+      };
+    }),
+  };
+}

@@ -1,39 +1,27 @@
 # Security policy
 
-## Current support
+## Operating boundary
 
-The 0.1 line is an early local-use foundation. There is no published security audit or guarantee that arbitrary websites can be scanned safely. Security fixes target the latest available release; update the application, Node.js, and its installed browser regularly.
+**Local use, trusted websites you own or are authorized to administer only.** SiteFenn is not a hostile-website sandbox, public scan service or security-audit product. No independent security certification is claimed. Keep Node, dependencies and the installed browser updated. Support targets the latest available release; no response-time commitment or bounty is offered.
 
-## Intended use
+## Protections and limits
 
-- Run the hub on your own computer, bound to loopback.
-- Scan only trusted websites you own or are authorized to administer.
-- Do not expose the API to the Internet or other users through tunnels, proxies, or network bindings.
-- Do not scan unknown or hostile URLs, sensitive internal applications, or privileged administration pages with this early release.
-- Do not provide credentials, session cookies, payment details, or secrets to the scan workflow.
+The app binds to loopback with Host/Origin/session/mutation checks. Browser traffic uses a proxy with destination/address validation and pinned resolution. Public targets use standard HTTP(S) ports. Local projects explicitly authorize one origin, not every private address. Jobs, scope and artifacts are bounded. Models are checked for local backing and output is validated; no model shell, source writes or autonomous browser tools are exposed.
 
-**Complete browser/network egress isolation is not implemented.** A target page can execute JavaScript and load resources. A local scanner is not automatically safe from SSRF-like network access, malicious page behavior, or browser vulnerabilities. Loading a page can itself have side effects on a poorly designed site. Current scope restrictions are not a substitute for technical isolation.
+These controls are **not kernel/network namespace isolation**, proof of no network escape, or protection from every malicious local process/browser vulnerability. Target JavaScript runs, and a page load can itself change state. Do not scan hostile sites, privileged admin screens or sensitive internal apps. Never expose the hub through a public tunnel/proxy/shared-network deployment.
 
-## Data and sharing
+No authentication-cookie import, login journey, purchases, form submission or destructive-action automation is supported. Do not provide credentials or secret-bearing URLs.
 
-The database and screenshots are stored in the configured local data directory. They are not automatically encrypted, anonymized, or safe to publish. Screenshots can reveal account details, personal information, URLs, or confidential content.
+## Model trust
 
-Before sharing a report, screenshot, log, or backup:
+Loopback alone does not mean inference is local: Ollama can expose remote aliases. Metadata is checked before sending observations; cloud tags, remote targets and unverifiable locality fail closed. The local Ollama installation must still be trusted to report honestly. The hub does not change its global settings, download models or grant tools. Validate advice before editing code; structured output can still be wrong or influenced by page content.
 
-1. Review its content and remove sensitive information.
-2. Exclude API tokens, cookies, credentials, and private application data.
-3. Confirm you have permission to share the target website's content.
+## Sensitive artifacts
 
-Do not commit your data directory to Git or attach an unreviewed database to a public issue. Stop the app before making a full manual backup.
+Databases, screenshots, imports, AI plans and backups can contain private information. They are not automatically encrypted/anonymized. Report location URLs omit queries, but arbitrary page text may still reveal secrets. ZIP screenshots require explicit inclusion; full backups deliberately contain workspace data.
 
-## Optional Ollama check
+Before sharing, review text/images, remove credentials/tokens/personal data and confirm permission to share website content. Do not commit your data directory or attach an unreviewed database/backup to a public issue. Restore only trusted archives into a new directory; checksums prove integrity, not authorship. Keep previous data until restoration is checked.
 
-Version 0.1 only checks the fixed local Ollama endpoint for availability/model listing. It does not train a model, download one automatically, or send website evidence to a cloud inference provider. The hub itself still accesses the websites it scans. Review any separately installed software's network behavior independently.
+## Vulnerability reporting
 
-## Reporting a vulnerability
-
-Use GitHub's private vulnerability reporting for this repository if it is enabled. Do not post exploit details, secrets, or private target data in a public issue. If private reporting is unavailable, open a minimal public issue requesting a private reporting channel without disclosing the vulnerability or affected private URLs.
-
-Include the affected version, operating system, reproduction steps against a harmless test site, and expected versus observed behavior when a private channel is available. Do not test an exploit against third-party systems without authorization.
-
-No response-time commitment or bounty program is offered. This policy documents the current boundaries; it is not a certification or a claim that all security risks have been addressed.
+Use GitHub private vulnerability reporting if enabled. Otherwise open a minimal issue requesting a private contact channel, without exploit details, secrets or private URLs. Once private contact exists, provide version, OS/runtime, expected/observed behavior and harmless owned-fixture reproduction. Do not exploit third-party systems without permission. This policy is not a claim that all possible vulnerabilities are addressed.

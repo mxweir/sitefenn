@@ -1,112 +1,110 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Activity,
-  ArrowDownRight,
+  ArrowLeftRight,
   ArrowRight,
-  Check,
-  CheckCircle2,
+  CheckSquare2,
   ChevronRight,
-  Circle,
-  CircleAlert,
   Clock3,
   ExternalLink,
+  FileText,
   FlaskConical,
   FolderOpen,
   Globe2,
-  Layers3,
   LayoutDashboard,
   LoaderCircle,
   Monitor,
   Plus,
-  ScanLine,
+  Radio,
+  Search,
   ShieldCheck,
-  Sparkles,
   TerminalSquare,
-  X,
 } from "lucide-react";
-import type { Project, Scan, Dependency } from "../shared/types.js";
+import type {
+  AiPlan,
+  AuditTask,
+  Dependency,
+  Finding,
+  HubSettings,
+  Project,
+  Scan,
+  ScoreSummary,
+} from "../shared/types.js";
+import { active, api, message, post, stamp, statusLabel } from "./api.js";
+import { Busy, FennMark, Notice } from "./ui.js";
+import ProjectModal from "./ProjectModal.js";
+import ScanConfig from "./ScanConfig.js";
+import ScoreCard from "./ScoreCard.js";
+import LiveScan from "./LiveScan.js";
+import { Report, Tasks } from "./Report.js";
+import Compare from "./Compare.js";
+import SearchVisibility from "./SearchVisibility.js";
+import Settings from "./Settings.js";
+import FennGuide from "./FennGuide.js";
 
-type Bootstrap = {
+interface Bootstrap {
+  version: string;
   projects: Project[];
   scans: Scan[];
   dependencies: Dependency[];
-  version: string;
-};
+  settings: HubSettings;
+  tasks: AuditTask[];
+  scores: Record<string, ScoreSummary>;
+  speechAvailable?: boolean;
+}
+interface ScanDetail {
+  scan: Scan;
+  score?: ScoreSummary;
+  tasks?: AuditTask[];
+  aiPlan?: AiPlan;
+}
+type Tab = "overview" | "live" | "report" | "tasks" | "compare" | "search";
 const empty: Bootstrap = {
+  version: "1.0.0",
   projects: [],
   scans: [],
   dependencies: [],
-  version: "0.1.0",
+  settings: { model: "", speechEnabled: false },
+  tasks: [],
+  scores: {},
 };
-const active = (scan: Scan) =>
-  scan.status === "queued" || scan.status === "running";
-const stamp = (value: string) =>
-  new Intl.DateTimeFormat("de-DE", {
-    day: "2-digit",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
-const scanLabel = (scan: Scan) =>
-  scan.status === "queued"
-    ? "In Warteschlange"
-    : scan.status === "running"
-      ? "Prüfung läuft"
-      : scan.status === "interrupted"
-        ? "Unterbrochen"
-        : scan.status === "failed" || scan.error
-          ? "Fehlgeschlagen"
-          : scan.result
-            ? "Abgeschlossen"
-            : scan.status;
-
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
-    credentials: "same-origin",
-    ...init,
-    headers: {
-      ...(init?.method ? { "X-Hub-Request": "1" } : {}),
-      ...(init?.body ? { "Content-Type": "application/json" } : {}),
-      ...init?.headers,
-    },
-  });
-  const payload = await response.json().catch(() => ({
-    error: `Serverantwort nicht lesbar (${response.status}).`,
-  }));
-  if (!response.ok)
-    throw new Error(
-      payload.error || `Anfrage fehlgeschlagen (${response.status}).`,
-    );
-  return payload as T;
-}
+const tabs = [
+  { id: "overview", label: "Übersicht", icon: LayoutDashboard },
+  { id: "live", label: "On-Screen-Check", icon: Radio },
+  { id: "report", label: "Befunde", icon: FileText },
+  { id: "tasks", label: "Maßnahmenplan", icon: CheckSquare2 },
+  { id: "compare", label: "Vergleich", icon: ArrowLeftRight },
+  { id: "search", label: "Sichtbarkeit", icon: Search },
+] as const;
 
 export default function App() {
+  const [scanDetail, setScanDetail] = useState<ScanDetail | null>(null);
   const [data, setData] = useState<Bootstrap>(empty);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [projectId, setProjectId] = useState<string | null>(null);
   const [scanId, setScanId] = useState<string | null>(null);
   const [modal, setModal] = useState(false);
-  const [busy, setBusy] = useState("");
   const [screen, setScreen] = useState<"projects" | "system">("projects");
-  const [imageError, setImageError] = useState(false);
-  const [guideOpen, setGuideOpen] = useState(true);
+  const [tab, setTab] = useState<Tab>("overview");
+  const [busy, setBusy] = useState("");
+  const [guideOpen, setGuideOpen] = useState(false);
+  const [guideFinding, setGuideFinding] = useState<Finding>();
   const addButton = useRef<HTMLButtonElement>(null);
+  const projectHeading = useRef<HTMLElement>(null);
   const refresh = useCallback(async () => {
     try {
-      const next = await request<Bootstrap>("/api/bootstrap");
-      setData(next);
+      const result = await api<Bootstrap>("/api/bootstrap");
+      setData({
+        ...empty,
+        ...result,
+        settings: result.settings ?? empty.settings,
+        scores: result.scores ?? {},
+        tasks: result.tasks ?? [],
+      });
       setError("");
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Der Hub ist nicht erreichbar.",
-      );
+      setError(message(err));
     } finally {
       setLoading(false);
     }
@@ -117,48 +115,86 @@ export default function App() {
   const running = data.scans.some(active);
   useEffect(() => {
     if (!running) return;
-    const interval = window.setInterval(() => void refresh(), 2000);
-    return () => window.clearInterval(interval);
+    const timer = window.setInterval(() => void refresh(), 2000);
+    return () => window.clearInterval(timer);
   }, [running, refresh]);
   const project =
     data.projects.find((p) => p.id === projectId) ?? data.projects[0];
   const scans = project
     ? data.scans
-        .filter((s) => s.projectId === project.id)
+        .filter((scan) => scan.projectId === project.id)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     : [];
-  const selectedScan = scans.find((s) => s.id === scanId) ?? scans[0];
+  const selectedSummary = scans.find((scan) => scan.id === scanId) ?? scans[0];
   useEffect(() => {
-    setImageError(false);
-  }, [selectedScan?.id]);
-  const missing = data.dependencies.filter((d) => d.status === "missing");
-  async function mutation(key: string, operation: () => Promise<unknown>) {
-    setBusy(key);
-    setError("");
-    try {
-      await operation();
-      await refresh();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Aktion fehlgeschlagen.");
-    } finally {
-      setBusy("");
+    if (!selectedSummary) {
+      setScanDetail(null);
+      return;
     }
-  }
+    let mounted = true;
+    void api<ScanDetail>(`/api/scans/${selectedSummary.id}`)
+      .then((detail) => {
+        if (mounted) setScanDetail(detail);
+      })
+      .catch((err) => {
+        if (mounted) setError(message(err));
+      });
+    return () => {
+      mounted = false;
+    };
+  }, [selectedSummary?.id, selectedSummary?.status, data.scans]);
+  const detail =
+    scanDetail?.scan.id === selectedSummary?.id &&
+    scanDetail?.scan.status === selectedSummary?.status
+      ? scanDetail
+      : null;
+  const selectedScan = detail?.scan ?? selectedSummary;
+  const tasks =
+    detail?.tasks ??
+    (selectedScan
+      ? data.tasks.filter((task) => task.scanId === selectedScan.id)
+      : []);
+  const score =
+    detail?.score ?? (selectedScan ? data.scores[selectedScan.id] : undefined);
+  const missing = data.dependencies.filter((dep) => dep.status === "missing");
   const chooseProject = (id: string) => {
     setProjectId(id);
     setScanId(null);
+    setTab("overview");
     setScreen("projects");
+    setGuideFinding(undefined);
+    window.setTimeout(
+      () =>
+        projectHeading.current?.scrollIntoView({
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)")
+            .matches
+            ? "auto"
+            : "smooth",
+          block: "start",
+        }),
+      0,
+    );
   };
-  const createDemo = () =>
-    mutation("demo", async () => {
-      const result = await request<Project | { project: Project }>(
-        "/api/demo",
-        { method: "POST" },
-      );
-      const p = "project" in result ? result.project : result;
-      if (p?.id) chooseProject(p.id);
-    });
-
+  const createDemo = async () => {
+    setBusy("demo");
+    setError("");
+    try {
+      const result = await post<{ project: Project; scan: Scan }>("/api/demo");
+      await refresh();
+      setProjectId(result.project.id);
+      setScanId(result.scan.id);
+      setTab("live");
+      setScreen("projects");
+    } catch (err) {
+      setError(message(err));
+    } finally {
+      setBusy("");
+    }
+  };
+  const explain = (finding?: Finding) => {
+    setGuideFinding(finding);
+    setGuideOpen(true);
+  };
   return (
     <div className="app-shell">
       <a className="skip-link" href="#main">
@@ -168,13 +204,14 @@ export default function App() {
         <a
           className="brand"
           href="#"
+          aria-label="SiteFenn Startseite"
           onClick={(e) => {
             e.preventDefault();
             setScreen("projects");
+            setTab("overview");
           }}
-          aria-label="SiteFenn Startseite"
         >
-          <span className="brand-mark" aria-hidden="true">
+          <span className="brand-mark">
             <FennMark />
           </span>
           <span className="brand-name">
@@ -193,14 +230,17 @@ export default function App() {
         <span className="nav-label">WORKSPACE</span>
         <nav aria-label="Hauptnavigation">
           <button
-            className={screen === "projects" ? "nav-item selected" : "nav-item"}
-            onClick={() => setScreen("projects")}
+            className={`nav-item ${screen === "projects" ? "selected" : ""}`}
+            onClick={() => {
+              setScreen("projects");
+              setTab("overview");
+            }}
           >
             <LayoutDashboard size={18} />
             Websites<span className="nav-count">{data.projects.length}</span>
           </button>
           <button
-            className={screen === "system" ? "nav-item selected" : "nav-item"}
+            className={`nav-item ${screen === "system" ? "selected" : ""}`}
             onClick={() => setScreen("system")}
           >
             <TerminalSquare size={18} />
@@ -210,21 +250,21 @@ export default function App() {
         </nav>
         <div className="sidebar-projects">
           <span className="nav-label">DEINE PROJEKTE</span>
-          {data.projects.slice(0, 7).map((p) => (
+          {data.projects.map((p) => (
             <button
+              className={`project-nav ${project?.id === p.id && screen === "projects" ? "current" : ""}`}
               key={p.id}
-              className={`project-nav ${screen === "projects" && project?.id === p.id ? "current" : ""}`}
               onClick={() => chooseProject(p.id)}
             >
               <span className="project-dot" />
               {p.name}
             </button>
           ))}
-          {data.projects.length === 0 && (
+          {!data.projects.length && (
             <p className="sidebar-empty">
-              Dein erster Scan beginnt
+              Ein klarer Blick beginnt
               <br />
-              mit einer Website.
+              mit deiner ersten Website.
             </p>
           )}
         </div>
@@ -232,12 +272,11 @@ export default function App() {
           <div className="local-note">
             <span className="online-dot" />
             <span>
-              Deine Daten bleiben lokal
-              <small>Keine Cloud-KI erforderlich</small>
+              Lokaler Workspace<small>Keine Cloud-KI erforderlich</small>
             </span>
           </div>
           <div className="version">
-            FOUNDATION RELEASE <span>v{data.version}</span>
+            SITEFENN <span>v{data.version}</span>
           </div>
         </div>
       </aside>
@@ -250,166 +289,121 @@ export default function App() {
           </div>
           <span className="local-badge">
             <span className="online-dot" />
-            LOCAL-FIRST <span className="beta-tag">0.1</span>
+            LOCAL-FIRST <span className="beta-tag">{data.version}</span>
           </span>
         </header>
         <main id="main" tabIndex={-1}>
           {error && (
-            <div className="error-banner" role="alert">
-              <CircleAlert size={19} />
-              <span>{error}</span>
-              <button onClick={() => void refresh()}>Erneut versuchen</button>
-            </div>
+            <Notice error>
+              <span>{error}</span>{" "}
+              <button className="text-button" onClick={() => void refresh()}>
+                Erneut versuchen
+              </button>
+            </Notice>
           )}
-          {screen === "projects" ? (
+          {screen === "system" ? (
+            <Settings
+              dependencies={data.dependencies}
+              settings={data.settings}
+              speechAvailable={!!data.speechAvailable}
+              onSaved={refresh}
+              onRefresh={refresh}
+            />
+          ) : (
             <>
-              <section className="page-heading poster-heading">
-                <div className="hero-copy">
-                  <p className="eyebrow">
-                    LOKAL. AUFMERKSAM. AUF DEINER SEITE.
-                  </p>
-                  <h1>
-                    DEINE SITE.
-                    <br />
-                    <span>KLARER BLICK.</span>
-                  </h1>
-                  <p className="subtitle">
-                    Weniger Rätselraten. Mehr Aha.
-                    <br />
-                    Deine Websites, echte Belege und der nächste klare Schritt.
-                  </p>
-                  <div className="hero-actions">
+              {data.projects.length ? (
+                <section className="workspace-heading">
+                  <div>
+                    <p className="eyebrow">DEIN WEBSITE-WORKSPACE</p>
+                    <h1>DEINE SITE. KLARER BLICK.</h1>
+                    <p>
+                      Echte Belege. Konkrete nächste Schritte. Und ein
+                      Vergleich, der Veränderungen sichtbar macht.
+                    </p>
+                  </div>
+                  <div className="workspace-actions">
+                    <button
+                      className="button secondary"
+                      disabled={!!busy}
+                      onClick={() => void createDemo()}
+                    >
+                      <FlaskConical size={16} />
+                      {busy === "demo" ? "Demo wird gestartet …" : "Demo laden"}
+                    </button>
                     <button
                       ref={addButton}
-                      className="button primary"
-                      onClick={() => setModal(true)}
-                    >
-                      <Plus size={18} />
-                      Website hinzufügen
-                    </button>
-                    <span className="hero-caption">
-                      PRIVATER WORKSPACE / FOUNDATION 0.1
-                    </span>
-                  </div>
-                </div>
-                <div className="hero-character">
-                  <span className="character-stamp">HI, ICH BIN FENN.</span>
-                  <img
-                    src="/brand/fenn-flat-v2.png"
-                    alt="Fenn, der aufmerksame Wüstenfuchs von SiteFenn"
-                    width="420"
-                    height="480"
-                    fetchPriority="high"
-                  />
-                  <span className="character-caption">
-                    KLEINER FUCHS. GENAUER BLICK.
-                  </span>
-                </div>
-              </section>
-              <div className="foundation-note">
-                <span className="note-icon">
-                  <Layers3 size={18} />
-                </span>
-                <div>
-                  <strong>Ein ehrlicher Anfang.</strong> Version 0.1 prüft eine
-                  Seite in einer Desktop-Ansicht und speichert den Screenshot
-                  mit messbaren Basisbefunden. Responsive-Scans, lokale KI und
-                  Scores folgen später.
-                </div>
-                <span className="foundation-chip">FOUNDATION</span>
-              </div>
-              <section className="stats-grid" aria-label="Workspace Übersicht">
-                <Stat
-                  icon={<Globe2 size={19} />}
-                  label="Verwaltete Websites"
-                  value={data.projects.length}
-                  detail="Deine Projekte an einem Ort"
-                />
-                <Stat
-                  icon={<ScanLine size={19} />}
-                  label="Prüfungen insgesamt"
-                  value={data.scans.length}
-                  detail="Mit nachvollziehbaren Ergebnissen"
-                />
-                <Stat
-                  icon={<Activity size={19} />}
-                  label="Aktive Prüfungen"
-                  value={data.scans.filter(active).length}
-                  detail={
-                    running
-                      ? "Ergebnisse werden aktualisiert"
-                      : "Bereit für den nächsten Blick"
-                  }
-                />
-              </section>
-              <section
-                className={`fenn-guide ${guideOpen ? "" : "collapsed"}`}
-                aria-label="Hinweis von Fenn"
-              >
-                <span className="guide-avatar" aria-hidden="true">
-                  <FennMark />
-                </span>
-                <div>
-                  <span className="eyebrow">
-                    FENN HAT EINEN HINWEIS{" "}
-                    <span className="static-label">
-                      STATISCHER TIPP · KEINE KI
-                    </span>
-                  </span>
-                  {guideOpen && (
-                    <p>
-                      {running
-                        ? "Der Prüf-Browser ist unterwegs. Sobald er fertig ist, findest du hier den Screenshot und die gemessenen Basisbefunde."
-                        : data.projects.length
-                          ? "Ein Screenshot sagt mehr als ein Bauchgefühl. Wähle eine Website und starte den Desktop-Check. Den genauen Prüfumfang findest du bei jedem Ergebnis."
-                          : "Noch keine Website? Probier die lokale Demo. Sie enthält einen absichtlichen Fehler – damit du siehst, wie aus einer Beobachtung ein Beleg wird."}
-                    </p>
-                  )}
-                </div>
-                <button
-                  className="guide-toggle"
-                  aria-expanded={guideOpen}
-                  onClick={() => setGuideOpen(!guideOpen)}
-                  aria-label={
-                    guideOpen
-                      ? "Fenns Hinweis einklappen"
-                      : "Fenns Hinweis anzeigen"
-                  }
-                >
-                  {guideOpen ? <X size={17} /> : <Plus size={17} />}
-                </button>
-              </section>
-              {loading ? (
-                <div className="loading-state" role="status">
-                  <LoaderCircle className="spin" />
-                  Workspace wird geladen …
-                </div>
-              ) : data.projects.length === 0 ? (
-                <section className="empty-card">
-                  <span className="empty-index" aria-hidden="true">
-                    01 / LOS GEHT’S
-                  </span>
-                  <p className="eyebrow">DEIN ERSTER KLARER BLICK</p>
-                  <h2>Welche Website nehmen wir uns vor?</h2>
-                  <p>
-                    Füge eine Website hinzu, die du verwaltest, oder probiere
-                    <br className="desktop-break" /> den Scanner sicher mit
-                    unserer lokalen Demo aus.
-                  </p>
-                  <div className="button-row">
-                    <button
                       className="button primary"
                       onClick={() => setModal(true)}
                     >
                       <Plus size={17} />
                       Website hinzufügen
                     </button>
+                  </div>
+                </section>
+              ) : (
+                <section className="page-heading poster-heading">
+                  <div className="hero-copy">
+                    <p className="eyebrow">
+                      LOKAL. AUFMERKSAM. AUF DEINER SEITE.
+                    </p>
+                    <h1>
+                      DEINE SITE.
+                      <br />
+                      <span>KLARER BLICK.</span>
+                    </h1>
+                    <p className="subtitle">
+                      Weniger Rätselraten. Mehr Aha.
+                      <br />
+                      Prüfe deine Websites, verstehe Befunde und arbeite einen
+                      klaren Plan ab.
+                    </p>
+                    <div className="hero-actions">
+                      <button
+                        ref={addButton}
+                        className="button primary"
+                        onClick={() => setModal(true)}
+                      >
+                        <Plus size={18} />
+                        Website hinzufügen
+                      </button>
+                      <span className="hero-caption">
+                        DEIN PRIVATER WEBSITE-WORKSPACE
+                      </span>
+                    </div>
+                  </div>
+                  <div className="hero-character">
+                    <span className="character-stamp">HI, ICH BIN FENN.</span>
+                    <img
+                      src="/brand/fenn-flat-v2.png"
+                      alt="Fenn, der aufmerksame Wüstenfuchs von SiteFenn"
+                      width="420"
+                      height="480"
+                      fetchPriority="high"
+                    />
+                    <span className="character-caption">
+                      KLEINER FUCHS. GENAUER BLICK.
+                    </span>
+                  </div>
+                </section>
+              )}
+              {loading ? (
+                <Busy label="Workspace wird geladen …" />
+              ) : !data.projects.length ? (
+                <section className="empty-card">
+                  <Monitor size={40} />
+                  <p className="eyebrow">ERST MAL SICHER AUSPROBIEREN</p>
+                  <h2>Dein erster Check. Ohne Rätselraten.</h2>
+                  <p>
+                    Unsere lokale Demo enthält absichtliche Fehler. Beobachte
+                    die Prüfung in drei Ansichten und entdecke den Bericht.
+                  </p>
+                  <div className="button-row">
                     <button
-                      className="button secondary"
+                      className="button primary"
                       disabled={!!busy}
                       onClick={() => void createDemo()}
                     >
-                      {busy === "demo" ? (
+                      {busy ? (
                         <LoaderCircle size={17} className="spin" />
                       ) : (
                         <FlaskConical size={17} />
@@ -418,41 +412,24 @@ export default function App() {
                     </button>
                   </div>
                   <small>
-                    Die Demo enthält absichtlich eingebaute Fehler. Kein
-                    externes Ziel nötig.
+                    Kein externes Ziel und kein KI-Modell erforderlich.
                   </small>
                 </section>
               ) : (
                 <>
-                  <section className="section-heading">
-                    <div>
-                      <h2>
-                        Deine Websites{" "}
-                        <span className="number-pill">
-                          {data.projects.length}
-                        </span>
-                      </h2>
-                      <p>
-                        Wähle ein Projekt, um Prüfungen und Belege anzusehen.
-                      </p>
-                    </div>
-                    <button
-                      className="text-button"
-                      disabled={!!busy}
-                      onClick={() => void createDemo()}
-                    >
-                      <FlaskConical size={15} />
-                      {busy === "demo" ? "Demo wird angelegt …" : "Demo laden"}
-                    </button>
-                  </section>
-                  <div className="project-grid">
+                  <section
+                    className="project-grid workspace-project-grid"
+                    aria-label="Deine Websites"
+                  >
                     {data.projects.map((p) => {
-                      const projectScans = data.scans.filter(
-                        (s) => s.projectId === p.id,
-                      );
-                      const latest = [...projectScans].sort((a, b) =>
-                        b.createdAt.localeCompare(a.createdAt),
-                      )[0];
+                      const latest = data.scans
+                        .filter((s) => s.projectId === p.id)
+                        .sort((a, b) =>
+                          b.createdAt.localeCompare(a.createdAt),
+                        )[0];
+                      const latestScore = latest
+                        ? data.scores[latest.id]
+                        : undefined;
                       return (
                         <button
                           key={p.id}
@@ -461,10 +438,14 @@ export default function App() {
                         >
                           <div className="project-card-top">
                             <span className="website-icon">
-                              <Globe2 size={22} />
+                              <Globe2 size={20} />
                             </span>
                             <span className={`environment ${p.environment}`}>
-                              {environmentLabel(p.environment)}
+                              {p.environment === "production"
+                                ? "Produktion"
+                                : p.environment === "staging"
+                                  ? "Staging"
+                                  : "Lokal"}
                             </span>
                           </div>
                           <h3>{p.name}</h3>
@@ -472,219 +453,262 @@ export default function App() {
                           <div className="project-card-footer">
                             <span>
                               {latest
-                                ? scanLabel(latest)
+                                ? statusLabel(latest.status)
                                 : "Noch keine Prüfung"}
                             </span>
-                            <ArrowDownRight size={17} />
+                            {latestScore?.lower !== null &&
+                            latestScore?.lower !== undefined ? (
+                              <span className="mini-score">
+                                {Math.round(latestScore.lower)}
+                                {latestScore.upper !== latestScore.lower
+                                  ? `–${Math.round(latestScore.upper ?? latestScore.lower)}`
+                                  : ""}
+                                /100
+                              </span>
+                            ) : (
+                              <ArrowRight size={16} />
+                            )}
                           </div>
                         </button>
                       );
                     })}
-                  </div>
+                  </section>
                   {project && (
                     <section
-                      className="project-workspace"
-                      aria-labelledby="project-title"
+                      ref={projectHeading}
+                      className="workspace-project"
+                      aria-label="Ausgewähltes Projekt"
                     >
-                      <div className="section-heading">
+                      <div className="project-context">
+                        <span className="website-icon">
+                          <Globe2 size={22} />
+                        </span>
                         <div>
-                          <p className="eyebrow">PROJEKTDETAILS</p>
-                          <h2 id="project-title">{project.name}</h2>
+                          <h2>{project.name}</h2>
                           <a
+                            className="external-url"
                             href={project.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="external-url"
                           >
                             {project.url}
-                            <ExternalLink size={13} />
+                            <ExternalLink size={12} />
                           </a>
                         </div>
-                        <button
-                          className="button primary"
-                          disabled={
-                            !!busy || scans.some(active) || missing.length > 0
-                          }
-                          onClick={() =>
-                            void mutation("scan", async () => {
-                              await request(
-                                `/api/projects/${encodeURIComponent(project.id)}/scans`,
-                                { method: "POST" },
-                              );
-                              setScanId(null);
-                            })
-                          }
-                        >
-                          {busy === "scan" || scans.some(active) ? (
-                            <LoaderCircle size={17} className="spin" />
-                          ) : (
-                            <ScanLine size={17} />
-                          )}{" "}
-                          {scans.some(active)
-                            ? "Prüfung läuft"
-                            : "Desktop-Check starten"}
-                        </button>
-                      </div>
-                      {missing.length > 0 && (
-                        <div className="inline-warning">
-                          <CircleAlert size={17} />
-                          <span>Zum Prüfen fehlen Systemvoraussetzungen.</span>
-                          <button onClick={() => setScreen("system")}>
-                            Setup öffnen
-                            <ArrowRight size={14} />
+                        {scans.length > 0 && (
+                          <select
+                            aria-label="Prüfung auswählen"
+                            value={selectedScan?.id ?? ""}
+                            onChange={(e) => {
+                              setScanId(e.target.value);
+                              setGuideFinding(undefined);
+                            }}
+                          >
+                            {scans.map((scan) => (
+                              <option key={scan.id} value={scan.id}>
+                                {stamp(scan.createdAt)} ·{" "}
+                                {statusLabel(scan.status)}
+                              </option>
+                            ))}
+                          </select>
+                        )}
+                        {selectedScan?.options && !active(selectedScan) && (
+                          <button
+                            className="button secondary"
+                            disabled={
+                              !!busy || scans.some(active) || missing.length > 0
+                            }
+                            onClick={async () => {
+                              setBusy("repeat");
+                              setError("");
+                              try {
+                                const result = await post<{ scan: Scan }>(
+                                  `/api/projects/${project.id}/scans`,
+                                  selectedScan.options,
+                                );
+                                await refresh();
+                                setScanId(result.scan.id);
+                                setTab("live");
+                              } catch (err) {
+                                setError(message(err));
+                              } finally {
+                                setBusy("");
+                              }
+                            }}
+                          >
+                            {busy === "repeat" ? (
+                              <LoaderCircle size={15} className="spin" />
+                            ) : (
+                              <Activity size={15} />
+                            )}
+                            Gleichen Check wiederholen
                           </button>
-                        </div>
-                      )}
-                      <div className="scan-layout">
-                        <div className="scan-history">
-                          <div className="panel-title">
-                            <Clock3 size={16} />
-                            Prüfungen<span>{scans.length}</span>
-                          </div>
-                          {scans.length ? (
-                            <div className="scan-list">
-                              {scans.map((scan) => (
-                                <button
-                                  key={scan.id}
-                                  className={
-                                    selectedScan?.id === scan.id
-                                      ? "scan-item chosen"
-                                      : "scan-item"
-                                  }
-                                  onClick={() => setScanId(scan.id)}
-                                >
-                                  <span
-                                    className={`scan-status ${active(scan) ? "pending" : scan.error || scan.status === "failed" ? "failed" : "done"}`}
-                                  >
-                                    {active(scan) ? (
-                                      <LoaderCircle
-                                        size={16}
-                                        className="spin"
-                                      />
-                                    ) : scan.error ||
-                                      scan.status === "failed" ? (
-                                      <CircleAlert size={16} />
-                                    ) : (
-                                      <CheckCircle2 size={16} />
-                                    )}
-                                  </span>
-                                  <span>
-                                    <strong>{scanLabel(scan)}</strong>
-                                    <small>{stamp(scan.createdAt)}</small>
-                                  </span>
-                                  <ChevronRight size={14} />
-                                </button>
-                              ))}
-                            </div>
-                          ) : (
-                            <div className="small-empty">
-                              <FolderOpen size={26} />
-                              <p>Noch kein Scan.</p>
-                              <span>Starte deinen ersten Desktop-Check.</span>
-                            </div>
-                          )}
-                        </div>
-                        <div className="scan-detail">
-                          {selectedScan ? (
-                            <ScanDetail
-                              scan={selectedScan}
-                              imageError={imageError}
-                              onImageError={() => setImageError(true)}
-                            />
-                          ) : (
-                            <div className="detail-placeholder">
-                              <ScanLine size={34} />
-                              <h3>Hier werden Vermutungen zu Belegen.</h3>
-                              <p>
-                                Ein Scan zeigt dir den tatsächlichen
-                                Seitenzustand
-                                <br /> und die Ergebnisse der Basisprüfungen.
-                              </p>
-                              <span>
-                                DESKTOP · EINE SEITE · KEINE KI-BEWERTUNG
-                              </span>
-                            </div>
-                          )}
-                        </div>
+                        )}
                       </div>
+                      <nav
+                        className="workspace-tabs"
+                        aria-label="Projektbereiche"
+                      >
+                        {tabs.map((item) => (
+                          <button
+                            key={item.id}
+                            aria-current={tab === item.id ? "page" : undefined}
+                            onClick={() => setTab(item.id)}
+                          >
+                            <item.icon size={15} />
+                            {item.label}
+                          </button>
+                        ))}
+                      </nav>
+                      {tab === "overview" && (
+                        <>
+                          <section
+                            className="stats-grid"
+                            aria-label="Projektübersicht"
+                          >
+                            <Stat
+                              icon={<Globe2 size={18} />}
+                              label="Geprüfte Ansichten"
+                              value={
+                                selectedScan?.result?.audit?.coverage
+                                  .completed ?? 0
+                              }
+                              detail="Im ausgewählten Check"
+                            />
+                            <Stat
+                              icon={<FileText size={18} />}
+                              label="Offene Maßnahmen"
+                              value={
+                                tasks.filter(
+                                  (t) =>
+                                    t.status !== "verified" &&
+                                    t.status !== "accepted",
+                                ).length
+                              }
+                              detail="Mit konkretem Abnahmekriterium"
+                            />
+                            <Stat
+                              icon={<Activity size={18} />}
+                              label="Prüfungen"
+                              value={scans.length}
+                              detail={
+                                scans.some(active)
+                                  ? "Ein Check ist aktiv"
+                                  : "Lokal dokumentierter Verlauf"
+                              }
+                            />
+                          </section>
+                          <div className="two-column">
+                            <ScanConfig
+                              key={project.id}
+                              project={project}
+                              disabled={
+                                scans.some(active) || missing.length > 0
+                              }
+                              onStarted={async (scan) => {
+                                await refresh();
+                                setScanId(scan.id);
+                                setTab("live");
+                              }}
+                            />
+                            <div>
+                              <ScoreCard score={score} />
+                              <section className="panel">
+                                <div className="panel-head">
+                                  <h3>Prüfverlauf</h3>
+                                  <Clock3 size={18} />
+                                </div>
+                                <div className="hub-history">
+                                  {scans.map((scan) => (
+                                    <button
+                                      className="history-row"
+                                      aria-current={
+                                        scan.id === selectedScan?.id
+                                      }
+                                      key={scan.id}
+                                      onClick={() => {
+                                        setScanId(scan.id);
+                                        setTab(
+                                          active(scan) ? "live" : "report",
+                                        );
+                                      }}
+                                    >
+                                      <div>
+                                        <strong>
+                                          {statusLabel(scan.status)}
+                                        </strong>
+                                        <small>
+                                          {stamp(scan.createdAt)} ·{" "}
+                                          {scan.options?.viewports.length ?? 1}{" "}
+                                          Ansichten
+                                        </small>
+                                      </div>
+                                      <ChevronRight size={15} />
+                                    </button>
+                                  ))}
+                                </div>
+                                {!scans.length && (
+                                  <p className="hint">
+                                    Noch keine Prüfung. Wähle den Umfang und
+                                    starte deinen ersten Check.
+                                  </p>
+                                )}
+                              </section>
+                              {missing.length > 0 && (
+                                <Notice>
+                                  Eine Systemvoraussetzung fehlt.{" "}
+                                  <button
+                                    className="text-button"
+                                    onClick={() => setScreen("system")}
+                                  >
+                                    Setup öffnen
+                                  </button>
+                                </Notice>
+                              )}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {tab === "live" && (
+                        <>
+                          <LiveScan scan={selectedScan} onChange={refresh} />
+                          {selectedScan?.result && (
+                            <div className="scan-config-actions">
+                              <button
+                                className="button primary"
+                                onClick={() => setTab("report")}
+                              >
+                                Zum vollständigen Bericht
+                                <ArrowRight size={16} />
+                              </button>
+                            </div>
+                          )}
+                        </>
+                      )}
+                      {tab === "report" && (
+                        <Report
+                          scan={selectedScan}
+                          score={score}
+                          onExplain={explain}
+                        />
+                      )}
+                      {tab === "tasks" && (
+                        <Tasks
+                          scan={selectedScan}
+                          tasks={tasks}
+                          onChange={refresh}
+                        />
+                      )}
+                      {tab === "compare" && (
+                        <Compare key={project.id} scans={scans} />
+                      )}
+                      {tab === "search" && (
+                        <SearchVisibility key={project.id} project={project} />
+                      )}
                     </section>
                   )}
                 </>
               )}
-            </>
-          ) : (
-            <>
-              <section className="page-heading">
-                <div>
-                  <p className="eyebrow">BEREIT FÜR DEN ERSTEN SCAN</p>
-                  <h1>
-                    Ein gesundes Setup<span className="accent">.</span>
-                  </h1>
-                  <p className="subtitle">
-                    Die Voraussetzungen für verlässliche lokale Prüfungen.
-                  </p>
-                </div>
-                <button
-                  className="button secondary"
-                  onClick={() => void refresh()}
-                >
-                  <Activity size={17} />
-                  Status aktualisieren
-                </button>
-              </section>
-              <section className="dependency-list">
-                {data.dependencies.map((dep) => (
-                  <article className="dependency-card" key={dep.id}>
-                    <span className={`dependency-icon ${dep.status}`}>
-                      {dep.status === "ready" ? (
-                        <CheckCircle2 />
-                      ) : dep.status === "missing" ? (
-                        <CircleAlert />
-                      ) : (
-                        <Sparkles />
-                      )}
-                    </span>
-                    <div>
-                      <div className="dependency-heading">
-                        <h2>{dep.label}</h2>
-                        <span className={`dependency-state ${dep.status}`}>
-                          {dep.status === "ready"
-                            ? "Bereit"
-                            : dep.status === "missing"
-                              ? "Fehlt"
-                              : "Optional"}
-                        </span>
-                      </div>
-                      <p>{dep.detail}</p>
-                      {dep.instruction && (
-                        <pre>
-                          <code>{dep.instruction}</code>
-                        </pre>
-                      )}
-                    </div>
-                  </article>
-                ))}
-                {loading && (
-                  <p role="status">Voraussetzungen werden geprüft …</p>
-                )}
-                {!loading && data.dependencies.length === 0 && (
-                  <p className="muted">
-                    Keine Systeminformationen verfügbar. Prüfe die Verbindung
-                    zum lokalen Server.
-                  </p>
-                )}
-              </section>
-              <div className="privacy-card">
-                <ShieldCheck size={23} />
-                <div>
-                  <h3>Lokal bedeutet: Du behältst die Kontrolle.</h3>
-                  <p>
-                    Prüfberichte bleiben in deinem lokalen Hub. Der Browser ruft
-                    die geprüfte Website und ihre eingebundenen Dienste auf. In
-                    Version 0.1 wird kein LLM verwendet.
-                  </p>
-                </div>
-              </div>
             </>
           )}
           <footer className="main-footer">
@@ -692,71 +716,32 @@ export default function App() {
               <ShieldCheck size={13} />
               Belege statt Bauchgefühl.
             </span>
-            <span>SiteFenn · Foundation v{data.version}</span>
+            <span>SiteFenn · v{data.version} · lokaler Workspace</span>
           </footer>
         </main>
       </div>
       {modal && (
         <ProjectModal
-          onClose={() => {
-            setModal(false);
-            window.setTimeout(() => addButton.current?.focus(), 0);
-          }}
-          onCreate={async (values) => {
-            const p = await request<Project | { project: Project }>(
-              "/api/projects",
-              {
-                method: "POST",
-                body: JSON.stringify({ ...values, acknowledged: true }),
-              },
-            );
-            const created = "project" in p ? p.project : p;
+          onClose={() => setModal(false)}
+          onCreated={async (p) => {
             await refresh();
-            if (created?.id) chooseProject(created.id);
+            chooseProject(p.id);
             setModal(false);
             window.setTimeout(() => addButton.current?.focus(), 0);
           }}
         />
       )}
+      <FennGuide
+        scan={selectedScan}
+        finding={guideFinding}
+        savedPlan={detail?.aiPlan}
+        open={guideOpen}
+        onToggle={setGuideOpen}
+        settings={data.settings}
+        speechAvailable={!!data.speechAvailable}
+      />
     </div>
   );
-}
-
-function FennMark() {
-  return (
-    <svg viewBox="0 0 64 64" fill="none" aria-hidden="true">
-      <path
-        d="M11 31 8 6l18 15a32 32 0 0 1 12 0L56 6l-3 25c5 17-8 28-21 28S6 48 11 31Z"
-        fill="currentColor"
-        stroke="#1a1a1a"
-        strokeWidth="3"
-        strokeLinejoin="round"
-      />
-      <path
-        d="m15 17 2 12 6-5m26-7-2 12-6-5"
-        stroke="#1a1a1a"
-        strokeWidth="2.5"
-        strokeLinecap="round"
-      />
-      <ellipse cx="24" cy="36" rx="2.5" ry="4" fill="#1a1a1a" />
-      <ellipse cx="40" cy="36" rx="2.5" ry="4" fill="#1a1a1a" />
-      <path d="m28 45 4 4 4-4Z" fill="#1a1a1a" />
-      <path
-        d="M27 52q5 3 10 0"
-        stroke="#1a1a1a"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
-function environmentLabel(value: string) {
-  return value === "production"
-    ? "Produktion"
-    : value === "staging"
-      ? "Staging"
-      : "Lokal";
 }
 function Stat({
   icon,
@@ -778,348 +763,5 @@ function Stat({
       <strong>{value.toString().padStart(2, "0")}</strong>
       <p>{detail}</p>
     </article>
-  );
-}
-
-function ScanDetail({
-  scan,
-  imageError,
-  onImageError,
-}: {
-  scan: Scan;
-  imageError: boolean;
-  onImageError: () => void;
-}) {
-  const result = scan.result;
-  if (active(scan))
-    return (
-      <div className="detail-placeholder" role="status">
-        <div className="scan-orbit">
-          <ScanLine size={33} />
-        </div>
-        <h3>
-          {scan.status === "queued"
-            ? "Deine Prüfung ist eingeplant."
-            : "Wir schauen genau hin."}
-        </h3>
-        <p>
-          Die Seite wird geöffnet und der sichtbare Zustand geprüft.
-          <br />
-          Die Ergebnisse erscheinen hier automatisch.
-        </p>
-        <span>KEIN LIVE-STREAM IN VERSION 0.1</span>
-      </div>
-    );
-  if (scan.error || scan.status === "failed")
-    return (
-      <div className="detail-placeholder failure">
-        <CircleAlert size={32} />
-        <h3>Diese Prüfung konnte nicht abgeschlossen werden.</h3>
-        <p>
-          {scan.error ||
-            "Der Browser hat kein auswertbares Ergebnis geliefert."}
-        </p>
-        <span>Kein Ergebnis wird als bestanden gewertet.</span>
-      </div>
-    );
-  if (!result)
-    return (
-      <div className="detail-placeholder">
-        <Clock3 size={30} />
-        <h3>Noch kein Ergebnis verfügbar.</h3>
-        <p>Status: {scan.status}</p>
-      </div>
-    );
-  return (
-    <>
-      <div className="result-heading">
-        <div>
-          <span className="eyebrow">DESKTOP-AUFNAHME</span>
-          <h3>{result.title || "Seitenprüfung"}</h3>
-        </div>
-        <span className="result-meta">
-          <Monitor size={14} />
-          {result.viewport.width} × {result.viewport.height}
-        </span>
-      </div>
-      <div className="browser-preview">
-        <div className="browser-chrome">
-          <div className="browser-dots">
-            <i />
-            <i />
-            <i />
-          </div>
-          <span>{result.url}</span>
-          <ShieldCheck size={12} />
-        </div>
-        {imageError ? (
-          <div className="image-error">
-            <CircleAlert size={23} />
-            <p>Screenshot konnte nicht geladen werden.</p>
-          </div>
-        ) : (
-          <a
-            className="screenshot-link"
-            href={`/api/scans/${encodeURIComponent(scan.id)}/screenshot`}
-            target="_blank"
-            rel="noreferrer"
-            aria-label="Screenshot in voller Größe öffnen"
-          >
-            <img
-              onError={onImageError}
-              src={`/api/scans/${encodeURIComponent(scan.id)}/screenshot`}
-              alt={`Gespeicherter Desktop-Screenshot: ${result.title || result.url}`}
-            />
-            <span>
-              Aufnahme öffnen
-              <ExternalLink size={13} />
-            </span>
-          </a>
-        )}
-      </div>
-      <div className="capture-caption">
-        <span>
-          <Clock3 size={13} />
-          {stamp(scan.createdAt)}
-        </span>
-        <span>
-          HTTP {result.statusCode} · {(result.durationMs / 1000).toFixed(1)} s
-        </span>
-      </div>
-      <div className="checks-heading">
-        <h3>Basisbefunde</h3>
-        <span>{result.checks.length} Einträge · kein Gesamtscore</span>
-      </div>
-      <div className="finding-list">
-        {result.checks.map((check) => (
-          <article key={check.id} className={`finding ${check.status}`}>
-            <span className="finding-icon">
-              {check.status === "pass" ? (
-                <Check size={17} />
-              ) : check.status === "fail" ? (
-                <CircleAlert size={17} />
-              ) : (
-                <Circle size={15} />
-              )}
-            </span>
-            <div>
-              <h4>{check.label}</h4>
-              <p>{check.detail}</p>
-            </div>
-            <span className="finding-label">
-              {check.status === "pass"
-                ? "Bestanden"
-                : check.status === "fail"
-                  ? "Befund"
-                  : "Hinweis"}
-            </span>
-          </article>
-        ))}
-      </div>
-    </>
-  );
-}
-
-function ProjectModal({
-  onClose,
-  onCreate,
-}: {
-  onClose: () => void;
-  onCreate: (values: {
-    name: string;
-    url: string;
-    environment: string;
-  }) => Promise<void>;
-}) {
-  const [name, setName] = useState("");
-  const [url, setUrl] = useState("");
-  const [environment, setEnvironment] = useState("production");
-  const [consent, setConsent] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const dialog = useRef<HTMLDivElement>(null);
-  const nameRef = useRef<HTMLInputElement>(null);
-  const savingRef = useRef(false);
-  const closeRef = useRef(onClose);
-  closeRef.current = onClose;
-  useEffect(() => {
-    const previous = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    nameRef.current?.focus();
-    return () => {
-      document.body.style.overflow = previous;
-    };
-  }, []);
-  useLayoutEffect(() => {
-    if (error && !saving) nameRef.current?.focus();
-  }, [error, saving]);
-  useEffect(() => {
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !savingRef.current) {
-        event.preventDefault();
-        closeRef.current();
-        return;
-      }
-      if (event.key !== "Tab") return;
-      const elements = dialog.current?.querySelectorAll<HTMLElement>(
-        "button:not(:disabled), input:not(:disabled), select:not(:disabled), a[href]",
-      );
-      if (!elements?.length) {
-        event.preventDefault();
-        return;
-      }
-      const first = elements[0],
-        last = elements[elements.length - 1];
-      if (!dialog.current?.contains(document.activeElement)) {
-        event.preventDefault();
-        (event.shiftKey ? last : first).focus();
-      } else if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault();
-        last.focus();
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault();
-        first.focus();
-      }
-    };
-    document.addEventListener("keydown", handleKey);
-    return () => document.removeEventListener("keydown", handleKey);
-  }, []);
-  return (
-    <div
-      className="modal-backdrop"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget && !saving) onClose();
-      }}
-    >
-      <div
-        className="modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="modal-title"
-        aria-describedby="modal-description"
-        ref={dialog}
-      >
-        <button
-          className="modal-close"
-          onClick={onClose}
-          disabled={saving}
-          aria-label="Dialog schließen"
-        >
-          <X size={20} />
-        </button>
-        <span className="modal-icon">
-          <Globe2 size={25} />
-        </span>
-        <p className="eyebrow">NEUES PROJEKT</p>
-        <h2 id="modal-title">Deine Website hinzufügen.</h2>
-        <p id="modal-description">
-          Ein fester Platz für deine Prüfungen und Ergebnisse.
-        </p>
-        <form
-          onSubmit={async (e) => {
-            e.preventDefault();
-            if (!consent || savingRef.current) return;
-            savingRef.current = true;
-            setSaving(true);
-            setError("");
-            try {
-              await onCreate({
-                name: name.trim(),
-                url: url.trim(),
-                environment,
-              });
-            } catch (err) {
-              savingRef.current = false;
-              setSaving(false);
-              setError(
-                err instanceof Error
-                  ? err.message
-                  : "Projekt konnte nicht erstellt werden.",
-              );
-            }
-          }}
-        >
-          <label htmlFor="project-name">Projektname</label>
-          <input
-            id="project-name"
-            ref={nameRef}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            maxLength={80}
-            placeholder="z. B. Mein Portfolio"
-            autoComplete="off"
-            disabled={saving}
-          />
-          <label htmlFor="project-url">Website-URL</label>
-          <input
-            id="project-url"
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            required
-            placeholder="https://meine-website.de"
-            disabled={saving}
-            aria-describedby="url-hint"
-          />
-          <p id="url-hint" className="field-hint">
-            Nur eigene oder ausdrücklich freigegebene, vertrauenswürdige
-            öffentliche Websites über HTTP/HTTPS (Port 80/443). Private und
-            lokale Ziele sind in Version 0.1 gesperrt; ausgenommen ist die
-            integrierte Demo.
-          </p>
-          <label htmlFor="environment">Umgebung</label>
-          <select
-            id="environment"
-            value={environment}
-            onChange={(e) => setEnvironment(e.target.value)}
-            disabled={saving}
-          >
-            <option value="production">Produktion</option>
-            <option value="staging">Staging</option>
-          </select>
-          <label className="consent-row">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(e) => setConsent(e.target.checked)}
-              required
-              disabled={saving}
-            />
-            <span>
-              Ich verwalte diese vertrauenswürdige Website oder bin ausdrücklich
-              berechtigt, sie automatisiert zu prüfen.
-            </span>
-          </label>
-          {error && (
-            <div className="form-error" role="alert">
-              {error}
-            </div>
-          )}
-          <div className="modal-actions">
-            <button
-              type="button"
-              className="button secondary"
-              onClick={onClose}
-              disabled={saving}
-            >
-              Abbrechen
-            </button>
-            <button
-              className="button primary"
-              type="submit"
-              disabled={!consent || saving}
-            >
-              {saving ? (
-                <LoaderCircle size={16} className="spin" />
-              ) : (
-                <Plus size={16} />
-              )}
-              Projekt erstellen
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
   );
 }

@@ -1,6 +1,6 @@
 # SiteFenn · Brand & Character System
 
-Stand: 28. Oktober 2026. In der 0.1-Oberfläche umgesetzt. Name weiterhin ohne abschließende Domain-/Markenprüfung. Technisches Repository und Datenverzeichnis heißen unverändert `website-audit-hub`; der Markenwechsel migriert oder löscht keine Projekte.
+Stand: 28. Oktober 2026. In der 1.0-Oberfläche umgesetzt. Name weiterhin ohne abschließende Domain-/Markenprüfung. Technisches Repository und Datenverzeichnis heißen unverändert `website-audit-hub`; der Markenwechsel migriert oder löscht keine Projekte.
 
 ## Identität
 
@@ -20,16 +20,16 @@ Die Übertragung auf den Hub ist bewusst funktional: große Schrift im Einstieg,
 
 ## Farben
 
-| Rolle | Wert |
-| --- | --- |
-| Bühne / Canvas | `#8584BD` |
-| Sidebar / Deep violet | `#3D365C` |
-| Lilac | `#61609A` |
-| Ink / Haupttext und Konturen | `#1A1A1A` |
+| Rolle                              | Wert      |
+| ---------------------------------- | --------- |
+| Bühne / Canvas                     | `#8584BD` |
+| Sidebar / Deep violet              | `#3D365C` |
+| Lilac                              | `#61609A` |
+| Ink / Haupttext und Konturen       | `#1A1A1A` |
 | Cream / Karten und primäre Buttons | `#F9F5F2` |
-| Lemon / Markenakzent | `#F4ED36` |
-| Butter / warmer Display-Akzent | `#F9CC73` |
-| Pink / aktives Projekt | `#F8C1BA` |
+| Lemon / Markenakzent               | `#F4ED36` |
+| Butter / warmer Display-Akzent     | `#F9CC73` |
+| Pink / aktives Projekt             | `#F8C1BA` |
 
 Helle Display-Schrift auf Violett erhält eine dunkle Kontur. Normaler Text verwendet dunkle Schrift auf Violett oder Cream; auf der dunklen Sidebar helle Schrift. Farbe ersetzt keine Statusbezeichnung. Auf Projektkarten ist Pink eine Auswahlfarbe, kein Fehlerschweregrad.
 
@@ -59,14 +59,14 @@ Fenn ist freundlich, aufmerksam und konkret. Keine Druckmechaniken, beschämende
 
 Aktuelle Integration:
 
-- Begrüßende Illustration im Einstieg.
-- Einklappbarer Hinweis mit Text passend zu Leerzustand, vorhandenen Projekten oder aktivem Scan.
-- Kennzeichnung **„Statischer Tipp · keine KI“**.
-- Keine Sprache, kein Mikrofon, keine Modellanfrage.
+- Einklappbarer Begleiter mit lokalen Markenassets und einem klar gekennzeichneten statischen Einstiegstipp.
+- Optionale beleggebundene Ollama-Erklärung nach einem abgeschlossenen Check und ausdrücklicher Modellauswahl.
+- Kennzeichnung **„Statischer Tipp · keine KI“**, bis tatsächlich eine validierte Modellantwort vorliegt; anschließend Modellname und **„Lokale KI“**.
+- Optionale lokale macOS-Sprachausgabe nach Aktivierung und Klick auf Vorlesen; kein Mikrofon und kein Autoplay.
 
 Die Hinweise ändern sich aus tatsächlichem App-Zustand, nicht aus einer simulierten Unterhaltung. Technische Fehlermeldungen und Ergebnisse bleiben ohne Avatar verständlich. Die Figur überdeckt keine Bedienelemente und keinen Screenshot-Nachweis.
 
-Späteres Ziel: Ein lokales Modell erklärt ausgewählte belegte Befunde; eine separat eingerichtete lokale Sprachausgabe kann diese auf Wunsch vorlesen. Keine automatische Cloud-Ausweichlösung und kein Autoplay. „Vorlesen“ erscheint erst, wenn es tatsächlich implementiert und getestet ist. Die Avatararbeit zieht keine ungeprüfte Modellintegration in 0.1 vor.
+Das Modell erhält begrenzte strukturierte Texte, keine Screenshots oder Browsersteuerung. Ungültige Antworten werden als Fehler angezeigt. Keine automatische Cloud-Ausweichlösung. Tatsächliche Modelltests und Grenzen stehen in [Release-Prüfung](../RELEASE-1.0.md).
 
 ## Vorlagen für spätere Erklärungen
 
@@ -80,7 +80,7 @@ Nicht verwenden: „Alles perfekt“, „Ich habe die komplette Website geprüft
 
 ## Grenzen und nächste Schritte
 
-Keine Repository-Umbenennung oder Datenmigration in diesem Schritt. 0.2 bleibt das nächste Funktionspaket. Weitere Avatar-Zustände werden später mit derselben Identität erstellt; der einzelne Master ist kein bereits vorhandenes Sprite-/Animationsset.
+Keine Repository-Umbenennung durch die Marke. Die Schema-2-Datenmigration gehört zum Funktionsupdate und bewahrt vorhandene Projekte. Weitere Avatar-Zustände werden später mit derselben Identität erstellt; der einzelne Master ist kein bereits vorhandenes Sprite-/Animationsset.
 
 Vor endgültigem Namens-/Domain-Rollout bleiben Verfügbarkeit und mögliche Verwechslungen separat zu prüfen. Ein KI-generiertes Bild ist kein Nachweis exklusiver Gestaltung oder geklärter Markenrechte.
 

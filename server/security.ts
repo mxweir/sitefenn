@@ -1,7 +1,10 @@
 import { lookup } from "node:dns/promises";
 import { isIP } from "node:net";
 
-export function parseTarget(value: unknown): URL {
+export function parseTarget(
+  value: unknown,
+  options: { allowLocal?: boolean } = {},
+): URL {
   if (typeof value !== "string" || value.length > 2048)
     throw new Error("Bitte eine gültige HTTP(S)-URL eingeben.");
   let url: URL;
@@ -16,7 +19,7 @@ export function parseTarget(value: unknown): URL {
     url.password
   )
     throw new Error("Nur HTTP(S)-URLs ohne Zugangsdaten sind erlaubt.");
-  if (url.port && !["80", "443"].includes(url.port))
+  if (!options.allowLocal && url.port && !["80", "443"].includes(url.port))
     throw new Error(
       "0.1 unterstützt öffentliche Ziele nur auf Port 80 oder 443.",
     );
@@ -75,6 +78,53 @@ export async function assertPublicTarget(url: URL) {
     throw new Error(
       "Das Ziel zeigt auf eine gesperrte/private Netzwerkadresse.",
     );
+}
+
+export interface TargetPolicy {
+  allowedLocalOrigin?: string;
+  demoOrigin?: string;
+  hubOrigin?: string;
+}
+
+/** Resolve once, validate every address, and connect to the returned IP rather than resolving again. */
+export async function resolvePinnedTarget(url: URL, policy: TargetPolicy = {}) {
+  parseTarget(url.href, {
+    allowLocal:
+      url.origin === policy.allowedLocalOrigin ||
+      url.origin === policy.demoOrigin,
+  });
+  const demo = url.origin === policy.demoOrigin;
+  const local = url.origin === policy.allowedLocalOrigin;
+  if (url.origin === policy.hubOrigin && !demo)
+    throw new Error(
+      "Der Hub selbst darf nicht als Projektziel verwendet werden.",
+    );
+  if (demo && !/^\/demo-site(?:\/|$)/.test(url.pathname))
+    throw new Error("Demo-Zugriff außerhalb der Beispielwebsite ist gesperrt.");
+  const hostname = url.hostname.replace(/^\[|\]$/g, "");
+  if (
+    !local &&
+    !demo &&
+    (hostname === "localhost" ||
+      hostname.endsWith(".localhost") ||
+      hostname.endsWith(".local"))
+  )
+    throw new Error("Lokales Ziel nicht ausdrücklich freigegeben.");
+  const addresses = isIP(hostname)
+    ? [{ address: hostname, family: isIP(hostname) }]
+    : await lookup(hostname, { all: true, verbatim: true });
+  if (
+    !addresses.length ||
+    (!local && !demo && addresses.some((item) => !isPublicIP(item.address)))
+  )
+    throw new Error(
+      "Das Ziel zeigt auf eine gesperrte/private Netzwerkadresse.",
+    );
+  return addresses[0]!;
+}
+
+export async function validateTarget(url: URL, policy: TargetPolicy = {}) {
+  await resolvePinnedTarget(url, policy);
 }
 
 export function requestAllowed(

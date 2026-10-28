@@ -112,7 +112,7 @@ test("API session, CSRF, demo, queue deduplication and malformed requests", asyn
       {
         name: "Private",
         url: "http://127.0.0.1",
-        environment: "local",
+        environment: "production",
         acknowledged: true,
       },
       {
