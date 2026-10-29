@@ -5,6 +5,7 @@ import type {
   AuditTask,
   Finding,
   Project,
+  PageAnalysis,
   Scan,
   ScoreSummary,
   SearchDataset,
@@ -114,6 +115,48 @@ const task: AuditTask = {
   updatedAt: scan.createdAt,
 };
 
+const analysis: PageAnalysis = {
+  kind: "page-analysis",
+  id: "analysis-ui",
+  scanId: scan.id,
+  pageUrl: project.url,
+  model: "local-test:8b",
+  question: "",
+  sourceHash: "a".repeat(64),
+  createdAt: scan.createdAt,
+  updatedAt: scan.createdAt,
+  status: "completed",
+  stage: "done",
+  parts: [
+    {
+      id: "part-1",
+      unitIds: ["finding-ui"],
+      findingIds: [finding.id],
+      status: "completed",
+      summary: "Der Seitentitel ist ein belegter nächster Schritt.",
+      solutions: [
+        {
+          findingId: finding.id,
+          explanation: finding.detail,
+          cause: "Vermutlich fehlt die Titelkonfiguration.",
+          steps: [
+            "Einen passenden Titel ergänzen.",
+            "Dieselbe Seite nachtesten.",
+          ],
+          code: { language: "html", text: "<title>Portfolio</title>" },
+          acceptance: finding.acceptance,
+          uncertainty: "Kein Quellcode angebunden.",
+        },
+      ],
+    },
+  ],
+  totalUnits: 1,
+  omitted: [],
+  unexplainedFindingIds: [],
+  summary: "Der Seitentitel ist ein belegter nächster Schritt.",
+  warnings: [],
+};
+
 async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
   const state = {
     scans: structuredClone(initialScans),
@@ -121,6 +164,8 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
     options: null as unknown,
     settings: { model: "", speechEnabled: false },
     datasets: [] as SearchDataset[],
+    analyses: [] as PageAnalysis[],
+    analysisRequest: null as unknown,
   };
   await page.route("**/api/**", async (route) => {
     const request = route.request();
@@ -155,6 +200,27 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
         score,
         tasks: state.tasks,
       });
+    if (pathname === `/api/scans/${scan.id}/page-analyses`) {
+      if (request.method() === "GET") return json({ analyses: state.analyses });
+      state.analysisRequest = request.postDataJSON();
+      state.analyses = [structuredClone(analysis)];
+      return json({ analysis: state.analyses[0] }, 202);
+    }
+    if (pathname === "/api/page-analyses/analysis-ui")
+      return json({ analysis: state.analyses[0] });
+    if (pathname === "/api/page-analyses/analysis-ui/cancel") {
+      state.analyses[0].status = "cancelled";
+      state.analyses[0].stage = "done";
+      state.analyses[0].parts[0].status = "cancelled";
+      return json({ cancelled: true });
+    }
+    if (pathname === "/api/page-analyses/analysis-ui/adopt") {
+      state.tasks[0].aiProposal = {
+        ...analysis.parts[0].solutions[0],
+        analysisId: analysis.id,
+      };
+      return json({ task: state.tasks[0], duplicate: false });
+    }
     if (pathname.endsWith("/discover"))
       return json({
         urls: [project.url, "https://example.com/contact"],
@@ -304,11 +370,7 @@ test("report evidence, task review and export preview stay distinct from verifie
   const state = await mockWorkspace(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Befunde", exact: true }).click();
-  await expect(
-    page
-      .getByRole("region", { name: "Ausgewähltes Projekt" })
-      .getByText("68–83"),
-  ).toBeVisible();
+  await expect(page.locator(".score-number").first()).toContainText("68–83");
   await expect(
     page.getByRole("progressbar", { name: "Prüfabdeckung" }),
   ).toHaveAttribute("aria-valuenow", "85");
@@ -383,7 +445,7 @@ test("incompatible scans do not invent a score improvement", async ({
 test("optional CSV visibility and explicit local model selection work without cloud auth", async ({
   page,
 }) => {
-  await mockWorkspace(page);
+  const state = await mockWorkspace(page);
   await page.goto("/");
   await page.getByRole("button", { name: "Sichtbarkeit", exact: true }).click();
   await page.getByLabel("CSV-Datei", { exact: true }).setInputFiles({
@@ -410,25 +472,47 @@ test("optional CSV visibility and explicit local model selection work without cl
   await page.getByLabel("Installiertes Modell").selectOption("local-test:8b");
   await page.getByRole("button", { name: "Einstellungen speichern" }).click();
   await expect(page.getByText("Einstellungen gespeichert.")).toBeVisible();
-  await page.getByRole("button", { name: "Fenns Hinweis anzeigen" }).click();
-  await page.getByRole("button", { name: "Lokal erklären lassen" }).click();
+  await page.getByRole("button", { name: "Fenn öffnen", exact: true }).click();
+  await expect(page.getByLabel("Seite auswählen")).toHaveValue(project.url);
   await expect(
-    page.getByRole("region", { name: "Hinweis von Fenn" }),
-  ).toContainText("LOKALE KI · local-test:8b");
-  await expect(
-    page.getByText(
-      "KI-Vorschläge sind ungeprüft und können den Messungen widersprechen. Maßgeblich sind die regelbasierten Befunde und ihre Nachweise.",
-    ),
+    page.getByText(/KI-Vorschläge sind ungeprüft und können/),
   ).toBeVisible();
+  await page.getByRole("button", { name: "Seite lokal analysieren" }).click();
   await expect(
-    page.getByRole("region", { name: "Hinweis von Fenn" }),
-  ).toContainText(`Gemessener Befund: ${finding.title}`);
+    page.getByText("Der Seitentitel ist ein belegter nächster Schritt.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(page.locator(".solution-code")).toContainText(
+    "<title>Portfolio</title>",
+  );
+  await expect(page.getByRole("link", { name: /Markdown/ })).toHaveAttribute(
+    "href",
+    "/api/page-analyses/analysis-ui/export",
+  );
+  await page.getByRole("button", { name: /Maßnahme übernehmen/ }).click();
+  await expect
+    .poll(() => state.tasks[0].aiProposal?.analysisId)
+    .toBe(analysis.id);
+  expect(state.tasks).toHaveLength(1);
+  expect(state.tasks[0].status).toBe("open");
   await page
-    .getByText("Ungeprüfte KI-Zusammenfassung", { exact: true })
-    .click();
-  await expect(
-    page.getByText("Der Seitentitel ist ein belegter nächster Schritt."),
-  ).toBeVisible();
+    .getByLabel("Frage zum Seitenbericht (optional)")
+    .fill("Welcher Nachtest ist nötig?");
+  await page.getByRole("button", { name: "Frage lokal auswerten" }).click();
+  await expect
+    .poll(() => state.analysisRequest)
+    .toMatchObject({
+      parentId: analysis.id,
+      pageUrl: project.url,
+      question: "Welcher Nachtest ist nötig?",
+    });
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
 });
 
 test("mobile workspace and failed project dialog retain keyboard access", async ({
@@ -467,4 +551,48 @@ test("mobile workspace and failed project dialog retain keyboard access", async 
     path: "test-results/workspace-mobile-qa.png",
     fullPage: true,
   });
+});
+
+test("partial and cancelled model work stays visible without successful repair actions", async ({
+  page,
+}) => {
+  const state = await mockWorkspace(page);
+  const incomplete = structuredClone(analysis);
+  incomplete.status = "partial";
+  incomplete.summary = "";
+  incomplete.parts[0].status = "failed";
+  incomplete.parts[0].error = "Ungültige Modellantwort: erfundene Fundstelle.";
+  incomplete.parts[0].solutions = [];
+  incomplete.unexplainedFindingIds = [finding.id];
+  state.analyses = [incomplete];
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Seite erklären", exact: true })
+    .click();
+  await expect(
+    page.getByText("Diese Interpretation ist unvollständig", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByText("Verarbeitete Teile und Identität", { exact: true })
+    .click();
+  await expect(
+    page.getByText(incomplete.parts[0].error, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: /Als Maßnahme übernehmen/ }),
+  ).toHaveCount(0);
+  incomplete.status = "running";
+  incomplete.stage = "context";
+  incomplete.parts[0].status = "running";
+  await page.reload();
+  await page
+    .getByRole("button", { name: "Seite erklären", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Auswertung abbrechen", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Abgebrochen", exact: true }),
+  ).toBeVisible();
+  expect(state.tasks[0].status).toBe("open");
 });

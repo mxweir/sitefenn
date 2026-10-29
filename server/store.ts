@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
+import type { PageAnalysis } from "../shared/types.js";
 import type {
   Project,
   Scan,
@@ -106,6 +107,32 @@ export class Store {
           new Date().toISOString(),
           "Die App wurde beendet. Gespeicherte Zwischenstände bleiben erhalten; du kannst die Prüfung fortsetzen.",
         );
+      for (const row of this.db
+        .prepare(
+          "SELECT payload FROM ai_plans WHERE json_extract(payload,'$.kind')='page-analysis'",
+        )
+        .all()) {
+        const job = JSON.parse(String(row.payload)) as PageAnalysis;
+        if (["queued", "running"].includes(job.status)) {
+          job.status = "interrupted";
+          job.stage = "done";
+          job.updatedAt = new Date().toISOString();
+          job.parts = job.parts.map((part) =>
+            ["queued", "running"].includes(part.status)
+              ? {
+                  ...part,
+                  status: "cancelled",
+                  error:
+                    "App beendet; dieser Kontextteil wurde nicht abgeschlossen.",
+                }
+              : part,
+          );
+          job.warnings.push(
+            "Die App wurde beendet. Vorhandene Teilantworten bleiben erhalten; für eine vollständige Erklärung neu analysieren.",
+          );
+          this.savePageAnalysis(job);
+        }
+      }
     } catch (error) {
       if (this.db.isTransaction) this.db.exec("ROLLBACK");
       this.close();
@@ -264,6 +291,7 @@ export class Store {
       const updated = previous
         ? {
             ...task,
+            ...(previous.aiProposal ? { aiProposal: previous.aiProposal } : {}),
             status: previous.status,
             updatedAt: previous.updatedAt,
             verifiedByScanId: previous.verifiedByScanId,
@@ -329,10 +357,42 @@ export class Store {
   aiPlan(scanId: string): AiPlan | undefined {
     const row = this.db
       .prepare(
-        "SELECT payload FROM ai_plans WHERE scanId=? ORDER BY rowid DESC LIMIT 1",
+        "SELECT payload FROM ai_plans WHERE scanId=? AND coalesce(json_extract(payload,'$.kind'),'legacy')!='page-analysis' ORDER BY rowid DESC LIMIT 1",
       )
       .get(scanId);
     return row ? JSON.parse(String(row.payload)) : undefined;
+  }
+  savePageAnalysis(job: PageAnalysis) {
+    this.db
+      .prepare(
+        "INSERT INTO ai_plans (id,scanId,payload) VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload",
+      )
+      .run(job.id, job.scanId, JSON.stringify(job));
+    return job;
+  }
+  pageAnalysis(id: string): PageAnalysis | undefined {
+    const row = this.db
+      .prepare(
+        "SELECT payload FROM ai_plans WHERE id=? AND json_extract(payload,'$.kind')='page-analysis'",
+      )
+      .get(id);
+    return row ? JSON.parse(String(row.payload)) : undefined;
+  }
+  pageAnalyses(scanId: string): PageAnalysis[] {
+    return this.db
+      .prepare(
+        "SELECT payload FROM ai_plans WHERE scanId=? AND json_extract(payload,'$.kind')='page-analysis' ORDER BY rowid DESC LIMIT 50",
+      )
+      .all(scanId)
+      .map((row) => JSON.parse(String(row.payload)));
+  }
+  putTask(task: AuditTask) {
+    this.db
+      .prepare(
+        "INSERT INTO tasks (id,scanId,projectId,payload) VALUES (?,?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload",
+      )
+      .run(task.id, task.scanId, task.projectId, JSON.stringify(task));
+    return task;
   }
   searchDatasets(projectId: string): SearchDataset[] {
     return this.db

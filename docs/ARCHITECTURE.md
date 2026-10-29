@@ -34,7 +34,13 @@ Loopback Host/Origin checks, HttpOnly SameSite sessions and mutation headers con
 
 Only loopback Ollama is used. Before website observations are transmitted, `/api/show` must report a local architecture without remote targets. Cloud tags, remote aliases and unverifiable metadata fail closed. A trusted local Ollama installation is assumed; no global configuration is silently changed and no model is downloaded by the hub.
 
-The UI sends up to 12 screenshot-backed findings as bounded text, not screenshot images, raw page dumps, cookies or source repositories. Numeric-only findings remain deterministic report data. Thinking mode follows supported metadata. Replies are schema-checked and must refer to known finding/evidence IDs; timeouts, cancellation and invalid output do not save successful plans. Correct JSON is not proof of true advice. Website strings are untrusted data, never instruction authority. No shell, write or autonomous browser tools exist.
+The 1.2 page-analysis workspace uses all structured records for the selected report page: page runs, pass/fail/not-run rules, evidence metadata (without file paths), performance, warnings and findings. Observation and future acceptance are explicitly separated in the model context. Context hashes bind follow-ups to the same measurement. The legacy selected-finding endpoint remains readable for older clients/history.
+
+Record batches have an 8,500-character budget, at most two findings and 24 parts. Oversized records/extra parts are explicit omissions. Local Ollama calls use 8,192 context tokens, bounded generation, a 90-second provider timeout and a ten-minute total job deadline. Validated successful summaries participate in bounded hierarchical synthesis. One correction attempt is allowed for invalid part output; provider failure does not loop indefinitely. Known model-weight identity cannot change between parts.
+
+Replies require exact known finding IDs and schema fields; targeted contradiction guards reject a few known false claims. These guards are deliberately not described as comprehensive semantic validation. All accepted advice remains unverified and can be wrong. No screenshot vision, source repository, tools, shell or autonomous browser actions are provided. Website strings and prior answers remain untrusted input.
+
+Page analyses use discriminated JSON records in the existing `ai_plans` table; no database migration is needed. Progress persists per part; restarts mark unfinished jobs interrupted while retaining accepted parts. Analyses serialize with scans/discovery/backups. Adoption annotates the existing canonical task, preserves the measured report and cannot claim a verified fix. Markdown escapes prose and fences illustrative code; consumers must review it before use.
 
 ## Search, export and backup boundaries
 

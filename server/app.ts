@@ -19,6 +19,13 @@ import {
   buildEvidenceManifest,
 } from "./services/reports.js";
 import { generateAiPlan, listOllamaModels } from "./services/ai.js";
+import type { AiDependencies } from "./services/ai.js";
+import {
+  preparePage,
+  newPageAnalysis,
+  runPageAnalysis,
+  pageAnalysisMarkdown,
+} from "./services/page-analysis.js";
 import {
   parseSearchConsoleCsv,
   compareSearchDatasets,
@@ -46,6 +53,7 @@ export async function createApp(options: {
   dataDir: string;
   dev?: boolean;
   runJobs?: boolean;
+  aiDependencies?: AiDependencies;
 }) {
   const app = Fastify({ logger: false, bodyLimit: 2_200_000 });
   const store = new Store(options.dataDir);
@@ -54,6 +62,8 @@ export async function createApp(options: {
   const session = randomBytes(32).toString("hex");
   let operation: "discovery" | "ai" | "backup" | null = null;
   const aiControllers = new Set<AbortController>();
+  let pageWork: Promise<void> | undefined;
+  let activePage: { id: string; controller: AbortController } | undefined;
   const idle = () => {
     if (operation || runner.isBusy())
       throw bad(
@@ -600,6 +610,181 @@ export async function createApp(options: {
       operation = null;
     }
   });
+  app.get<{ Params: { id: string } }>(
+    "/api/scans/:id/page-analyses",
+    async (request) => {
+      requireScan(request.params.id);
+      return {
+        analyses: store
+          .pageAnalyses(request.params.id)
+          .map(({ id, pageUrl, status, model, createdAt }) => ({
+            id,
+            pageUrl,
+            status,
+            model,
+            createdAt,
+          })),
+      };
+    },
+  );
+  app.get<{ Params: { id: string } }>(
+    "/api/page-analyses/:id",
+    async (request) => {
+      const analysis = store.pageAnalysis(request.params.id);
+      if (!analysis) throw bad("Seitenanalyse nicht gefunden.", 404);
+      return { analysis };
+    },
+  );
+  app.post<{ Params: { id: string } }>(
+    "/api/scans/:id/page-analyses",
+    async (request, reply) => {
+      const scan = requireScan(request.params.id);
+      if (scan.status !== "completed" || !scan.result?.audit)
+        throw bad("Zuerst einen vollständigen Check abschließen.");
+      idle();
+      const body = object(request.body),
+        model = body.model ?? store.settings().model;
+      if (typeof model !== "string" || !/^[a-zA-Z0-9._:/-]{1,255}$/.test(model))
+        throw bad("Ein installiertes lokales Modell auswählen.");
+      if (
+        typeof body.pageUrl !== "string" ||
+        !scan.result.audit.options.pages.includes(body.pageUrl)
+      )
+        throw bad("Eine Seite aus dem ausgewählten Bericht auswählen.");
+      if (
+        body.question !== undefined &&
+        (typeof body.question !== "string" || body.question.length > 1000)
+      )
+        throw bad("Frage maximal 1000 Zeichen.");
+      if (store.pageAnalyses(scan.id).length >= 50)
+        throw bad(
+          "Pro Check maximal 50 Seitenanalysen. Vor weiteren Auswertungen einen neuen Check erstellen.",
+        );
+      if (body.parentId !== undefined && typeof body.parentId !== "string")
+        throw bad("Ungültige Rückfrage.");
+      const parent = body.parentId
+        ? store.pageAnalysis(body.parentId as string)
+        : undefined;
+      if (
+        body.parentId &&
+        (!parent ||
+          parent.scanId !== scan.id ||
+          !["completed", "partial"].includes(parent.status))
+      )
+        throw bad(
+          "Die Rückfrage braucht eine gültige Auswertung desselben Checks.",
+        );
+      let prepared;
+      try {
+        prepared = preparePage(scan.result.audit, body.pageUrl, parent);
+      } catch (error) {
+        throw bad((error as Error).message);
+      }
+      const job = newPageAnalysis(
+        scan.id,
+        body.pageUrl,
+        model,
+        (body.question as string | undefined) ?? "",
+        prepared,
+        parent?.id,
+      );
+      store.savePageAnalysis(job);
+      const controller = new AbortController();
+      activePage = { id: job.id, controller };
+      aiControllers.add(controller);
+      operation = "ai";
+      pageWork = runPageAnalysis(
+        job,
+        prepared,
+        (value) => store.savePageAnalysis(value),
+        controller.signal,
+        options.aiDependencies,
+      )
+        .then(() => {})
+        .catch((error) => {
+          job.status = "failed";
+          job.stage = "done";
+          job.warnings.push(
+            error instanceof Error
+              ? error.message
+              : "Seitenanalyse fehlgeschlagen.",
+          );
+          store.savePageAnalysis(job);
+        })
+        .finally(() => {
+          aiControllers.delete(controller);
+          activePage = undefined;
+          operation = null;
+        });
+      return reply.code(202).send({ analysis: store.pageAnalysis(job.id) });
+    },
+  );
+  app.post<{ Params: { id: string } }>(
+    "/api/page-analyses/:id/cancel",
+    async (request) => {
+      if (!store.pageAnalysis(request.params.id))
+        throw bad("Seitenanalyse nicht gefunden.", 404);
+      if (activePage?.id !== request.params.id)
+        throw bad("Diese Auswertung ist nicht aktiv.", 409);
+      activePage.controller.abort();
+      return { cancelled: true };
+    },
+  );
+  app.get<{ Params: { id: string } }>(
+    "/api/page-analyses/:id/export",
+    async (request, reply) => {
+      const job = store.pageAnalysis(request.params.id);
+      if (!job) throw bad("Seitenanalyse nicht gefunden.", 404);
+      const scan = requireScan(job.scanId);
+      if (!scan.result?.audit) throw bad("Messbericht fehlt.");
+      return reply
+        .header(
+          "Content-Disposition",
+          'attachment; filename="sitefenn-page-analysis.md"',
+        )
+        .type("text/markdown; charset=utf-8")
+        .send(pageAnalysisMarkdown(job, scan.result.audit));
+    },
+  );
+  app.post<{ Params: { id: string } }>(
+    "/api/page-analyses/:id/adopt",
+    async (request) => {
+      const job = store.pageAnalysis(request.params.id);
+      if (!job) throw bad("Seitenanalyse nicht gefunden.", 404);
+      if (!["completed", "partial"].includes(job.status))
+        throw bad("Zuerst die Auswertung abschließen.");
+      const body = object(request.body),
+        solution = job.parts
+          .filter((part) => part.status === "completed")
+          .flatMap((part) => part.solutions)
+          .find((item) => item.findingId === body.findingId);
+      if (!solution)
+        throw bad("Kein gültiger Lösungsvorschlag für diesen Befund.");
+      const scan = requireScan(job.scanId);
+      ensureTasks(scan);
+      const task = store
+        .tasks(scan.id)
+        .find((item) => item.findingIds.includes(solution.findingId));
+      if (!task) throw bad("Zugehörige Regelaufgabe fehlt.");
+      if (task.status === "verified")
+        throw bad(
+          "Historisch verifizierte Aufgaben bleiben erhalten. Einen aktuellen Check erstellen.",
+          409,
+        );
+      const duplicate =
+        task.aiProposal?.analysisId === job.id &&
+        task.aiProposal.findingId === solution.findingId;
+      const updated = duplicate
+        ? task
+        : store.putTask({
+            ...task,
+            status: "open",
+            updatedAt: new Date().toISOString(),
+            aiProposal: { ...solution, analysisId: job.id },
+          });
+      return { task: updated, duplicate };
+    },
+  );
   app.post("/api/ai/cancel", async () => {
     for (const controller of aiControllers) controller.abort();
     return { cancelled: true };
@@ -726,6 +911,7 @@ export async function createApp(options: {
   }
   app.addHook("onClose", async () => {
     for (const controller of aiControllers) controller.abort();
+    await pageWork;
     stopSpeech();
     await runner.close();
     await closeVite?.();

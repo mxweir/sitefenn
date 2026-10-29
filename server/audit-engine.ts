@@ -83,7 +83,7 @@ export async function closeAuditResources() {
   activeChrome.clear();
   activeProxies.clear();
 }
-export const RULE_VERSION = "rules-1.1.0";
+export const RULE_VERSION = "rules-1.2.0";
 export const PROFILE_VERSION = "responsive-1.0.0";
 const digest = (text: string) =>
   createHash("sha256").update(text).digest("hex").slice(0, 24);
@@ -1285,6 +1285,19 @@ export async function runAudit(
                 await page.addScriptTag({
                   content: await readFile(axePath, "utf8"),
                 });
+                const locale = JSON.parse(
+                  await readFile(
+                    require.resolve("axe-core/locales/de.json"),
+                    "utf8",
+                  ),
+                );
+                await page.evaluate((locale) => {
+                  (
+                    window as unknown as {
+                      axe: { configure: (options: unknown) => void };
+                    }
+                  ).axe.configure({ locale });
+                }, locale);
                 const axeResult = await page.evaluate(async () => {
                   const axe = (
                     window as unknown as {

@@ -442,3 +442,80 @@ async function installedDigest(
     return null;
   }
 }
+
+/** Bounded, local-only primitive for page reports; never supplies tools or a cloud fallback. */
+export async function localStructuredCompletion(
+  input: {
+    model: string;
+    system: string;
+    content: string;
+    schema: unknown;
+    promptVersion: string;
+  },
+  signal?: AbortSignal,
+  dependencies: AiDependencies = {},
+): Promise<{ value: unknown; provenance: NonNullable<AiPlan["provenance"]> }> {
+  if (
+    !/^[a-zA-Z0-9._:/-]{1,255}$/.test(input.model) ||
+    input.content.length > 16000
+  )
+    throw new Error(
+      "Modellname oder Kontext überschreitet die erlaubte Grenze.",
+    );
+  const started = Date.now();
+  const caps = await assertLocalOllamaModel(input.model, signal, dependencies);
+  const digest = await installedDigest(input.model, signal, dependencies);
+  const limit = caps.thinkingOnly ? 4096 : 3072;
+  const envelope = await readJson(
+    await (dependencies.fetch ?? fetch)(`${OLLAMA}/api/chat`, {
+      method: "POST",
+      redirect: "error",
+      headers: { "content-type": "application/json" },
+      signal: boundedSignal(signal, dependencies.timeoutMs ?? 90000),
+      body: JSON.stringify({
+        model: input.model,
+        stream: false,
+        think: caps.thinkingOnly,
+        format: input.schema,
+        options: { temperature: 0, num_ctx: 8192, num_predict: limit },
+        messages: [
+          { role: "system", content: input.system },
+          { role: "user", content: input.content },
+        ],
+      }),
+    }),
+  );
+  if (
+    !object(envelope) ||
+    remoteBacked(envelope) ||
+    !object(envelope.message) ||
+    typeof envelope.message.content !== "string" ||
+    envelope.done === false ||
+    envelope.done_reason === "length"
+  )
+    throw new Error(
+      "Das lokale Modell hat keine abgeschlossene strukturierte Antwort geliefert.",
+    );
+  const value: unknown = JSON.parse(envelope.message.content);
+  if (
+    digest &&
+    (await installedDigest(input.model, signal, dependencies)) !== digest
+  )
+    throw new Error(
+      "Modellgewichte haben sich während der Auswertung geändert.",
+    );
+  return {
+    value,
+    provenance: {
+      promptVersion: input.promptVersion,
+      promptSha256: sha256(input.system + JSON.stringify(input.schema)),
+      contextSha256: sha256(input.content),
+      modelDigest: digest,
+      modelMetadataSha256: caps.metadataSha256,
+      temperature: 0,
+      contextTokens: 8192,
+      predictionLimit: limit,
+      durationMs: Date.now() - started,
+    },
+  };
+}

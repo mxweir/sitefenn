@@ -8,17 +8,19 @@ Manage websites you own, inspect desktop/tablet/mobile layouts, collect evidence
 
 The repository and package are now **`sitefenn`**. Existing data stays in the legacy `website-audit-hub` directory so the rename does not reset your projects. Name/domain clearance is still pending.
 
-![SiteFenn 1.1 report with score bounds and execution identity](docs/screenshots/1.1-report.jpg)
+![SiteFenn 1.2 fix workspace with grouped findings and original evidence](docs/screenshots/1.2-fix-workspace.jpg)
 
 _Actual application, owned synthetic demo. Missing measurements remain unknown._
 
-[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.0.md) · [Changelog](CHANGELOG.md)
+[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.2.md) · [Changelog](CHANGELOG.md)
 
-## What's new in 1.1
+## What's new in 1.2
 
-More reliable covered-control checks, conservative fixed-overlay candidates, corrected scrolled markers and recorded execution/model identities. A repeatable reference corpus and three authorized real websites were exercised on the M5 Pro/24 GiB target machine. See the [measured baseline and its limits](docs/BASELINE-1.1.md), [release verification](docs/RELEASE-1.1.md) and [desktop/OAuth feasibility checks](docs/FEASIBILITY-1.1.md).
+**From evidence to a concrete next step.** The fix workspace brings the original capture, observation, action and acceptance criterion together. Filter by page, device, category, priority and task status; group similar findings while keeping every captured location accessible.
 
-Existing clones can update their remote with `git remote set-url origin https://github.com/mxweir/sitefenn.git`. Existing local folder names and data directories do not need renaming.
+**Explain this page** gives Fenn a dedicated workspace. It processes the selected page's structured report across devices: findings, passed/failed/unknown checks, numeric-only measurements and evidence references. Saved analyses show progress, omissions and failed parts. Ask follow-up questions, copy illustrative code, export Markdown, or attach an unverified proposal to an existing task without creating duplicates.
+
+Small models can still contradict the measurements. Schema checks and targeted contradiction guards catch some failures, not every false statement. A real `qwen2.5:3b` multi-part test produced only a partial accepted analysis; this feature remains an **optional, unverified assistant**. See [1.2 verification and known limits](docs/RELEASE-1.2.md). The earlier [1.1 detection baseline](docs/BASELINE-1.1.md) remains available.
 
 ## The workflow
 
@@ -42,9 +44,9 @@ The built-in demo is an authorized fixture for trying the workflow without an ex
 
 ![Actual grouped repair checklist](docs/screenshots/1.0-tasks.jpg)
 
-**Ask a local model, with measured observations beside unverified advice:**
+**Explain a page, with visible context and partial-result handling:**
 
-![Actual Qwen2.5 response through Ollama](docs/screenshots/1.0-local-ai.jpg)
+![Actual SiteFenn page-analysis workspace](docs/screenshots/1.2-page-analysis.jpg)
 
 </details>
 
@@ -96,7 +98,7 @@ Stop the development process first if it uses the same port. `PORT` defaults to 
 
 Install/run Ollama separately, explicitly download a suitable model, and select it in settings. The hub does not download or train models, change global Ollama settings, or enable cloud inference automatically.
 
-A tested small starting point is `qwen2.5:3b` (approximately 1.9 GB, Q4_K_M). If its separate license fits your use, download it explicitly:
+The integration was exercised with `qwen2.5:3b` (approximately 1.9 GB, Q4_K_M). It is lightweight, but the full-page test exposed semantic errors; it is not a verified audit expert. If you still want to try it and its separate license fits your use, download it explicitly:
 
 ```sh
 ollama pull qwen2.5:3b
@@ -104,14 +106,16 @@ ollama pull qwen2.5:3b
 
 The 3B model uses the **Qwen Research License, not this app's MIT license or Apache 2.0**; read the [official model information and license](https://ollama.com/library/qwen2.5:3b). Model weights are not bundled with SiteFenn.
 
-On 2026-10-28, one real local service request on an M5 Pro/24 GiB returned validated JSON with correct evidence references in about 2.9 seconds for **one synthetic finding**. This verifies that integration path, not website-audit accuracy, language consistency or general response speed. The tested `qwen3:4b` thinking-only variant instead failed structured-output validation after about 60 seconds; it is not the recommended starting model. Review every model suggestion.
+On 2026-10-29, the multi-part page-report test on an M5 Pro/24 GiB exposed contradictory summaries and unsuitable retest criteria from this 3B model. Targeted guards rejected such parts. Correctly shaped JSON and known finding IDs **do not prove factual correctness**. The tested `qwen3:4b` thinking-only variant previously failed its structured-output budget; it is not an established replacement. Model quality needs further evaluation.
 
 - Fixed endpoint: `http://127.0.0.1:11434`.
-- Model metadata is checked before sharing observations; remote-backed aliases, cloud tags and unverifiable locality are rejected.
-- At most **12 selected screenshot-backed findings** per UI request are sent as bounded structured text. No screenshot images, raw page dump, source repository, cookies or browser-control tools are provided.
-- Numeric-only performance findings remain in the deterministic report.
-- Replies must validate against a schema and existing finding/evidence IDs. Cancelled, timed-out or invalid output is not saved as a successful plan.
-- Advice is fallible and does not modify facts, scores or source files. Model speed and structured-output reliability depend on the selected model and hardware; no fixed performance is guaranteed.
+- Local-backing metadata is checked before sharing observations; remote-backed aliases, cloud tags and unverifiable locality are rejected.
+- The selected page's structured report is processed in **up to 24 parts**, each with an 8,500-character record budget and at most two findings. This includes numeric-only performance findings. Oversize individual records and the part limit produce explicit omissions and a partial result.
+- No screenshot images, raw page dump, source repository, cookies or browser-control tools are supplied.
+- Each part has a bounded provider request, schema/reference checks and one correction attempt for invalid output. The overall job has a ten-minute limit. Failed parts remain visible; there is no cloud fallback or canned replacement answer.
+- Progress and accepted partial answers persist. A restart marks unfinished analyses interrupted; run a new analysis to complete them. Follow-ups stay bound to the same scan/page/context hash.
+- Proposals stay unverified. Adopting one annotates an existing task, does not execute code or mark it fixed, and does not change scores. Historical verified tasks are preserved.
+- Optional real-model smoke: `npm run test:page-ai-local`. It exits unsuccessfully for partial/failed output and leaves private diagnostics in ignored `.local-data/`. This is separate from deterministic CI tests using a mocked provider.
 
 The integration is text-based; screenshot vision analysis is not implemented. Thinking-only models can require much larger inference budgets and may fail validation within the bounded request. Do not interpret model availability as a quality benchmark.
 
@@ -139,7 +143,7 @@ Exports distinguish observations, recommendations, acceptance criteria and limit
 | Linux    | `$XDG_DATA_HOME/website-audit-hub`, otherwise `~/.local/share/website-audit-hub` |
 | Windows  | `%LOCALAPPDATA%/website-audit-hub`                                               |
 
-`HUB_DATA_DIR` selects another directory. Projects, scans, evidence, tasks, settings and imported search data stay local, but are not encrypted by this app.
+`HUB_DATA_DIR` selects another directory. Projects, scans, evidence, tasks, saved page analyses, settings and imported search data stay local, but are not encrypted by this app.
 
 The UI can create a portable backup while no scan/analysis is active: database snapshot, evidence and checksum manifest. Limits: 250 MiB and 2,000 evidence files. For larger workspaces, stop the app and back up the full data directory normally.
 

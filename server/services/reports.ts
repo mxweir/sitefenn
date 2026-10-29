@@ -283,6 +283,19 @@ export function buildMarkdownReport(
       `  - Acceptance: ${text(task.acceptance)}`,
       "",
     );
+    if (task.aiProposal) {
+      lines.push(
+        `  - Unverified AI proposal (${text(task.aiProposal.analysisId)}): ${text(task.aiProposal.explanation)}`,
+        `  - Hypothesis: ${text(task.aiProposal.cause)}`,
+        ...task.aiProposal.steps.map((step) => `    - ${text(step)}`),
+        `  - Proposed retest: ${text(task.aiProposal.acceptance)}`,
+        `  - Uncertainty: ${text(task.aiProposal.uncertainty)}`,
+      );
+      if (task.aiProposal.code.text)
+        lines.push(
+          `  - Illustrative code (not a verified source patch): ${text(task.aiProposal.code.text)}`,
+        );
+    }
     for (const finding of related) {
       lines.push(
         `### ${text(finding.id)} · ${text(finding.evidenceStatus)}`,

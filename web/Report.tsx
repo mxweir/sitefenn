@@ -42,17 +42,48 @@ export function Report({
   scan,
   score,
   onExplain,
+  initialFindingId,
+  tasks = [],
 }: {
   scan?: Scan;
   score?: ScoreSummary;
-  onExplain: (finding?: Finding) => void;
+  onExplain: (finding?: Finding, pageUrl?: string) => void;
+  initialFindingId?: string;
+  tasks?: AuditTask[];
 }) {
   const [category, setCategory] = useState("all");
   const [priority, setPriority] = useState("all");
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState("all");
+  const [device, setDevice] = useState("all");
+  const [status, setStatus] = useState("all");
+  const [grouped, setGrouped] = useState(true);
+  const [variant, setVariant] = useState("");
   const [open, setOpen] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const report = scan?.result?.audit;
+  useEffect(() => {
+    setCategory("all");
+    setPriority("all");
+    setQuery("");
+    setStatus("all");
+    const finding = report?.findings.find(
+      (item) => item.id === initialFindingId,
+    );
+    setPage(finding?.pageUrl ?? "all");
+    setDevice(finding?.viewportId ?? "all");
+    setOpen(finding?.id ?? null);
+    setVariant(finding?.id ?? "");
+  }, [scan?.id, initialFindingId, !!report]);
+  useEffect(() => {
+    if (!initialFindingId || open !== initialFindingId) return;
+    const frame = requestAnimationFrame(() => {
+      const target = document.getElementById(`finding-${initialFindingId}`);
+      target?.focus({ preventScroll: true });
+      target?.scrollIntoView({ block: "center", behavior: "instant" });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [initialFindingId, open]);
   if (!scan?.result)
     return (
       <Empty
@@ -70,11 +101,29 @@ export function Report({
     (f) =>
       (category === "all" || f.category === category) &&
       (priority === "all" || f.priority === priority) &&
+      (page === "all" || f.pageUrl === page) &&
+      (device === "all" || f.viewportId === device) &&
+      (status === "all" ||
+        tasks.some(
+          (task) => task.findingIds.includes(f.id) && task.status === status,
+        )) &&
       `${f.title} ${f.detail} ${f.pageUrl}`
         .toLowerCase()
         .includes(query.toLowerCase()),
   );
   const categories = [...new Set(findings.map((f) => f.category))];
+  const groupedFindings = new Map<string, Finding[]>();
+  for (const finding of visible) {
+    const key = grouped
+      ? JSON.stringify([
+          finding.pageUrl,
+          finding.ruleId,
+          finding.selector ?? finding.title,
+          finding.evidenceStatus,
+        ])
+      : finding.id;
+    groupedFindings.set(key, [...(groupedFindings.get(key) ?? []), finding]);
+  }
   return (
     <>
       <div className="toolbar report-toolbar">
@@ -83,7 +132,12 @@ export function Report({
           <h2>Dein Prüfbericht</h2>
         </div>
         <div className="action-group">
-          <button className="button secondary" onClick={() => onExplain()}>
+          <button
+            className="button secondary"
+            onClick={() =>
+              onExplain(undefined, page === "all" ? undefined : page)
+            }
+          >
             <Sparkles size={16} />
             Mit Fenn besprechen
           </button>
@@ -197,14 +251,76 @@ export function Report({
             <option value="important">Wichtig</option>
             <option value="nice-to-have">Nice to have</option>
           </select>
+          <select
+            aria-label="Seite filtern"
+            value={page}
+            onChange={(e) => {
+              setPage(e.target.value);
+              setOpen(null);
+            }}
+          >
+            <option value="all">Alle Seiten</option>
+            {report?.options.pages.map((url) => (
+              <option key={url} value={url}>
+                {url}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Gerät filtern"
+            value={device}
+            onChange={(e) => {
+              setDevice(e.target.value);
+              setOpen(null);
+            }}
+          >
+            <option value="all">Alle Geräte</option>
+            {report?.options.viewports.map((viewport) => (
+              <option key={viewport.id} value={viewport.id}>
+                {viewport.id}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Maßnahmenstatus filtern"
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            <option value="all">Alle Maßnahmenstatus</option>
+            {Object.entries(taskLabels).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
         </div>
-        {visible.map((finding) => {
-          const expanded = open === finding.id;
+        <label className="group-control">
+          <input
+            type="checkbox"
+            checked={grouped}
+            onChange={(e) => {
+              setGrouped(e.target.checked);
+              setOpen(null);
+            }}
+          />
+          Ähnliche Befunde pro Seite bündeln
+        </label>
+        {[...groupedFindings.values()].map((group) => {
+          const representative = group[0]!;
+          const expanded = group.some((item) => item.id === open);
+          const finding = expanded
+            ? (group.find((item) => item.id === variant) ?? representative)
+            : representative;
           const evidence = report?.evidence.find(
             (e) => e.id === finding.evidenceId,
           );
           return (
-            <article key={finding.id} className="issue-card">
+            <article
+              key={representative.id}
+              className="issue-card"
+              id={`finding-${finding.id}`}
+              tabIndex={-1}
+            >
               <div className="issue-summary">
                 <span
                   className={`pill ${finding.priority === "nice-to-have" ? "nice" : finding.priority}`}
@@ -221,10 +337,17 @@ export function Report({
                     <span className="small-label">
                       {categoryLabel(finding.category)}
                     </span>
+                    <span className="pill">
+                      {group.length}{" "}
+                      {group.length === 1 ? "Fundstelle" : "Fundstellen"}
+                    </span>
                   </div>
                   <h3>{finding.title}</h3>
                   <p className="issue-location">
-                    {finding.pageUrl} · {finding.viewportId} · {finding.state}
+                    {new URL(finding.pageUrl).pathname} ·{" "}
+                    {group.length > 1
+                      ? "mehrere Ansichten"
+                      : `${finding.viewportId} · ${finding.state}`}
                   </p>
                   <p className="issue-excerpt">{finding.detail}</p>
                 </div>
@@ -232,7 +355,10 @@ export function Report({
                   className="issue-toggle"
                   aria-expanded={expanded}
                   aria-label={`${expanded ? "Details schließen" : "Details öffnen"}: ${finding.title}`}
-                  onClick={() => setOpen(expanded ? null : finding.id)}
+                  onClick={() => {
+                    setOpen(expanded ? null : representative.id);
+                    setVariant(representative.id);
+                  }}
                 >
                   {expanded ? (
                     <ChevronUp size={18} />
@@ -242,48 +368,87 @@ export function Report({
                 </button>
               </div>
               {expanded && (
-                <div className="issue-body">
-                  <dl>
-                    <dt>Beobachtung</dt>
-                    <dd>{finding.detail}</dd>
-                    <dt>Maßnahme</dt>
-                    <dd>{finding.recommendation}</dd>
-                    <dt>Abnahmekriterium</dt>
-                    <dd>{finding.acceptance}</dd>
-                    <dt>Element / Regel</dt>
-                    <dd>
-                      <code>{finding.selector ?? "Kein Elementanker"}</code>
-                      <br />
-                      {finding.ruleId}
-                    </dd>
-                  </dl>
-                  {evidence && (
-                    <div className="evidence-detail">
-                      <EvidenceView
-                        evidence={evidence}
-                        scanId={scan.id}
-                        findings={[finding]}
-                      />
-                    </div>
-                  )}
-                  <div className="issue-actions">
-                    <button
-                      className="button secondary"
-                      onClick={() => onExplain(finding)}
-                    >
-                      <Sparkles size={15} />
-                      Diesen Befund erklären
-                    </button>
-                    {finding.source && /^https:\/\//.test(finding.source) && (
-                      <a
-                        className="button secondary"
-                        href={finding.source}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        Regelreferenz
-                      </a>
+                <div className="issue-body fix-workspace">
+                  <div className="fix-observation">
+                    {group.length > 1 && (
+                      <>
+                        <label htmlFor={`variant-${representative.id}`}>
+                          Fundstelle wählen
+                        </label>
+                        <select
+                          id={`variant-${representative.id}`}
+                          value={finding.id}
+                          onChange={(e) => setVariant(e.target.value)}
+                        >
+                          {group.map((item) => (
+                            <option key={item.id} value={item.id}>
+                              {item.viewportId} · {item.state} ·{" "}
+                              {new URL(item.pageUrl).pathname}
+                            </option>
+                          ))}
+                        </select>
+                      </>
                     )}
+                    <dl>
+                      <dt>Beobachtung</dt>
+                      <dd>{finding.detail}</dd>
+                      <dt>Maßnahme</dt>
+                      <dd>{finding.recommendation}</dd>
+                      <dt>Abnahmekriterium</dt>
+                      <dd>{finding.acceptance}</dd>
+                    </dl>
+                    <details>
+                      <summary>Fundstelle und technische Details</summary>
+                      <dl>
+                        <dt>URL</dt>
+                        <dd className="identity-hash">{finding.pageUrl}</dd>
+                        <dt>Element / Regel</dt>
+                        <dd>
+                          <code>{finding.selector ?? "Kein Elementanker"}</code>
+                          <br />
+                          {finding.ruleId}
+                        </dd>
+                      </dl>
+                    </details>
+                    <div className="issue-actions">
+                      <button
+                        className="button secondary"
+                        onClick={() => onExplain(finding)}
+                      >
+                        <Sparkles size={15} />
+                        Diesen Befund erklären
+                      </button>
+                    </div>
+                  </div>
+                  <div className="fix-evidence">
+                    {evidence && (
+                      <div className="evidence-detail">
+                        <EvidenceView
+                          evidence={evidence}
+                          scanId={scan.id}
+                          findings={[finding]}
+                        />
+                      </div>
+                    )}
+                    {!evidence && (
+                      <p className="plan-note">
+                        Für diesen Befund liegt kein Screenshot vor. Der
+                        numerische oder regelbasierte Nachweis steht in der
+                        Beobachtung und im Regelprotokoll.
+                      </p>
+                    )}
+                    <div className="issue-actions">
+                      {finding.source && /^https:\/\//.test(finding.source) && (
+                        <a
+                          className="button secondary"
+                          href={finding.source}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Regelreferenz
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -471,6 +636,9 @@ export function Tasks({
   onChange: () => void | Promise<void>;
 }) {
   const [filter, setFilter] = useState("all");
+  const [page, setPage] = useState("all");
+  const [device, setDevice] = useState("all");
+  const [category, setCategory] = useState("all");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
@@ -487,7 +655,16 @@ export function Tasks({
       </Empty>
     );
   const visible = tasks.filter(
-    (task) => filter === "all" || task.status === filter,
+    (task) =>
+      (filter === "all" || task.status === filter) &&
+      (category === "all" || task.category === category) &&
+      ((page === "all" && device === "all") ||
+        scan.result?.audit?.findings.some(
+          (finding) =>
+            task.findingIds.includes(finding.id) &&
+            (page === "all" || finding.pageUrl === page) &&
+            (device === "all" || finding.viewportId === device),
+        )),
   );
   const update = async (task: AuditTask, status: TaskStatus) => {
     setBusy(task.id);
@@ -508,8 +685,8 @@ export function Tasks({
           <p className="eyebrow">VOM BEFUND ZUM NÄCHSTEN SCHRITT</p>
           <h2>Dein Maßnahmenplan</h2>
           <p>
-            Gemeinsame Ursachen werden gebündelt. Manuell abgehakt bedeutet „zur
-            Prüfung“, nicht automatisch behoben.
+            Ähnliche Beobachtungen werden gebündelt. Manuell abgehakt bedeutet
+            „zur Prüfung“, nicht automatisch behoben.
           </p>
         </div>
         <button className="button primary" onClick={() => setExportOpen(true)}>
@@ -528,6 +705,42 @@ export function Tasks({
           {Object.entries(taskLabels).map(([status, label]) => (
             <option key={status} value={status}>
               {label}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Aufgabenseite filtern"
+          value={page}
+          onChange={(e) => setPage(e.target.value)}
+        >
+          <option value="all">Alle Seiten</option>
+          {scan.result.audit?.options.pages.map((url) => (
+            <option key={url} value={url}>
+              {url}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Aufgabengerät filtern"
+          value={device}
+          onChange={(e) => setDevice(e.target.value)}
+        >
+          <option value="all">Alle Geräte</option>
+          {scan.result.audit?.options.viewports.map((viewport) => (
+            <option key={viewport.id} value={viewport.id}>
+              {viewport.id}
+            </option>
+          ))}
+        </select>
+        <select
+          aria-label="Aufgabenkategorie filtern"
+          value={category}
+          onChange={(e) => setCategory(e.target.value)}
+        >
+          <option value="all">Alle Kategorien</option>
+          {[...new Set(tasks.map((task) => task.category))].map((item) => (
+            <option key={item} value={item}>
+              {categoryLabel(item)}
             </option>
           ))}
         </select>
@@ -573,6 +786,28 @@ export function Tasks({
               <strong>So prüfst du die Behebung</strong>
               {task.acceptance}
             </div>
+            {task.aiProposal && (
+              <details className="plan-note">
+                <summary>Übernommener KI-Vorschlag · ungeprüft</summary>
+                <p>{task.aiProposal.explanation}</p>
+                <p>Vermutete Ursache: {task.aiProposal.cause}</p>
+                <ol>
+                  {task.aiProposal.steps.map((step, i) => (
+                    <li key={i}>{step}</li>
+                  ))}
+                </ol>
+                {task.aiProposal.code.text && (
+                  <pre className="solution-code">
+                    <code>{task.aiProposal.code.text}</code>
+                  </pre>
+                )}
+                <p>Vorgeschlagener Nachtest: {task.aiProposal.acceptance}</p>
+                <p>Unsicherheit: {task.aiProposal.uncertainty}</p>
+                <p className="small-label">
+                  Auswertung {task.aiProposal.analysisId}
+                </p>
+              </details>
+            )}
             <div className="toolbar task-status-row">
               <label htmlFor={`status-${task.id}`} className="small-label">
                 STATUS

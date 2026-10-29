@@ -4,6 +4,8 @@ Stand: 29. Oktober 2026. Vorschlag auf Basis des veröffentlichten 1.0-Codes und
 
 Fortschritt 1.1: Referenzläufe, Regressionen, drei autorisierte Real-Websites, Messgrenzen und frühe Machbarkeitsprüfungen sind in [BASELINE-1.1.md](docs/BASELINE-1.1.md) und [RELEASE-1.1.md](docs/RELEASE-1.1.md) dokumentiert. Das Repository heißt jetzt `sitefenn`; Daten bleiben im bisherigen Verzeichnis. Eine unabhängige menschliche Beschriftung und ein separates zurückgehaltenes Testset sind weiterhin offen. Die neue synthetische Auswertung ersetzt diese nicht.
 
+Fortschritt 1.2: Fix-Arbeitsbereich, Filter/Bündelung und der erste durchgängige lokale Ablauf „Seite erklären“ sind implementiert. Teilfehler, Kontextgrenzen und ungeprüfte Vorschläge bleiben sichtbar. [RELEASE-1.2.md](docs/RELEASE-1.2.md) dokumentiert Tests und Modellgrenzen. Der im Plan geforderte moderierte Nutzertest wurde noch nicht durchgeführt; die unabhängige UX-Abnahme ist damit ausdrücklich offen.
+
 ## Produktziel
 
 **SiteFenn hilft dir, Website-Probleme nachweisbar zu beheben und neue Fehler vor der Veröffentlichung zu erkennen.**

@@ -41,7 +41,7 @@ import { Report, Tasks } from "./Report.js";
 import Compare from "./Compare.js";
 import SearchVisibility from "./SearchVisibility.js";
 import Settings from "./Settings.js";
-import FennGuide from "./FennGuide.js";
+import PageAnalysis from "./PageAnalysis.js";
 
 interface Bootstrap {
   version: string;
@@ -59,7 +59,15 @@ interface ScanDetail {
   tasks?: AuditTask[];
   aiPlan?: AiPlan;
 }
-type Tab = "overview" | "live" | "report" | "tasks" | "compare" | "search";
+type Tab =
+  | "overview"
+  | "history"
+  | "live"
+  | "report"
+  | "analysis"
+  | "tasks"
+  | "compare"
+  | "search";
 const empty: Bootstrap = {
   version: APP_VERSION,
   projects: [],
@@ -73,6 +81,7 @@ const tabs = [
   { id: "overview", label: "Übersicht", icon: LayoutDashboard },
   { id: "live", label: "On-Screen-Check", icon: Radio },
   { id: "report", label: "Befunde", icon: FileText },
+  { id: "analysis", label: "Seite erklären", icon: FileText },
   { id: "tasks", label: "Maßnahmenplan", icon: CheckSquare2 },
   { id: "compare", label: "Vergleich", icon: ArrowLeftRight },
   { id: "search", label: "Sichtbarkeit", icon: Search },
@@ -89,8 +98,8 @@ export default function App() {
   const [screen, setScreen] = useState<"projects" | "system">("projects");
   const [tab, setTab] = useState<Tab>("overview");
   const [busy, setBusy] = useState("");
-  const [guideOpen, setGuideOpen] = useState(false);
-  const [guideFinding, setGuideFinding] = useState<Finding>();
+  const [analysisPage, setAnalysisPage] = useState<string>();
+  const [reportFinding, setReportFinding] = useState<string>();
   const addButton = useRef<HTMLButtonElement>(null);
   const projectHeading = useRef<HTMLElement>(null);
   const refresh = useCallback(async () => {
@@ -113,6 +122,10 @@ export default function App() {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+    document.getElementById("main")?.focus({ preventScroll: true });
+  }, [screen, tab]);
   const running = data.scans.some(active);
   useEffect(() => {
     if (!running) return;
@@ -163,7 +176,8 @@ export default function App() {
     setScanId(null);
     setTab("overview");
     setScreen("projects");
-    setGuideFinding(undefined);
+    setAnalysisPage(undefined);
+    setReportFinding(undefined);
     window.setTimeout(
       () =>
         projectHeading.current?.scrollIntoView({
@@ -192,9 +206,10 @@ export default function App() {
       setBusy("");
     }
   };
-  const explain = (finding?: Finding) => {
-    setGuideFinding(finding);
-    setGuideOpen(true);
+  const explain = (finding?: Finding, pageUrl?: string) => {
+    setAnalysisPage(finding?.pageUrl ?? pageUrl);
+    setScreen("projects");
+    setTab("analysis");
   };
   return (
     <div className="app-shell">
@@ -231,7 +246,7 @@ export default function App() {
         <span className="nav-label">WORKSPACE</span>
         <nav aria-label="Hauptnavigation">
           <button
-            className={`nav-item ${screen === "projects" ? "selected" : ""}`}
+            className={`nav-item ${screen === "projects" && tab === "overview" ? "selected" : ""}`}
             onClick={() => {
               setScreen("projects");
               setTab("overview");
@@ -240,6 +255,40 @@ export default function App() {
             <LayoutDashboard size={18} />
             Websites<span className="nav-count">{data.projects.length}</span>
           </button>
+          {project && (
+            <>
+              <button
+                className={`nav-item ${screen === "projects" && ["history", "live", "report", "analysis", "compare"].includes(tab) ? "selected" : ""}`}
+                onClick={() => {
+                  setScreen("projects");
+                  setTab("history");
+                }}
+              >
+                <Activity size={18} />
+                Prüfungen
+              </button>
+              <button
+                className={`nav-item ${screen === "projects" && tab === "tasks" ? "selected" : ""}`}
+                onClick={() => {
+                  setScreen("projects");
+                  setTab("tasks");
+                }}
+              >
+                <CheckSquare2 size={18} />
+                Maßnahmen
+              </button>
+              <button
+                className={`nav-item ${screen === "projects" && tab === "search" ? "selected" : ""}`}
+                onClick={() => {
+                  setScreen("projects");
+                  setTab("search");
+                }}
+              >
+                <Search size={18} />
+                Sichtbarkeitsdaten
+              </button>
+            </>
+          )}
           <button
             className={`nav-item ${screen === "system" ? "selected" : ""}`}
             onClick={() => setScreen("system")}
@@ -313,34 +362,38 @@ export default function App() {
           ) : (
             <>
               {data.projects.length ? (
-                <section className="workspace-heading">
-                  <div>
-                    <p className="eyebrow">DEIN WEBSITE-WORKSPACE</p>
-                    <h1>DEINE SITE. KLARER BLICK.</h1>
-                    <p>
-                      Echte Belege. Konkrete nächste Schritte. Und ein
-                      Vergleich, der Veränderungen sichtbar macht.
-                    </p>
-                  </div>
-                  <div className="workspace-actions">
-                    <button
-                      className="button secondary"
-                      disabled={!!busy}
-                      onClick={() => void createDemo()}
-                    >
-                      <FlaskConical size={16} />
-                      {busy === "demo" ? "Demo wird gestartet …" : "Demo laden"}
-                    </button>
-                    <button
-                      ref={addButton}
-                      className="button primary"
-                      onClick={() => setModal(true)}
-                    >
-                      <Plus size={17} />
-                      Website hinzufügen
-                    </button>
-                  </div>
-                </section>
+                tab === "overview" ? (
+                  <section className="workspace-heading">
+                    <div>
+                      <p className="eyebrow">DEIN WEBSITE-WORKSPACE</p>
+                      <h1>DEINE SITE. KLARER BLICK.</h1>
+                      <p>
+                        Echte Belege. Konkrete nächste Schritte. Und ein
+                        Vergleich, der Veränderungen sichtbar macht.
+                      </p>
+                    </div>
+                    <div className="workspace-actions">
+                      <button
+                        className="button secondary"
+                        disabled={!!busy}
+                        onClick={() => void createDemo()}
+                      >
+                        <FlaskConical size={16} />
+                        {busy === "demo"
+                          ? "Demo wird gestartet …"
+                          : "Demo laden"}
+                      </button>
+                      <button
+                        ref={addButton}
+                        className="button primary"
+                        onClick={() => setModal(true)}
+                      >
+                        <Plus size={17} />
+                        Website hinzufügen
+                      </button>
+                    </div>
+                  </section>
+                ) : null
               ) : (
                 <section className="page-heading poster-heading">
                   <div className="hero-copy">
@@ -418,62 +471,64 @@ export default function App() {
                 </section>
               ) : (
                 <>
-                  <section
-                    className="project-grid workspace-project-grid"
-                    aria-label="Deine Websites"
-                  >
-                    {data.projects.map((p) => {
-                      const latest = data.scans
-                        .filter((s) => s.projectId === p.id)
-                        .sort((a, b) =>
-                          b.createdAt.localeCompare(a.createdAt),
-                        )[0];
-                      const latestScore = latest
-                        ? data.scores[latest.id]
-                        : undefined;
-                      return (
-                        <button
-                          key={p.id}
-                          className={`project-card ${project?.id === p.id ? "active-project" : ""}`}
-                          onClick={() => chooseProject(p.id)}
-                        >
-                          <div className="project-card-top">
-                            <span className="website-icon">
-                              <Globe2 size={20} />
-                            </span>
-                            <span className={`environment ${p.environment}`}>
-                              {p.environment === "production"
-                                ? "Produktion"
-                                : p.environment === "staging"
-                                  ? "Staging"
-                                  : "Lokal"}
-                            </span>
-                          </div>
-                          <h3>{p.name}</h3>
-                          <span className="project-url">{p.url}</span>
-                          <div className="project-card-footer">
-                            <span>
-                              {latest
-                                ? statusLabel(latest.status)
-                                : "Noch keine Prüfung"}
-                            </span>
-                            {latestScore?.lower !== null &&
-                            latestScore?.lower !== undefined ? (
-                              <span className="mini-score">
-                                {Math.round(latestScore.lower)}
-                                {latestScore.upper !== latestScore.lower
-                                  ? `–${Math.round(latestScore.upper ?? latestScore.lower)}`
-                                  : ""}
-                                /100
+                  {tab === "overview" && (
+                    <section
+                      className="project-grid workspace-project-grid"
+                      aria-label="Deine Websites"
+                    >
+                      {data.projects.map((p) => {
+                        const latest = data.scans
+                          .filter((s) => s.projectId === p.id)
+                          .sort((a, b) =>
+                            b.createdAt.localeCompare(a.createdAt),
+                          )[0];
+                        const latestScore = latest
+                          ? data.scores[latest.id]
+                          : undefined;
+                        return (
+                          <button
+                            key={p.id}
+                            className={`project-card ${project?.id === p.id ? "active-project" : ""}`}
+                            onClick={() => chooseProject(p.id)}
+                          >
+                            <div className="project-card-top">
+                              <span className="website-icon">
+                                <Globe2 size={20} />
                               </span>
-                            ) : (
-                              <ArrowRight size={16} />
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </section>
+                              <span className={`environment ${p.environment}`}>
+                                {p.environment === "production"
+                                  ? "Produktion"
+                                  : p.environment === "staging"
+                                    ? "Staging"
+                                    : "Lokal"}
+                              </span>
+                            </div>
+                            <h3>{p.name}</h3>
+                            <span className="project-url">{p.url}</span>
+                            <div className="project-card-footer">
+                              <span>
+                                {latest
+                                  ? statusLabel(latest.status)
+                                  : "Noch keine Prüfung"}
+                              </span>
+                              {latestScore?.lower !== null &&
+                              latestScore?.lower !== undefined ? (
+                                <span className="mini-score">
+                                  {Math.round(latestScore.lower)}
+                                  {latestScore.upper !== latestScore.lower
+                                    ? `–${Math.round(latestScore.upper ?? latestScore.lower)}`
+                                    : ""}
+                                  /100
+                                </span>
+                              ) : (
+                                <ArrowRight size={16} />
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </section>
+                  )}
                   {project && (
                     <section
                       ref={projectHeading}
@@ -502,7 +557,8 @@ export default function App() {
                             value={selectedScan?.id ?? ""}
                             onChange={(e) => {
                               setScanId(e.target.value);
-                              setGuideFinding(undefined);
+                              setAnalysisPage(undefined);
+                              setReportFinding(undefined);
                             }}
                           >
                             {scans.map((scan) => (
@@ -691,7 +747,60 @@ export default function App() {
                           scan={selectedScan}
                           score={score}
                           onExplain={explain}
+                          initialFindingId={reportFinding}
+                          tasks={tasks}
                         />
+                      )}
+                      {tab === "analysis" && (
+                        <PageAnalysis
+                          key={selectedScan?.id}
+                          scan={selectedScan}
+                          requestedPage={analysisPage}
+                          legacyPlan={detail?.aiPlan}
+                          settings={data.settings}
+                          speechAvailable={!!data.speechAvailable}
+                          onTasksChanged={refresh}
+                          onShowFinding={(id) => {
+                            setReportFinding(id);
+                            setTab("report");
+                          }}
+                        />
+                      )}
+                      {tab === "history" && (
+                        <section className="panel">
+                          <p className="eyebrow">GESPEICHERTE MESSSTÄNDE</p>
+                          <h2>Prüfungen von {project.name}</h2>
+                          <div className="hub-history">
+                            {scans.map((scan) => (
+                              <button
+                                key={scan.id}
+                                className="history-row"
+                                onClick={() => {
+                                  setScanId(scan.id);
+                                  setReportFinding(undefined);
+                                  setTab(active(scan) ? "live" : "report");
+                                }}
+                              >
+                                <div>
+                                  <strong>{statusLabel(scan.status)}</strong>
+                                  <small>
+                                    {stamp(scan.createdAt)} ·{" "}
+                                    {scan.options?.pages.length ?? 1} Seiten ·{" "}
+                                    {scan.options?.viewports.length ?? 1}{" "}
+                                    Ansichten
+                                  </small>
+                                </div>
+                                <ChevronRight size={16} />
+                              </button>
+                            ))}
+                          </div>
+                          {!scans.length && (
+                            <p>
+                              Noch keine Prüfung. In der Übersicht den Umfang
+                              festlegen und starten.
+                            </p>
+                          )}
+                        </section>
                       )}
                       {tab === "tasks" && (
                         <Tasks
@@ -732,15 +841,17 @@ export default function App() {
           }}
         />
       )}
-      <FennGuide
-        scan={selectedScan}
-        finding={guideFinding}
-        savedPlan={detail?.aiPlan}
-        open={guideOpen}
-        onToggle={setGuideOpen}
-        settings={data.settings}
-        speechAvailable={!!data.speechAvailable}
-      />
+      {!(screen === "projects" && tab === "analysis") && (
+        <button
+          className="fenn-launcher"
+          aria-label="Fenn öffnen"
+          disabled={!selectedScan?.result?.audit}
+          onClick={() => explain()}
+        >
+          <FennMark />
+          <span>Seitenbericht mit Fenn erklären</span>
+        </button>
+      )}
     </div>
   );
 }

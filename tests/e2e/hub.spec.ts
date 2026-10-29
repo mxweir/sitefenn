@@ -69,6 +69,29 @@ test("real responsive demo produces evidence, a report and persisted history", a
       evidence.evaluate((img) => (img as HTMLImageElement).naturalWidth),
     )
     .toBe(1440);
+  await expect(description.getByLabel("Fundstelle wählen")).toHaveCount(1);
+  const mobileOption = await description
+    .getByLabel("Fundstelle wählen")
+    .locator("option")
+    .allTextContents();
+  expect(mobileOption.some((value) => value.includes("mobile"))).toBe(true);
+  await description
+    .getByLabel("Fundstelle wählen")
+    .selectOption({
+      label: mobileOption.find((value) => value.includes("mobile"))!,
+    });
+  await expect
+    .poll(() =>
+      description
+        .getByAltText(/Gespeicherter Mobile-Screenshot/)
+        .evaluate((img) => (img as HTMLImageElement).naturalWidth),
+    )
+    .toBe(390);
+  await page
+    .getByLabel("Gerät filtern", { exact: true })
+    .selectOption("mobile");
+  await expect(page.getByLabel("Fundstelle wählen")).toHaveCount(0);
+  await page.getByLabel("Gerät filtern", { exact: true }).selectOption("all");
   await expect(
     page.getByRole("progressbar", { name: "Prüfabdeckung" }),
   ).toBeVisible();
@@ -145,7 +168,7 @@ test("real responsive demo produces evidence, a report and persisted history", a
   expect(errors).toEqual([]);
 });
 
-test("Fenn asset is served locally and collapsed guidance is explicitly non-AI", async ({
+test("Fenn stays local and the launcher opens an explicit report-based analysis", async ({
   page,
 }) => {
   await page.goto("/");
@@ -153,20 +176,17 @@ test("Fenn asset is served locally and collapsed guidance is explicitly non-AI",
   expect(asset.ok()).toBe(true);
   expect(asset.headers()["content-type"]).toContain("image/png");
   expect((await asset.body()).length).toBeGreaterThan(1000);
+  await page.getByRole("button", { name: "Fenn öffnen", exact: true }).click();
   await expect(
-    page.getByRole("button", { name: "Fenns Hinweis anzeigen" }),
-  ).toHaveAttribute("aria-expanded", "false");
-  await page.getByRole("button", { name: "Fenns Hinweis anzeigen" }).click();
-  const guide = page.getByRole("region", { name: "Hinweis von Fenn" });
-  await expect(guide).toContainText("STATISCHER TIPP · KEINE KI");
+    page.getByRole("heading", { name: "Seite mit Fenn erklären" }),
+  ).toBeVisible();
+  await expect(page.getByLabel("Seite auswählen")).toBeVisible();
   await expect(
-    guide.getByRole("button", { name: "Lokal erklären lassen" }),
+    page.getByRole("button", { name: "Seite lokal analysieren" }),
   ).toBeDisabled();
-  await page.getByRole("button", { name: "Fenns Hinweis einklappen" }).click();
-  await expect(guide).toBeHidden();
   await expect(
-    page.getByRole("button", { name: "Fenns Hinweis anzeigen" }),
-  ).toHaveAttribute("aria-expanded", "false");
+    page.getByText("Vom Report zur konkreten Lösung", { exact: true }),
+  ).toBeVisible();
 });
 
 test("public project dialog enforces consent and restores focus after blocked target", async ({

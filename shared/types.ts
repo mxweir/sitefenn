@@ -252,6 +252,7 @@ export type TaskStatus =
   | "verified"
   | "accepted";
 export interface AuditTask {
+  aiProposal?: PageSolution & { analysisId: string };
   id: string;
   scanId: string;
   projectId: string;
@@ -312,6 +313,54 @@ export interface AiPlan {
 export interface HubSettings {
   model: string;
   speechEnabled: boolean;
+}
+export interface PageSolution {
+  findingId: string;
+  explanation: string;
+  cause: string;
+  steps: string[];
+  code: { language: "none" | "html" | "css" | "javascript"; text: string };
+  acceptance: string;
+  uncertainty: string;
+}
+export interface AnalysisPart {
+  attempts?: number;
+  id: string;
+  unitIds: string[];
+  findingIds: string[];
+  status: "queued" | "running" | "completed" | "failed" | "cancelled";
+  summary?: string;
+  solutions: PageSolution[];
+  error?: string;
+  provenance?: AiPlan["provenance"];
+}
+export interface PageAnalysis {
+  kind: "page-analysis";
+  id: string;
+  scanId: string;
+  pageUrl: string;
+  model: string;
+  question: string;
+  parentId?: string;
+  sourceHash: string;
+  createdAt: string;
+  updatedAt: string;
+  status:
+    | "queued"
+    | "running"
+    | "completed"
+    | "partial"
+    | "failed"
+    | "cancelled"
+    | "interrupted";
+  stage: "context" | "summary" | "done";
+  parts: AnalysisPart[];
+  totalUnits: number;
+  omitted: { unitId: string; reason: string }[];
+  unexplainedFindingIds: string[];
+  summary: string;
+  summaryProvenance?: AiPlan["provenance"];
+  warnings: string[];
 }
 export type SearchDimension = "date" | "page" | "query" | "country" | "device";
 export interface SearchImportMetadata {

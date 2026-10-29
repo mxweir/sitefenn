@@ -320,7 +320,7 @@ export function EvidenceView({
         ) : (
           <img
             src={`/api/scans/${scanId}/evidence/${evidence.id}`}
-            alt={`Gespeicherter Desktop-Screenshot / ${evidence.viewportId}: ${evidence.pageUrl}`}
+            alt={`Gespeicherter ${evidence.viewportId === "mobile" ? "Mobile" : evidence.viewportId === "tablet" ? "Tablet" : "Desktop"}-Screenshot / ${evidence.viewportId}: ${evidence.pageUrl}`}
             onError={() => setFailed(true)}
           />
         )}{" "}

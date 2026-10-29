@@ -1,6 +1,6 @@
 {
   "name": "sitefenn",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -17,7 +17,8 @@
     "restore": "tsx scripts/restore-backup.ts",
     "benchmark": "tsx scripts/benchmark.ts",
     "test:readiness": "tsx scripts/readiness.ts",
-    "test:ai-local": "tsx scripts/ai-identity-smoke.ts"
+    "test:ai-local": "tsx scripts/ai-identity-smoke.ts",
+    "test:page-ai-local": "tsx scripts/page-ai-smoke.ts"
   },
   "dependencies": {
     "@fastify/static": "10.1.8",

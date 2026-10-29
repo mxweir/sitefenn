@@ -2,6 +2,37 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 1.2.0 — 2026-10-29
+
+### Fix workspace and navigation
+
+- Brought original evidence, observation, action and future acceptance into one fix view.
+- Added page/device/category/priority/workflow filters and per-page grouping with individually selectable captured locations.
+- Added direct navigation to checks, tasks and visibility; secondary workspaces no longer repeat the home hero/project grid. Workspace switches reset scroll/focus; linked findings open and receive focus.
+- Localized new axe findings into German and corrected device labels for captured screenshots. Historical reports retain their original text and identities.
+
+### Explain the selected page
+
+- Added a dedicated Fenn area using the selected page's complete structured report, including pass/fail/unknown checks and numeric-only measurements.
+- Added bounded multi-part jobs, persisted progress/history, cancellation, explicit omissions, restart interruption and scan/page/context-bound follow-ups.
+- Added concrete steps, cause hypotheses, illustrative code, future retest proposals and Markdown export. Accepted proposals annotate existing tasks without duplicates or verified-fix claims.
+- Added exact reference/schema validation, stable model identity checks and one bounded correction attempt. Targeted contradiction guards reject some known factual errors; accepted output remains unverified.
+
+### Compatibility and tested limits
+
+No database migration or data-directory rename. Older reports and saved legacy AI plans remain readable. The real 3B model test produced partial accepted output and factual mistakes; this is an optional assistant, not a validated audit expert. Independent moderated usability validation remains open.
+
+[Verification and limits](docs/RELEASE-1.2.md)
+
+![Actual 1.2 fix workspace](docs/screenshots/1.2-fix-workspace.jpg)
+
+<details>
+<summary>The actual page-analysis workspace</summary>
+
+![Actual local page analysis](docs/screenshots/1.2-page-analysis.jpg)
+
+</details>
+
 ## 1.1.0 — 2026-10-29
 
 ### Reliability and reference evidence
