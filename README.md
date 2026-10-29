@@ -8,19 +8,21 @@ Manage websites you own, inspect desktop/tablet/mobile layouts, collect evidence
 
 The repository and package are now **`sitefenn`**. Existing data stays in the legacy `website-audit-hub` directory so the rename does not reset your projects. Name/domain clearance is still pending.
 
-![SiteFenn 1.2 fix workspace with grouped findings and original evidence](docs/screenshots/1.2-fix-workspace.jpg)
+![SiteFenn 1.3 visual before-and-after comparison](docs/screenshots/1.3-visual-comparison.jpg)
 
 _Actual application, owned synthetic demo. Missing measurements remain unknown._
 
-[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.2.md) · [Changelog](CHANGELOG.md)
+[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.3.md) · [Changelog](CHANGELOG.md)
 
-## What's new in 1.2
+## What's new in 1.3
 
-**From evidence to a concrete next step.** The fix workspace brings the original capture, observation, action and acceptance criterion together. Filter by page, device, category, priority and task status; group similar findings while keeping every captured location accessible.
+**See what changed. Retest what matters.** Compare saved captures side by side, reveal them with a keyboard-accessible wipe slider, or highlight changed pixel regions. Explicitly approve a full scan as your visual reference and save rectangular masks for regions you want to exclude from future image comparisons.
 
-**Explain this page** gives Fenn a dedicated workspace. It processes the selected page's structured report across devices: findings, passed/failed/unknown checks, numeric-only measurements and evidence references. Saved analyses show progress, omissions and failed parts. Ask follow-up questions, copy illustrative code, export Markdown, or attach an unverified proposal to an existing task without creating duplicates.
+**Retest this task** creates a separate scan for its affected URLs and device profiles. An explicit matching passing rule can verify the requested task; an omitted page cannot. Partial runs are labeled and keep their own coverage. They do not replace the full project score or produce a project-score improvement.
 
-Small models can still contradict the measurements. Schema checks and targeted contradiction guards catch some failures, not every false statement. A real `qwen2.5:3b` multi-part test produced only a partial accepted analysis; this feature remains an **optional, unverified assistant**. See [1.2 verification and known limits](docs/RELEASE-1.2.md). The earlier [1.1 detection baseline](docs/BASELINE-1.1.md) remains available.
+Changed pixels are **not detected website errors**. Missing capture metadata, changed environments/browsers, unsettled fonts or different scroll coordinates prevent a numeric pixel comparison. Reference approval does not close rule-based findings. See [1.3 verification and limits](docs/RELEASE-1.3.md).
+
+The [1.2 fix workspace and report-per-page assistant](docs/RELEASE-1.2.md) remain available. Local AI remains optional and unverified; the tested small models were not established as reliable full-page advisors.
 
 ## The workflow
 
@@ -29,7 +31,8 @@ Small models can still contradict the measurements. Schema checks and targeted c
 3. **Watch the check:** streamed browser frames show bounded scroll samples and finding overlays. This is a preview, not an interactive remote browser or target iframe.
 4. **Review evidence:** measured observations, heuristic candidates and optional AI suggestions are separate.
 5. **Work the checklist:** related findings are grouped into tasks with acceptance criteria. Export Markdown/JSON or an optional evidence ZIP.
-6. **Retest:** compatible scans show changes. A manual checkbox means ready for review; a matching passing check verifies a fix.
+6. **Retest:** launch a scoped task retest or another full check. A manual checkbox means ready for review; an explicit compatible passing check verifies a fix.
+7. **Compare visually:** choose a saved reference, inspect paired page/device/scroll captures, explicitly mask regions and review changed pixels separately from rule findings.
 
 The built-in demo is an authorized fixture for trying the workflow without an external website. No external user pilot or security certification is implied; [release verification](docs/RELEASE-1.0.md) lists the actual checks and remaining validation.
 
@@ -47,6 +50,23 @@ The built-in demo is an authorized fixture for trying the workflow without an ex
 **Explain a page, with visible context and partial-result handling:**
 
 ![Actual SiteFenn page-analysis workspace](docs/screenshots/1.2-page-analysis.jpg)
+
+</details>
+
+## Visual references and targeted retests
+
+In **Vergleich**, choose two completed scans and load their image pairs. Each pair records its page, viewport, state, scroll coordinates and capture conditions. Use **Nebeneinander**, **Wischregler** or **Änderungsbereiche**. The diff uses a fixed 24/255 per-channel tolerance and marks changed 32 px tile regions; this is a simple local pixel comparison, not AI vision or a perceptual-quality score.
+
+Mask by dragging on the before image or entering an integer rectangle in original screenshot pixels. At most 30 masks are allowed per reference. They affect both images of that capture state, not the scan or rule checks. The result reports excluded pixels and the remaining comparison denominator; an entirely masked image is not assessed. Approve the baseline and masks explicitly to save a new reference record. Earlier approvals remain available (up to 50 per project).
+
+From **Maßnahmenplan**, select **Diese Maßnahme nachtesten**. The server derives scope from the original findings; it does not discover extra pages. The affected page/device combinations run the existing bounded initial/scroll checks. Performance tasks request lab runs for the selected supported device profiles. A matching completed rule pass can verify the requested task; changed document destinations, missing coverage or incompatible identities do not. Scroll findings still need their captured position to have been sampled again. Partial results and their source task are recorded in history and exports.
+
+![Actual masked pixel comparison](docs/screenshots/1.3-difference-mask.jpg)
+
+<details>
+<summary>A targeted run keeps a distinct scope and score</summary>
+
+![Actual targeted retest report](docs/screenshots/1.3-partial-retest.jpg)
 
 </details>
 
@@ -143,7 +163,7 @@ Exports distinguish observations, recommendations, acceptance criteria and limit
 | Linux    | `$XDG_DATA_HOME/website-audit-hub`, otherwise `~/.local/share/website-audit-hub` |
 | Windows  | `%LOCALAPPDATA%/website-audit-hub`                                               |
 
-`HUB_DATA_DIR` selects another directory. Projects, scans, evidence, tasks, saved page analyses, settings and imported search data stay local, but are not encrypted by this app.
+`HUB_DATA_DIR` selects another directory. Projects, scans, evidence, tasks, saved page analyses, visual references/masks, settings and imported search data stay local, but are not encrypted by this app.
 
 The UI can create a portable backup while no scan/analysis is active: database snapshot, evidence and checksum manifest. Limits: 250 MiB and 2,000 evidence files. For larger workspaces, stop the app and back up the full data directory normally.
 

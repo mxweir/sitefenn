@@ -100,6 +100,7 @@ export function calculateScore(report: AuditReport): ScoreSummary {
       "Heuristic and AI suggestions do not independently determine the audit score.",
     );
   return {
+    ...(report.options.retest ? { scope: "partial" as const } : {}),
     version: SCORE_VERSION,
     lower: hasApplicable ? weighted("lower") : null,
     upper: hasApplicable ? weighted("upper") : null,

@@ -103,6 +103,12 @@ export default function LiveScan({
             {statusLabel(scan.status)}
           </span>
         </div>
+        {scan.options?.retest && (
+          <Notice>
+            Gezielter Teilnachtest. Dieser Lauf prüft nur die betroffenen URLs
+            und Geräte und ersetzt keinen vollständigen Projekt-Score.
+          </Notice>
+        )}
         {error && <Notice error>{error}</Notice>}
         {scan.error && <Notice error>{scan.error}</Notice>}
         {frame ? (

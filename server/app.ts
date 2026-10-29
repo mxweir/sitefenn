@@ -1,7 +1,7 @@
 import Fastify from "fastify";
 import { readFile, access } from "node:fs/promises";
 import { join, resolve, relative } from "node:path";
-import { timingSafeEqual, randomBytes } from "node:crypto";
+import { timingSafeEqual, randomBytes, randomUUID } from "node:crypto";
 import { zipSync, strToU8 } from "fflate";
 import { Store } from "./store.js";
 import { Runner } from "./runner.js";
@@ -11,6 +11,7 @@ import { demoPage } from "./demo.js";
 import { discoverPages } from "./scan-worker.js";
 import { normalizeScanOptions } from "./options.js";
 import { calculateScore } from "./services/scoring.js";
+import { visualPairs, validateMasks, diffPng } from "./services/visual.js";
 import { compareScans } from "./services/comparison.js";
 import {
   buildTasks,
@@ -33,6 +34,7 @@ import {
 import { createBackup } from "./backup.js";
 import { speechAvailable, speak, stopSpeech } from "./speech.js";
 import type {
+  RetestScope,
   Environment,
   HubSettings,
   Scan,
@@ -60,7 +62,7 @@ export async function createApp(options: {
   const origin = `http://127.0.0.1:${options.port}`;
   const runner = new Runner(store, origin);
   const session = randomBytes(32).toString("hex");
-  let operation: "discovery" | "ai" | "backup" | null = null;
+  let operation: "discovery" | "ai" | "backup" | "visual" | null = null;
   const aiControllers = new Set<AbortController>();
   let pageWork: Promise<void> | undefined;
   let activePage: { id: string; controller: AbortController } | undefined;
@@ -275,7 +277,11 @@ export async function createApp(options: {
       }
     },
   );
-  const startScan = (projectId: string, rawOptions?: unknown) => {
+  const startScan = (
+    projectId: string,
+    rawOptions?: unknown,
+    retest?: RetestScope,
+  ) => {
     if (operation)
       throw bad(
         "Eine andere aufwendige Arbeit ist aktiv. Bitte kurz warten.",
@@ -302,6 +308,7 @@ export async function createApp(options: {
     } catch (error) {
       throw bad((error as Error).message);
     }
+    if (retest) normalized.retest = retest;
     const scan = store.createScan(projectId, normalized);
     if (options.runJobs !== false) runner.enqueue();
     return scan;
@@ -313,6 +320,168 @@ export async function createApp(options: {
         .code(202)
         .send({ scan: startScan(request.params.id, request.body) }),
   );
+  app.post<{ Params: { id: string } }>(
+    "/api/tasks/:id/retest",
+    async (request, reply) => {
+      const task = store.task(request.params.id);
+      if (!task) throw bad("Maßnahme nicht gefunden.", 404);
+      const source = requireScan(task.scanId),
+        report = source.result?.audit;
+      if (
+        source.status !== "completed" ||
+        !report ||
+        task.status === "verified"
+      )
+        throw bad(
+          "Nur offene Maßnahmen eines abgeschlossenen Checks nachtesten.",
+        );
+      const findings = report.findings.filter((f) =>
+        task.findingIds.includes(f.id),
+      );
+      if (!findings.length || findings.length !== task.findingIds.length)
+        throw bad("Die Fundstellen sind unvollständig.");
+      if (
+        findings.some(
+          (f) =>
+            f.category === "performance" &&
+            !["desktop", "mobile"].includes(f.viewportId),
+        )
+      )
+        throw bad("Performance-Profil nicht unterstützt.");
+      const pages = [...new Set(findings.map((f) => f.pageUrl))],
+        devices = new Set(findings.map((f) => f.viewportId));
+      const viewports = report.options.viewports.filter((p) =>
+        devices.has(p.id),
+      );
+      if (viewports.length !== devices.size)
+        throw bad(
+          "Historische Geräteprofile fehlen; einen neuen vollständigen Check starten.",
+        );
+      const next = startScan(
+        task.projectId,
+        {
+          pages,
+          viewports,
+          maxPages: pages.length,
+          maxDepth: 0,
+          excludedPaths: report.options.excludedPaths,
+          performance: findings.some((f) => f.category === "performance"),
+          performanceRuns: report.options.performanceRuns,
+        },
+        {
+          sourceScanId: source.id,
+          taskId: task.id,
+          findingIds: task.findingIds,
+        },
+      );
+      return reply.code(202).send({ scan: next });
+    },
+  );
+  app.get<{ Params: { id: string } }>(
+    "/api/projects/:id/visual-references",
+    async (request) => {
+      requireProject(request.params.id);
+      return { references: store.visualReferences(request.params.id) };
+    },
+  );
+  app.post<{ Params: { id: string } }>(
+    "/api/projects/:id/visual-references",
+    async (request, reply) => {
+      const body = object(request.body),
+        scan = requireScan(String(body.scanId)),
+        report = scan.result?.audit;
+      requireProject(request.params.id);
+      if (
+        scan.projectId !== request.params.id ||
+        scan.status !== "completed" ||
+        scan.options?.retest ||
+        !report ||
+        report.coverage.completed !== report.coverage.planned ||
+        report.pages.some((p) => p.status !== "completed") ||
+        !report.evidence.length
+      )
+        throw bad(
+          "Nur einen vollständigen abgeschlossenen Projekt-Check als Referenz freigeben.",
+        );
+      if (body.confirmed !== true)
+        throw bad(
+          "Die sichtbare Referenz ausdrücklich freigeben. Regelbefunde werden dadurch nicht behoben.",
+        );
+      let masks;
+      try {
+        masks = validateMasks(body.masks ?? [], report.evidence);
+      } catch (error) {
+        throw bad((error as Error).message);
+      }
+      if (store.visualReferences(scan.projectId).length >= 50)
+        throw bad("Maximal 50 gespeicherte Referenzfreigaben pro Projekt.");
+      const reference = store.saveVisualReference({
+        id: randomUUID(),
+        projectId: scan.projectId,
+        scanId: scan.id,
+        approvedAt: new Date().toISOString(),
+        masks,
+      });
+      return reply.code(201).send({ reference });
+    },
+  );
+  app.get<{ Querystring: { before: string; after: string } }>(
+    "/api/visual-pairs",
+    async (request) => {
+      try {
+        return {
+          pairs: visualPairs(
+            requireScan(request.query.before),
+            requireScan(request.query.after),
+          ),
+        };
+      } catch (error) {
+        throw bad((error as Error).message);
+      }
+    },
+  );
+  app.post("/api/visual-diff", async (request) => {
+    idle();
+    operation = "visual";
+    try {
+      const body = object(request.body),
+        before = requireScan(String(body.beforeId)),
+        after = requireScan(String(body.afterId));
+      let pair;
+      try {
+        pair = visualPairs(before, after).find(
+          (p) => p.before.id === body.evidenceId,
+        );
+      } catch (error) {
+        throw bad((error as Error).message);
+      }
+      if (!pair?.comparable || !pair.after)
+        throw bad(pair?.reason ?? "Bildpaar nicht gefunden.");
+      let masks;
+      try {
+        masks = validateMasks(body.masks ?? [], [pair.before]);
+      } catch (error) {
+        throw bad((error as Error).message);
+      }
+      try {
+        const bytes = await Promise.all([
+          evidenceBytes(pair.before.path),
+          evidenceBytes(pair.after.path),
+        ]);
+        return {
+          diff: diffPng(
+            bytes[0]!,
+            bytes[1]!,
+            masks.map((m) => m.rect),
+          ),
+        };
+      } catch (error) {
+        throw bad((error as Error).message);
+      }
+    } finally {
+      operation = null;
+    }
+  });
   app.post("/api/demo", async (_request, reply) => {
     const project =
       store.projects().find((p) => store.isDemo(p.id)) ||

@@ -7,7 +7,7 @@ import type {
 } from "../../shared/types.js";
 import { calculateScore } from "./scoring.js";
 
-function canonical(value: unknown): string {
+export function canonical(value: unknown): string {
   if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
   if (value && typeof value === "object")
     return `{${Object.entries(value)
@@ -44,7 +44,7 @@ function samePageViewport(
     a.viewportId === b.viewportId
   );
 }
-function recordedIdentity(report: AuditReport): boolean {
+export function recordedIdentity(report: AuditReport): boolean {
   const value = report.provenance;
   return (
     !!value &&
@@ -58,6 +58,16 @@ function recordedIdentity(report: AuditReport): boolean {
       value.platform,
       value.arch,
     ].every((item) => typeof item === "string" && !!item.trim())
+  );
+}
+export function sameExecution(a: AuditReport, b: AuditReport): boolean {
+  return (
+    recordedIdentity(a) &&
+    recordedIdentity(b) &&
+    canonical(a.provenance) === canonical(b.provenance) &&
+    a.ruleVersion === b.ruleVersion &&
+    a.profileVersion === b.profileVersion &&
+    a.browserVersion === b.browserVersion
   );
 }
 function compatible(a: AuditReport, b: AuditReport): boolean {
@@ -83,7 +93,21 @@ export function compareScans(before: Scan, after: Scan): ScanComparison {
     throw new Error("Both scans need persisted audit reports for comparison.");
   if (before.projectId !== after.projectId)
     throw new Error("Only scans of the same project may be compared.");
-  const comparable = compatible(a, b);
+  const terminal =
+    before.status === "completed" && after.status === "completed";
+  const partial = !!b.options.retest;
+  const comparable = terminal && !partial && compatible(a, b);
+  const verificationComparable =
+    comparable ||
+    (terminal &&
+      partial &&
+      b.options.retest?.sourceScanId === before.id &&
+      sameExecution(a, b) &&
+      b.options.viewports.every((profile) =>
+        a.options.viewports.some(
+          (old) => canonical(old) === canonical(profile),
+        ),
+      ));
   const beforeScore = calculateScore(a),
     afterScore = calculateScore(b);
   const beforeByFingerprint = new Map(
@@ -123,6 +147,24 @@ export function compareScans(before: Scan, after: Scan): ScanComparison {
         )
       );
     }
+    const originalDocument = a.pages.find(
+      (page) =>
+        samePageViewport(page, finding) &&
+        page.state === "initial" &&
+        page.status === "completed",
+    );
+    if (
+      !originalDocument ||
+      !b.pages.some(
+        (page) =>
+          samePageViewport(page, finding) &&
+          page.state === "initial" &&
+          page.status === "completed" &&
+          normalizedUrl(page.finalUrl) ===
+            normalizedUrl(originalDocument.finalUrl),
+      )
+    )
+      return false;
     if (
       !b.pages.some(
         (page) =>
@@ -185,11 +227,18 @@ export function compareScans(before: Scan, after: Scan): ScanComparison {
     beforeId: before.id,
     afterId: after.id,
     comparable,
-    reason: comparable
-      ? "Gleiche Regeln, Profile, Browser-Version, Optionen, geplante Regelinstanzen und Seitenzustände."
-      : !recordedIdentity(a) || !recordedIdentity(b)
-        ? "Historische Ausführungsidentität fehlt. Bitte neue Checks mit derselben Engine starten; kein belastbares Score-Delta und keine verifizierte Behebung."
-        : "Prüfumfang, Engine-Identität oder Ausführungsprofil haben sich geändert. Kein Score-Delta; fehlende oder nicht vergleichbare Belege bestätigen keine Behebung.",
+    partial,
+    verificationComparable,
+    reason: partial
+      ? "Gezielter Teilnachtest: nur die angegebenen Fundstellen können verifiziert werden. Kein Projekt-Score-Delta; ausgelassene Seiten bleiben ungeprüft." +
+        (!verificationComparable
+          ? " Die Engine-/Profilidentität passt nicht zum Ausgangscheck; keine Behebung wird verifiziert."
+          : "")
+      : comparable
+        ? "Gleiche Regeln, Profile, Browser-Version, Optionen, geplante Regelinstanzen und Seitenzustände."
+        : !recordedIdentity(a) || !recordedIdentity(b)
+          ? "Historische Ausführungsidentität fehlt. Bitte neue Checks mit derselben Engine starten; kein belastbares Score-Delta und keine verifizierte Behebung."
+          : "Prüfumfang, Engine-Identität oder Ausführungsprofil haben sich geändert. Kein Score-Delta; fehlende oder nicht vergleichbare Belege bestätigen keine Behebung.",
     scoreDelta:
       comparable &&
       beforeScore.final &&
@@ -203,15 +252,22 @@ export function compareScans(before: Scan, after: Scan): ScanComparison {
     entries: keys.map((fingerprint) => {
       const previous = beforeByFingerprint.get(fingerprint),
         current = afterByFingerprint.get(fingerprint);
-      const state = !comparable
+      const inRetest =
+        !previous ||
+        !partial ||
+        (!!previous && b.options.retest!.findingIds.includes(previous.id));
+      const state = !verificationComparable
         ? "not-comparable"
-        : previous && current
-          ? "persistent"
-          : !previous
-            ? "new"
-            : previous.evidenceStatus === "measured" && isVerifiedPass(previous)
-              ? "resolved"
-              : "not-retested";
+        : !inRetest
+          ? "not-retested"
+          : previous && current
+            ? "persistent"
+            : !previous
+              ? "new"
+              : previous.evidenceStatus === "measured" &&
+                  isVerifiedPass(previous)
+                ? "resolved"
+                : "not-retested";
       return {
         fingerprint,
         title: (current ?? previous)!.title,

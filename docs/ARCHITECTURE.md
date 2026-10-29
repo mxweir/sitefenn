@@ -22,6 +22,18 @@ Missing categories are unknown, not passed. No applicable measurements is not as
 
 Score deltas require matching rules, profiles, browser, options, planned rule weights and page-state cohort. A missing finding alone is not a fix: matching explicit PASS and completed coverage are required. Scroll findings additionally require equivalent captured coordinates; `scroll-2` at a new location does not qualify. Axe sub-rules use the aggregate automated check. Performance uses matching successful numeric samples rather than screenshot evidence. Manual task completion is ready-for-review, not verified.
 
+## Visual references and partial retests (1.3)
+
+Visual references are immutable approval records (`visual_references`): project, source full scan, approval timestamp and up to 30 screenshot-bound rectangles. They are stored in SQLite and included in portable snapshots. Approval does not accept rule findings or alter task statuses. Original PNGs are retained unchanged.
+
+Evidence records carry optional capture conditions. Visual pairing uses exact page/profile/state plus compatible recorded engine/browser/environment, final document URL, font readiness, dimensions and scroll offsets. Historical missing metadata is unknown. Incompatible captures may be viewed beside one another, but receive no numeric pixel result.
+
+A bounded PNG decoder (20 MiB input, 4,096 px per axis, 12 million pixels) compares four channels using a fixed 24/255 tolerance. Explicit masks are applied to both captures; the denominator excludes their union. Entirely masked images are refused. Changed 32 px tiles are merged into at most 50 displayed region boxes; the pixel count remains complete. This is neither DOM interpretation nor perceptual/AI defect detection. Images are transiently computed; original evidence is not overwritten.
+
+A task-retest endpoint derives pages/profiles from stored findings and records `options.retest` with the source scan/task/finding IDs. The existing worker runs supported initial/scroll samples and optional selected lab profiles. No new interactive/authenticated journey is introduced. For task verification, completed runs must share execution identity and matching rule evidence. Omitted findings remain not retested; document destinations and captured scroll positions must match. Only the requested task may be verified by that targeted run, and an existing historical verification pointer is preserved.
+
+The project overview, cards and active full-plan defaults exclude partial retests. Partial scores are labeled, exports preserve scope and source, and comparisons with a partial run never emit a project-score delta. A separate full scan remains necessary for a full-project assessment.
+
 ## Browser and API boundaries
 
 The browser executes website JavaScript. The audit proxy checks destinations, pins permitted resolved addresses and constrains egress. Public targets use standard HTTP(S) ports; local mode explicitly authorizes its one origin, not the whole private network. Discovery remains within selected origin/exclusions.

@@ -14,7 +14,7 @@ import type {
   ScoreSummary,
   TaskStatus,
 } from "../shared/types.js";
-import { api, categoryLabel, message, patch, stamp } from "./api.js";
+import { api, categoryLabel, message, patch, post, stamp } from "./api.js";
 import { Dialog, Empty, Notice } from "./ui.js";
 import ScoreCard from "./ScoreCard.js";
 import { EvidenceView } from "./LiveScan.js";
@@ -150,6 +150,13 @@ export function Report({
           </button>
         </div>
       </div>
+      {scan.options?.retest && (
+        <Notice>
+          Gezielter Teilnachtest. Nur dieser ausgewählte Umfang wurde geprüft;
+          der vollständige Projekt-Score bleibt separat erhalten. Ausgangscheck:{" "}
+          {scan.options.retest.sourceScanId.slice(0, 8)}.
+        </Notice>
+      )}
       <p className="report-meta">
         Scan {scan.id.slice(0, 8)} · {stamp(scan.createdAt)} ·{" "}
         {report?.pages.length ?? 1} Seitenansichten · Regeln{" "}
@@ -630,10 +637,12 @@ export function Tasks({
   scan,
   tasks,
   onChange,
+  onRetestStarted,
 }: {
   scan?: Scan;
   tasks: AuditTask[];
   onChange: () => void | Promise<void>;
+  onRetestStarted?: (scan: Scan) => void | Promise<void>;
 }) {
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState("all");
@@ -807,6 +816,37 @@ export function Tasks({
                   Auswertung {task.aiProposal.analysisId}
                 </p>
               </details>
+            )}
+            {scan.status === "completed" && task.status !== "verified" && (
+              <div className="retest-action">
+                <p className="hint">
+                  Nachtest: nur betroffene URLs und Geräte, mit den
+                  unterstützten anfänglichen und gescrollten Zuständen. Neuer
+                  Teillauf; kein Ersatz für den vollständigen Projekt-Score.
+                </p>
+                <button
+                  className="button secondary"
+                  disabled={!!busy}
+                  onClick={async () => {
+                    setBusy(task.id);
+                    setError("");
+                    try {
+                      const result = await post<{ scan: Scan }>(
+                        `/api/tasks/${task.id}/retest`,
+                      );
+                      await onChange();
+                      await onRetestStarted?.(result.scan);
+                    } catch (err) {
+                      setError(message(err));
+                    } finally {
+                      setBusy("");
+                    }
+                  }}
+                >
+                  <ScanLine size={16} />
+                  Diese Maßnahme nachtesten
+                </button>
+              </div>
             )}
             <div className="toolbar task-status-row">
               <label htmlFor={`status-${task.id}`} className="small-label">

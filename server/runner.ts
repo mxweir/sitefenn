@@ -43,15 +43,18 @@ export class Runner {
     const tasks = buildTasks(project, scan);
     this.store.saveTasks(tasks);
     if (scan.status !== "completed") return;
-    const before = this.store
-      .scans()
-      .find(
-        (item) =>
-          item.id !== id &&
-          item.projectId === scan.projectId &&
-          item.result?.audit &&
-          item.status === "completed",
-      );
+    const before = scan.options?.retest
+      ? this.store.scan(scan.options.retest.sourceScanId)
+      : this.store
+          .scans()
+          .find(
+            (item) =>
+              item.id !== id &&
+              item.projectId === scan.projectId &&
+              item.result?.audit &&
+              !item.options?.retest &&
+              item.status === "completed",
+          );
     if (!before) return;
     const comparison = compareScans(before, scan);
     const resolved = new Set(
@@ -61,6 +64,8 @@ export class Runner {
     );
     for (const task of this.store.tasks(before.id)) {
       if (
+        task.status !== "verified" &&
+        (!scan.options?.retest || task.id === scan.options.retest.taskId) &&
         task.findingIds.length &&
         task.findingIds.every((findingId) => resolved.has(findingId))
       )

@@ -4,6 +4,7 @@ import type { Scan, ScanComparison } from "../shared/types.js";
 import { api, message, stamp } from "./api.js";
 import { Empty, Notice } from "./ui.js";
 import ScoreCard from "./ScoreCard.js";
+import VisualCompare from "./VisualCompare.js";
 
 const labels: Record<string, string> = {
   new: "Neu",
@@ -12,32 +13,54 @@ const labels: Record<string, string> = {
   "not-retested": "Nicht erneut geprüft",
   "not-comparable": "Nicht vergleichbar",
 };
-export default function Compare({ scans }: { scans: Scan[] }) {
+export default function Compare({
+  scans,
+  projectId,
+}: {
+  scans: Scan[];
+  projectId: string;
+}) {
   const completed = scans.filter((s) => s.status === "completed" && s.result);
-  const [before, setBefore] = useState(completed[1]?.id ?? "");
+  const [before, setBefore] = useState(
+    completed[0]?.options?.retest?.sourceScanId ??
+      completed.slice(1).find((scan) => !scan.options?.retest)?.id ??
+      completed[1]?.id ??
+      "",
+  );
   const [after, setAfter] = useState(completed[0]?.id ?? "");
   const [result, setResult] = useState<ScanComparison | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   useEffect(() => {
-    setBefore(completed[1]?.id ?? "");
+    setBefore(
+      completed[0]?.options?.retest?.sourceScanId ??
+        completed.slice(1).find((scan) => !scan.options?.retest)?.id ??
+        completed[1]?.id ??
+        "",
+    );
     setAfter(completed[0]?.id ?? "");
     setResult(null);
   }, [scans[0]?.projectId]);
   if (completed.length < 2)
     return (
-      <Empty
-        icon={<ArrowLeftRight size={34} />}
-        title="Zwei Checks machen Entwicklung sichtbar."
-      >
-        <p>
-          Führe einen weiteren Check mit demselben Umfang aus. Erst dann können
-          wir neue, fortbestehende und behobene Probleme vergleichen.
-        </p>
-      </Empty>
+      <>
+        {completed.length > 0 && (
+          <VisualCompare scans={scans} projectId={projectId} />
+        )}
+        <Empty
+          icon={<ArrowLeftRight size={34} />}
+          title="Zwei Checks machen Entwicklung sichtbar."
+        >
+          <p>
+            Führe einen weiteren Check mit demselben Umfang aus. Erst dann
+            können wir neue, fortbestehende und behobene Probleme vergleichen.
+          </p>
+        </Empty>
+      </>
     );
   return (
     <>
+      <VisualCompare scans={scans} projectId={projectId} />
       <div className="panel workspace-form">
         <div className="panel-head">
           <div>
@@ -111,9 +134,11 @@ export default function Compare({ scans }: { scans: Scan[] }) {
         <>
           <div className="plan-note">
             <strong>
-              {result.comparable
-                ? "Vergleichbare Messprofile"
-                : "Nur eingeschränkt vergleichbar"}
+              {result.partial
+                ? "Gezielter Teilnachtest"
+                : result.comparable
+                  ? "Vergleichbare Messprofile"
+                  : "Nur eingeschränkt vergleichbar"}
             </strong>
             <p>{result.reason}</p>
             <p>

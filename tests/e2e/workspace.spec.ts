@@ -1,3 +1,4 @@
+import { PNG } from "pngjs";
 import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
 import type {
@@ -9,6 +10,7 @@ import type {
   Scan,
   ScoreSummary,
   SearchDataset,
+  VisualReference,
 } from "../../shared/types.js";
 
 const project: Project = {
@@ -166,6 +168,8 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
     datasets: [] as SearchDataset[],
     analyses: [] as PageAnalysis[],
     analysisRequest: null as unknown,
+    references: [] as VisualReference[],
+    diffRequest: null as unknown,
   };
   await page.route("**/api/**", async (route) => {
     const request = route.request();
@@ -194,6 +198,74 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
         settings: state.settings,
         speechAvailable: false,
       });
+    if (pathname.includes("/evidence/")) {
+      const png = new PNG({ width: 390, height: 844 });
+      png.data.fill(220);
+      return route.fulfill({
+        contentType: "image/png",
+        body: PNG.sync.write(png),
+      });
+    }
+    if (pathname === `/api/projects/${project.id}/visual-references`) {
+      if (request.method() === "GET")
+        return json({ references: state.references });
+      const body = request.postDataJSON();
+      const reference = {
+        id: "reference-ui",
+        projectId: project.id,
+        scanId: body.scanId,
+        approvedAt: scan.createdAt,
+        masks: body.masks,
+      };
+      state.references.unshift(reference);
+      return json({ reference }, 201);
+    }
+    if (pathname === "/api/visual-pairs")
+      return json({
+        pairs: [
+          {
+            before: state.scans[1].result?.audit?.evidence[0],
+            after: state.scans[0].result?.audit?.evidence[0],
+            comparable: true,
+            reason:
+              "Gleiche Aufnahmebedingungen; Pixeländerungen sind keine Regelverletzungen.",
+          },
+        ],
+      });
+    if (pathname === "/api/visual-diff") {
+      state.diffRequest = request.postDataJSON();
+      const png = new PNG({ width: 390, height: 844 });
+      png.data.fill(255);
+      return json({
+        diff: {
+          width: 390,
+          height: 844,
+          changedPixels: 100,
+          comparedPixels: 329060,
+          maskedPixels: 100,
+          changedPercent: 0.03,
+          threshold: 24,
+          regions: [{ x: 0, y: 0, width: 32, height: 32 }],
+          image: `data:image/png;base64,${PNG.sync.write(png).toString("base64")}`,
+        },
+      });
+    }
+    if (pathname === `/api/tasks/${task.id}/retest`) {
+      const next = {
+        ...structuredClone(scan),
+        id: "scan-retest",
+        options: {
+          ...report.options,
+          retest: {
+            sourceScanId: scan.id,
+            taskId: task.id,
+            findingIds: [finding.id],
+          },
+        },
+      };
+      state.scans.unshift(next);
+      return json({ scan: next }, 202);
+    }
     if (/^\/api\/scans\/[^/]+$/.test(pathname))
       return json({
         scan: state.scans.find((s) => s.id === pathname.split("/").pop()),
@@ -595,4 +667,114 @@ test("partial and cancelled model work stays visible without successful repair a
     page.getByRole("heading", { name: "Abgebrochen", exact: true }),
   ).toBeVisible();
   expect(state.tasks[0].status).toBe("open");
+});
+
+test("visual comparison offers wipe, explicit masks and a saved reference without marking rule fixes", async ({
+  page,
+}) => {
+  const evidence = {
+    id: "capture-new",
+    path: "evidence/fixture.png",
+    pageUrl: project.url,
+    viewportId: "mobile",
+    width: 390,
+    height: 844,
+    scrollX: 0,
+    scrollY: 0,
+    state: "initial",
+    capturedAt: scan.createdAt,
+  };
+  const after = structuredClone(scan),
+    before = structuredClone(scan);
+  before.id = "scan-old";
+  before.createdAt = "2026-10-20T10:00:00Z";
+  after.result!.audit!.evidence = [evidence];
+  before.result!.audit!.evidence = [{ ...evidence, id: "capture-old" }];
+  const state = await mockWorkspace(page, [after, before]);
+  await page.goto("/");
+  await page.getByRole("button", { name: "Vergleich", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Bildpaare laden", exact: true })
+    .click();
+  await expect(
+    page.getByAltText("Gespeicherte Aufnahme vorher", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Bildvergleich Ansicht", { exact: true })
+    .selectOption("wipe");
+  await page
+    .getByLabel("Vorher-Nachher Wischregler", { exact: true })
+    .fill("25");
+  await expect(page.locator(".visual-wipe")).toHaveCSS(
+    "clip-path",
+    "inset(0px 75% 0px 0px)",
+  );
+  await page
+    .getByText("Dynamische Bereiche maskieren", { exact: true })
+    .click();
+  await page.getByLabel("Maske width", { exact: true }).fill("10");
+  await page.getByLabel("Maske height", { exact: true }).fill("10");
+  await page
+    .getByRole("button", { name: "Maske hinzufügen", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Pixeländerungen berechnen", exact: true })
+    .click();
+  await expect(
+    page.getByText(/0,?\.?03 % der unmaskierten Pixel geändert/),
+  ).toBeVisible();
+  expect(state.diffRequest).toMatchObject({
+    masks: [
+      {
+        evidenceId: "capture-old",
+        rect: { x: 0, y: 0, width: 10, height: 10 },
+      },
+    ],
+  });
+  await page
+    .getByRole("checkbox", {
+      name: /Ich habe die Aufnahmen und Masken geprüft/,
+    })
+    .check();
+  await page
+    .getByRole("button", {
+      name: "Ausgangscheck als Referenz freigeben",
+      exact: true,
+    })
+    .click();
+  await expect.poll(() => state.references.length).toBe(1);
+  expect(state.references[0].masks).toHaveLength(1);
+  expect(state.tasks[0].status).toBe("open");
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});
+test("a task starts a scoped retest and the home project score still comes from the full check", async ({
+  page,
+}) => {
+  const state = await mockWorkspace(page);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Maßnahmenplan", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Diese Maßnahme nachtesten", exact: true })
+    .click();
+  await expect(
+    page.getByText(
+      "Gezielter Teilnachtest · kein vollständiger Projekt-Score",
+      { exact: true },
+    ),
+  ).toBeVisible();
+  expect(state.scans[0].options?.retest?.sourceScanId).toBe(scan.id);
+  await page
+    .getByRole("button", {
+      name: "Zum Ausgangscheck und Maßnahmenplan",
+      exact: true,
+    })
+    .click();
+  await expect(page.getByLabel("Prüfung auswählen")).toHaveValue(scan.id);
 });

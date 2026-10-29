@@ -2,6 +2,39 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 1.3.0 — 2026-10-29
+
+### Visual before and after
+
+- Added side-by-side captures, a keyboard-accessible wipe slider, changed-pixel images and bounded changed-region outlines.
+- Added explicit full-scan reference approval and per-capture rectangular masks. New approvals preserve earlier references; masks affect image comparisons only.
+- New screenshots record animation suppression, reduced motion, light color scheme, locale/timezone, font readiness and the final document URL. Pixel assessment requires compatible engine/browser/environment, profile, capture metadata and scroll coordinates. Historical unknowns are not fabricated.
+- Added a fixed-tolerance local PNG comparison with explicit changed/compared/masked pixel counts, image-size limits and downloadable difference images. Changed pixels are not rule violations.
+
+### Targeted task retests
+
+- Added **Retest this task** using server-derived affected URLs and profiles with bounded supported states. Each run records its source scan/task/finding IDs and its own coverage.
+- Matching measured passes can verify the requested task. Omitted pages, changed document destinations, cancelled runs and incompatible execution identities cannot claim a fix.
+- Partial runs stay separate from the full project score and default project overview. Their comparisons never invent a project-score delta. Later full checks preserve an existing original verification reference.
+- Added scope labels and source navigation to reports/history, partial-scope score labels and export metadata. The visual workspace keeps its actions clear of the floating assistant.
+
+### Data and verification
+
+References use an additive SQLite table included in portable backups; existing projects/reports remain readable and the data directory stays unchanged. Older captures can be viewed, but missing conditions prevent numeric pixel assessment. New rule identity: `rules-1.3.0`.
+
+[Verification and limits](docs/RELEASE-1.3.md)
+
+![Actual 1.3 before-and-after workspace](docs/screenshots/1.3-visual-comparison.jpg)
+
+<details>
+<summary>Masked difference image and targeted retest</summary>
+
+![Actual masked difference image](docs/screenshots/1.3-difference-mask.jpg)
+
+![Actual scoped retest](docs/screenshots/1.3-partial-retest.jpg)
+
+</details>
+
 ## 1.2.0 — 2026-10-29
 
 ### Fix workspace and navigation

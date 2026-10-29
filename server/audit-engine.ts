@@ -83,7 +83,7 @@ export async function closeAuditResources() {
   activeChrome.clear();
   activeProxies.clear();
 }
-export const RULE_VERSION = "rules-1.2.0";
+export const RULE_VERSION = "rules-1.3.0";
 export const PROFILE_VERSION = "responsive-1.0.0";
 const digest = (text: string) =>
   createHash("sha256").update(text).digest("hex").slice(0, 24);
@@ -159,6 +159,7 @@ async function createContext(
     acceptDownloads: false,
     permissions: [],
     reducedMotion: "reduce",
+    colorScheme: "light",
   });
   // tsx/esbuild preserves function names with this helper inside serialized evaluate callbacks.
   await context.addInitScript("globalThis.__name = value => value");
@@ -805,7 +806,10 @@ export async function runAudit(
         );
       }
     }
-  for (const device of ["desktop", "mobile"])
+  for (const device of ["desktop", "mobile"].filter(
+    (device) =>
+      !options.retest || options.viewports.some((p) => p.id === device),
+  ))
     for (const metric of ["lcp", "cls", "tbt"])
       addRule(
         `performance-${metric}`,
@@ -993,6 +997,18 @@ export async function runAudit(
               scrollY: geometry.scrollY,
               state,
               capturedAt: new Date().toISOString(),
+              capture: {
+                version: "capture-1.3",
+                animations: "disabled",
+                reducedMotion: "reduce",
+                colorScheme: "light",
+                locale: "de-DE",
+                timezone: "Europe/Berlin",
+                fontsReady: await page.evaluate(
+                  () => document.fonts.status === "loaded",
+                ),
+                documentUrl: page.url(),
+              },
             };
             report.evidence.push(currentEvidence);
             if (!first)
@@ -1631,6 +1647,8 @@ export async function runAudit(
   }
   // Performance must not share the streamed/inspected browser or run alongside model inference.
   for (const device of ["desktop", "mobile"] as const) {
+    if (options.retest && !options.viewports.some((p) => p.id === device))
+      continue;
     await control?.checkpoint();
     if (control?.cancelled()) throw new Error("Prüfung abgebrochen.");
     const sample = options.performance

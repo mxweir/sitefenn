@@ -76,7 +76,13 @@ export const VIEWPORTS: ViewportProfile[] = [
     deviceScaleFactor: 1,
   },
 ];
+export interface RetestScope {
+  sourceScanId: string;
+  taskId: string;
+  findingIds: string[];
+}
 export interface ScanOptions {
+  retest?: RetestScope;
   pages: string[];
   maxPages: number;
   maxDepth: number;
@@ -91,7 +97,18 @@ export interface Rect {
   width: number;
   height: number;
 }
+export interface CaptureConditions {
+  version: "capture-1.3";
+  animations: "disabled";
+  reducedMotion: "reduce";
+  colorScheme: "light";
+  locale: "de-DE";
+  timezone: "Europe/Berlin";
+  fontsReady: boolean;
+  documentUrl: string;
+}
 export interface Evidence {
+  capture?: CaptureConditions;
   id: string;
   path: string;
   pageUrl: string;
@@ -236,6 +253,7 @@ export interface ScoreCategory {
   applicableWeight: number;
 }
 export interface ScoreSummary {
+  scope?: "partial";
   version: string;
   lower: number | null;
   upper: number | null;
@@ -275,6 +293,8 @@ export interface ComparisonEntry {
   afterFindingId?: string;
 }
 export interface ScanComparison {
+  partial?: boolean;
+  verificationComparable?: boolean;
   beforeId: string;
   afterId: string;
   comparable: boolean;
@@ -398,4 +418,33 @@ export interface Dependency {
   status: "ready" | "missing" | "optional";
   detail: string;
   instruction?: string;
+}
+
+export interface VisualMask {
+  evidenceId: string;
+  rect: Rect;
+}
+export interface VisualReference {
+  id: string;
+  projectId: string;
+  scanId: string;
+  approvedAt: string;
+  masks: VisualMask[];
+}
+export interface VisualPair {
+  before: Evidence;
+  after?: Evidence;
+  comparable: boolean;
+  reason: string;
+}
+export interface VisualDiff {
+  width: number;
+  height: number;
+  changedPixels: number;
+  comparedPixels: number;
+  maskedPixels: number;
+  changedPercent: number;
+  threshold: number;
+  regions: Rect[];
+  image: string;
 }

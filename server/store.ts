@@ -2,7 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-import type { PageAnalysis } from "../shared/types.js";
+import type { PageAnalysis, VisualReference } from "../shared/types.js";
 import type {
   Project,
   Scan,
@@ -95,6 +95,7 @@ export class Store {
         CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, scanId TEXT NOT NULL REFERENCES scans(id), projectId TEXT NOT NULL REFERENCES projects(id), payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS search_datasets (id TEXT PRIMARY KEY, projectId TEXT NOT NULL REFERENCES projects(id), payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS ai_plans (id TEXT PRIMARY KEY, scanId TEXT NOT NULL REFERENCES scans(id), payload TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS visual_references (id TEXT PRIMARY KEY, projectId TEXT NOT NULL REFERENCES projects(id), payload TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS scans_project ON scans(projectId,createdAt);
         CREATE INDEX IF NOT EXISTS tasks_scan ON tasks(scanId);
         PRAGMA user_version=2;`);
@@ -321,6 +322,7 @@ export class Store {
     for (const scan of this.scans())
       if (
         scan.result?.audit &&
+        !scan.options?.retest &&
         ["completed", "cancelled"].includes(scan.status) &&
         !projects.has(scan.projectId)
       ) {
@@ -346,6 +348,22 @@ export class Store {
       .prepare("UPDATE tasks SET payload=? WHERE id=?")
       .run(JSON.stringify(updated), id);
     return updated;
+  }
+  saveVisualReference(reference: VisualReference) {
+    this.db
+      .prepare(
+        "INSERT INTO visual_references (id,projectId,payload) VALUES (?,?,?)",
+      )
+      .run(reference.id, reference.projectId, JSON.stringify(reference));
+    return reference;
+  }
+  visualReferences(projectId: string): VisualReference[] {
+    return this.db
+      .prepare(
+        "SELECT payload FROM visual_references WHERE projectId=? ORDER BY rowid DESC LIMIT 50",
+      )
+      .all(projectId)
+      .map((row) => JSON.parse(String(row.payload)));
   }
   saveAiPlan(scanId: string, plan: AiPlan) {
     const saved = { ...plan, id: randomUUID() };

@@ -6,6 +6,8 @@ Fortschritt 1.1: Referenzläufe, Regressionen, drei autorisierte Real-Websites, 
 
 Fortschritt 1.2: Fix-Arbeitsbereich, Filter/Bündelung und der erste durchgängige lokale Ablauf „Seite erklären“ sind implementiert. Teilfehler, Kontextgrenzen und ungeprüfte Vorschläge bleiben sichtbar. [RELEASE-1.2.md](docs/RELEASE-1.2.md) dokumentiert Tests und Modellgrenzen. Der im Plan geforderte moderierte Nutzertest wurde noch nicht durchgeführt; die unabhängige UX-Abnahme ist damit ausdrücklich offen.
 
+Fortschritt 1.3: Visuelle Referenzen, Masken, Wisch-/Pixelvergleich und gezielte Maßnahmen-Nachtests sind implementiert. Ein eigener realer Browser-Test bestätigt einen korrigierten Befund, lässt die ausgelassene Seite offen und prüft Backup/Restore der Referenz. Grenzen und tatsächliche Prüfungen stehen in [RELEASE-1.3.md](docs/RELEASE-1.3.md). Keine allgemeine visuelle Erkennungsgenauigkeit oder unabhängige UX-Abnahme wird daraus abgeleitet.
+
 ## Produktziel
 
 **SiteFenn hilft dir, Website-Probleme nachweisbar zu beheben und neue Fehler vor der Veröffentlichung zu erkennen.**

@@ -139,7 +139,10 @@ export default function App() {
         .filter((scan) => scan.projectId === project.id)
         .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     : [];
-  const selectedSummary = scans.find((scan) => scan.id === scanId) ?? scans[0];
+  const selectedSummary =
+    scans.find((scan) => scan.id === scanId) ??
+    scans.find((scan) => !scan.options?.retest) ??
+    scans[0];
   useEffect(() => {
     if (!selectedSummary) {
       setScanDetail(null);
@@ -478,7 +481,9 @@ export default function App() {
                     >
                       {data.projects.map((p) => {
                         const latest = data.scans
-                          .filter((s) => s.projectId === p.id)
+                          .filter(
+                            (s) => s.projectId === p.id && !s.options?.retest,
+                          )
                           .sort((a, b) =>
                             b.createdAt.localeCompare(a.createdAt),
                           )[0];
@@ -564,44 +569,72 @@ export default function App() {
                             {scans.map((scan) => (
                               <option key={scan.id} value={scan.id}>
                                 {stamp(scan.createdAt)} ·{" "}
+                                {scan.options?.retest ? "Teilnachtest · " : ""}{" "}
                                 {statusLabel(scan.status)}
                               </option>
                             ))}
                           </select>
                         )}
-                        {selectedScan?.options && !active(selectedScan) && (
-                          <button
-                            className="button secondary"
-                            disabled={
-                              !!busy || scans.some(active) || missing.length > 0
-                            }
-                            onClick={async () => {
-                              setBusy("repeat");
-                              setError("");
-                              try {
-                                const result = await post<{ scan: Scan }>(
-                                  `/api/projects/${project.id}/scans`,
-                                  selectedScan.options,
-                                );
-                                await refresh();
-                                setScanId(result.scan.id);
-                                setTab("live");
-                              } catch (err) {
-                                setError(message(err));
-                              } finally {
-                                setBusy("");
+                        {selectedScan?.options &&
+                          !selectedScan.options.retest &&
+                          !active(selectedScan) && (
+                            <button
+                              className="button secondary"
+                              disabled={
+                                !!busy ||
+                                scans.some(active) ||
+                                missing.length > 0
                               }
+                              onClick={async () => {
+                                setBusy("repeat");
+                                setError("");
+                                try {
+                                  const result = await post<{ scan: Scan }>(
+                                    `/api/projects/${project.id}/scans`,
+                                    selectedScan.options,
+                                  );
+                                  await refresh();
+                                  setScanId(result.scan.id);
+                                  setTab("live");
+                                } catch (err) {
+                                  setError(message(err));
+                                } finally {
+                                  setBusy("");
+                                }
+                              }}
+                            >
+                              {busy === "repeat" ? (
+                                <LoaderCircle size={15} className="spin" />
+                              ) : (
+                                <Activity size={15} />
+                              )}
+                              Gleichen Check wiederholen
+                            </button>
+                          )}
+                      </div>
+                      {selectedScan?.options?.retest && (
+                        <div className="plan-note">
+                          <strong>
+                            Gezielter Teilnachtest · kein vollständiger
+                            Projekt-Score
+                          </strong>
+                          <p>
+                            Dieser Lauf gehört zu einer einzelnen Maßnahme.
+                            Ausgelassene Seiten und Geräte bleiben ungeprüft.
+                          </p>
+                          <button
+                            className="text-button"
+                            onClick={() => {
+                              setScanId(
+                                selectedScan.options!.retest!.sourceScanId,
+                              );
+                              setTab("tasks");
                             }}
                           >
-                            {busy === "repeat" ? (
-                              <LoaderCircle size={15} className="spin" />
-                            ) : (
-                              <Activity size={15} />
-                            )}
-                            Gleichen Check wiederholen
+                            Zum Ausgangscheck und Maßnahmenplan
                           </button>
-                        )}
-                      </div>
+                        </div>
+                      )}
                       <nav
                         className="workspace-tabs"
                         aria-label="Projektbereiche"
@@ -696,6 +729,9 @@ export default function App() {
                                         </strong>
                                         <small>
                                           {stamp(scan.createdAt)} ·{" "}
+                                          {scan.options?.retest
+                                            ? "Teilnachtest · "
+                                            : ""}{" "}
                                           {scan.options?.viewports.length ?? 1}{" "}
                                           Ansichten
                                         </small>
@@ -785,6 +821,9 @@ export default function App() {
                                   <strong>{statusLabel(scan.status)}</strong>
                                   <small>
                                     {stamp(scan.createdAt)} ·{" "}
+                                    {scan.options?.retest
+                                      ? "Teilnachtest · "
+                                      : ""}{" "}
                                     {scan.options?.pages.length ?? 1} Seiten ·{" "}
                                     {scan.options?.viewports.length ?? 1}{" "}
                                     Ansichten
@@ -807,10 +846,19 @@ export default function App() {
                           scan={selectedScan}
                           tasks={tasks}
                           onChange={refresh}
+                          onRetestStarted={async (scan) => {
+                            await refresh();
+                            setScanId(scan.id);
+                            setTab("live");
+                          }}
                         />
                       )}
                       {tab === "compare" && (
-                        <Compare key={project.id} scans={scans} />
+                        <Compare
+                          key={project.id}
+                          scans={scans}
+                          projectId={project.id}
+                        />
                       )}
                       {tab === "search" && (
                         <SearchVisibility key={project.id} project={project} />
@@ -841,7 +889,7 @@ export default function App() {
           }}
         />
       )}
-      {!(screen === "projects" && tab === "analysis") && (
+      {!(screen === "projects" && ["analysis", "compare"].includes(tab)) && (
         <button
           className="fenn-launcher"
           aria-label="Fenn öffnen"

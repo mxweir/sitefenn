@@ -27,7 +27,12 @@ export default function ScoreCard({ score }: { score?: ScoreSummary }) {
           <small>/100</small>
         </div>
         <div>
-          <span className="eyebrow">AUDIT-SCORE · {score.version}</span>
+          <span className="eyebrow">
+            {score.scope === "partial"
+              ? "TEILNACHTEST · KEIN PROJEKT-SCORE"
+              : "AUDIT-SCORE"}{" "}
+            · {score.version}
+          </span>
           <h3>
             {score.final
               ? "Für den geprüften Umfang"
