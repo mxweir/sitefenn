@@ -182,6 +182,9 @@ export function buildJsonReport(
         status: scan.status,
         createdAt: scan.createdAt,
         finishedAt: scan.finishedAt,
+        ...(scan.options?.retest
+          ? { scopeKind: "targeted-retest", retest: scan.options.retest }
+          : {}),
       },
       provenance: {
         toolchain: report.provenance ?? null,
@@ -211,6 +214,14 @@ export function buildJsonReport(
         .map((evidence) => ({
           ...evidence,
           pageUrl: urlLabel(evidence.pageUrl),
+          ...(evidence.capture
+            ? {
+                capture: {
+                  ...evidence.capture,
+                  documentUrl: urlLabel(evidence.capture.documentUrl),
+                },
+              }
+            : {}),
           path: exportedEvidence.get(evidence.id),
         })),
       warnings: [

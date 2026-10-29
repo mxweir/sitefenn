@@ -13,6 +13,7 @@ import {
 } from "../server/services/visual.js";
 import { createApp } from "../server/app.js";
 import { compareScans } from "../server/services/comparison.js";
+import { buildJsonReport } from "../server/services/reports.js";
 import { Store } from "../server/store.js";
 import { createBackup, restoreBackup } from "../server/backup.js";
 import type { Scan } from "../shared/types.js";
@@ -254,6 +255,22 @@ test(
         headers,
       });
       assert.match(exportResult.body, /PARTIAL RETEST/);
+      const jsonExport = await app.inject({
+        url: `/api/scans/${after.id}/export?format=json`,
+        headers,
+      });
+      assert.equal(jsonExport.json().scan.retest.taskId, task.id);
+      assert.equal(jsonExport.json().scan.scopeKind, "targeted-retest");
+      const exportCopy = structuredClone(before);
+      exportCopy.result!.audit!.evidence[0]!.capture!.documentUrl =
+        origin + "/one?session=private#fragment";
+      const safeJson = JSON.parse(
+        buildJsonReport(project, exportCopy, store.tasks(before.id), {
+          includeEvidence: true,
+        }),
+      );
+      assert.equal(safeJson.evidence[0].capture.documentUrl, origin + "/one");
+      assert.ok(!JSON.stringify(safeJson).includes("session=private"));
       const repeatFull = await app.inject({
         method: "POST",
         url: `/api/projects/${project.id}/scans`,
