@@ -11,6 +11,7 @@ import type {
   ScoreSummary,
   SearchDataset,
   VisualReference,
+  SeoContext,
 } from "../../shared/types.js";
 
 const project: Project = {
@@ -170,6 +171,7 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
     analysisRequest: null as unknown,
     references: [] as VisualReference[],
     diffRequest: null as unknown,
+    sitemapRequest: null as unknown,
   };
   await page.route("**/api/**", async (route) => {
     const request = route.request();
@@ -292,6 +294,23 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
         analysisId: analysis.id,
       };
       return json({ task: state.tasks[0], duplicate: false });
+    }
+    if (pathname.endsWith("/sitemap")) {
+      state.sitemapRequest = request.postDataJSON();
+      return json({
+        urls: ["https://example.com/from-sitemap"],
+        documents: [
+          {
+            url: "https://example.com/sitemap.xml",
+            status: "read",
+            entries: 1,
+            detail: "urlset",
+          },
+        ],
+        excluded: [],
+        warnings: [],
+        limited: false,
+      });
     }
     if (pathname.endsWith("/discover"))
       return json({
@@ -777,4 +796,143 @@ test("a task starts a scoped retest and the home project score still comes from 
     })
     .click();
   await expect(page.getByLabel("Prüfung auswählen")).toHaveValue(scan.id);
+});
+
+test("sitemap candidates need explicit selection and technical SEO scope is sent deliberately", async ({
+  page,
+}) => {
+  const state = await mockWorkspace(page, []);
+  await page.goto("/");
+  await page
+    .getByText("Seiten aus einer Sitemap auswählen", { exact: true })
+    .click();
+  await page
+    .getByLabel("Sitemap-URL", { exact: true })
+    .fill("https://example.com/sitemap.xml");
+  await page
+    .getByRole("button", { name: "Sitemap importieren", exact: true })
+    .click();
+  const candidate = page.getByRole("checkbox", {
+    name: "https://example.com/from-sitemap",
+    exact: true,
+  });
+  await expect(candidate).not.toBeChecked();
+  expect(state.scans).toHaveLength(0);
+  await candidate.check();
+  await page
+    .getByRole("button", { name: "On-Screen-Check starten", exact: true })
+    .click();
+  await expect
+    .poll(() => state.options)
+    .toMatchObject({
+      pages: [project.url, "https://example.com/from-sitemap"],
+      technicalSeo: true,
+    });
+});
+test("SEO context separates observed HTTP failures, metadata candidates, robots and the limited schema profile", async ({
+  page,
+}) => {
+  const current = structuredClone(scan),
+    p = project.url,
+    p2 = "https://example.com/contact",
+    missing = "https://example.com/missing";
+  const snapshot = {
+    pageUrl: p,
+    finalUrl: p,
+    viewportId: "mobile",
+    title: "Gemeinsamer Titel",
+    description: "Gemeinsame Beschreibung",
+    canonicals: [p],
+    robots: ["noindex"],
+    googlebot: [],
+    headerRobots: [],
+    links: [{ url: missing, text: "Fehlender Link", rel: "" }],
+    linksTruncated: false,
+    signalsTruncated: false,
+    jsonld: {
+      status: "not_applicable" as const,
+      detail: "Andere Typen nicht validiert.",
+      types: ["Product"],
+    },
+    jsonldTruncated: false,
+  };
+  const seo: SeoContext = {
+    version: "technical-seo-1.4",
+    pages: [snapshot, { ...snapshot, pageUrl: p2, finalUrl: p2 }],
+    probes: [
+      {
+        url: missing,
+        finalUrl: missing,
+        statusCode: 404,
+        redirects: [],
+        outcome: "checked",
+        detail: "HTTP-Stichprobe",
+        checkedAt: scan.createdAt,
+      },
+    ],
+    robots: {
+      url: "https://example.com/robots.txt",
+      statusCode: 200,
+      googlebot: [{ pageUrl: p, allowed: false }],
+      detail: "Begrenzte Robots-Auswertung; kein Indexierungsnachweis.",
+    },
+    graph: [
+      {
+        from: p,
+        to: missing,
+        text: "Fehlender Link",
+        rel: "",
+        viewportIds: ["mobile"],
+      },
+    ],
+    duplicates: [
+      {
+        kind: "title",
+        value: "Gemeinsamer Titel",
+        pages: [p, p2],
+        viewportId: "mobile",
+      },
+    ],
+    coverage: {
+      linkTargets: 1,
+      checkedTargets: 1,
+      limit: 40,
+      omittedTargets: 0,
+      linksTruncated: false,
+    },
+    warnings: [],
+  };
+  current.result!.audit!.seo = seo;
+  current.result!.audit!.options.pages = [p, p2];
+  await mockWorkspace(page, [current]);
+  await page.goto("/");
+  await page.getByRole("button", { name: "SEO-Kontext", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Interner Linkgraph", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("cell", { name: /HTTP 404/ })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Metadaten im Vergleich", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Ähnliche Seitentitel", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Canonical & Robots", exact: true })
+    .click();
+  await expect(page.getByText(/laut Datei gesperrt/)).toBeVisible();
+  await page
+    .getByRole("button", { name: "Strukturierte Daten", exact: true })
+    .click();
+  await expect(
+    page
+      .getByText(/Breadcrumb-Teilprofil: Nicht im unterstützten Profil/)
+      .first(),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
 });

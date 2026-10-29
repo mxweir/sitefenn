@@ -65,3 +65,11 @@ Backups snapshot SQLite and evidence with checksums under bounded limits. Restor
 ## Known coverage limits
 
 Three standard viewport profiles and bounded scroll samples do not cover every state. Interactive/authenticated flows and vision inference are absent. Automated accessibility is incomplete; Lighthouse is lab measurement. Chromium emulation does not establish Safari/device behavior. No external pilot or independent security audit is implied.
+
+## Technical SEO context (1.4)
+
+`technicalSeo` is an optional persisted scan option. After selected browser captures, a bounded HTTP phase correlates their metadata/anchors with samples in the approved origin. Failed/cancelled/uncaptured pages cannot gain fabricated passes. New rules are seeded before capture; compatible resume retains completed snapshots and redoes bounded context sampling. Task retests inherit the source option.
+
+`seo-network.ts` reuses `resolvePinnedTarget`, pins each approved DNS result for the connection, validates every redirect against origin/path/network policy, and applies per-request/global budgets. `sitemap.ts` uses strict namespace-aware saxes XML with no DTD/external entities; explicit import returns candidates without starting scans. `seo-meta.ts` parses raw target HTML with parse5, handles Googlebot noindex scope and the limited inline Breadcrumb profile. `technical-seo.ts` builds directed observed edges, per-profile duplicate candidates, robots-parser context and rule outcomes. Raw target HTML is not executed or retained. See [1.4 verification](RELEASE-1.4.md) for exact caps and methodological limits.
+
+SEO snapshots/probes/graph/groups are optional JSON report fields; no database migration. Their parser versions and all new service sources participate in provenance. Measured HTTP failures, heuristic review candidates and unknown target/metadata scope remain distinct in scoring, tasks and the dedicated UI. Page-analysis context includes bounded SEO units; no new model/tool execution ability is added. Selected-finding exports restrict snapshots/edges while preserving related target/group URLs and scan-wide coverage; URL sanitization does not guarantee arbitrary text is secret-free.

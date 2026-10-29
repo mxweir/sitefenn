@@ -10,6 +10,7 @@ export function normalizeScanOptions(
       ? (input as Record<string, unknown>)
       : {};
   const allowed = new Set([
+    "technicalSeo",
     "pages",
     "maxPages",
     "maxDepth",
@@ -123,7 +124,10 @@ export function normalizeScanOptions(
   const performanceRuns = body.performanceRuns ?? 1;
   if (performanceRuns !== 1 && performanceRuns !== 3)
     throw new Error("Ein oder drei Performance-Messläufe wählen.");
+  if (body.technicalSeo !== undefined && typeof body.technicalSeo !== "boolean")
+    throw new Error("Technisches SEO muss ein Boolean sein.");
   return {
+    ...(body.technicalSeo === true ? { technicalSeo: true } : {}),
     pages,
     maxPages,
     maxDepth,

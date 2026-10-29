@@ -6,6 +6,7 @@ import type {
   Project,
   Scan,
   ScanOptions,
+  SitemapImport,
 } from "../shared/types.js";
 import { message, post } from "./api.js";
 import { Notice } from "./ui.js";
@@ -29,12 +30,21 @@ export default function ScanConfig({
     "tablet",
     "mobile",
   ]);
+  const [technicalSeo, setTechnicalSeo] = useState(true);
+  const [sitemapUrl, setSitemapUrl] = useState(
+    new URL("/sitemap.xml", project.url).href,
+  );
+  const [sitemapResult, setSitemapResult] = useState<SitemapImport | null>(
+    null,
+  );
   const [performance, setPerformance] = useState(false);
   const [repetitions, setRepetitions] = useState<1 | 3>(1);
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
   useEffect(() => {
+    setSitemapUrl(new URL("/sitemap.xml", project.url).href);
+    setSitemapResult(null);
     setPages([project.url]);
     setDiscovered([project.url]);
     setError("");
@@ -52,6 +62,7 @@ export default function ScanConfig({
     viewports: VIEWPORTS.filter((v) => viewportIds.includes(v.id)),
     performance,
     performanceRuns: repetitions,
+    technicalSeo,
   };
   return (
     <div className="panel workspace-form">
@@ -133,6 +144,74 @@ export default function ScanConfig({
         )}
         Seiten entdecken
       </button>
+      <details className="sitemap-import">
+        <summary>Seiten aus einer Sitemap auswählen</summary>
+        <p>
+          XML oder gzip; auch begrenzte Sitemap-Indizes. Gleicher freigegebener
+          Ursprung und Pfadausschlüsse. Neue Kandidaten werden nicht automatisch
+          gescannt oder ausgewählt.
+        </p>
+        <label htmlFor="sitemap-url">Sitemap-URL</label>
+        <input
+          id="sitemap-url"
+          type="url"
+          value={sitemapUrl}
+          onChange={(e) => setSitemapUrl(e.target.value)}
+        />
+        <button
+          className="button secondary"
+          disabled={!!busy || disabled}
+          onClick={async () => {
+            setBusy("sitemap");
+            setError("");
+            setSitemapResult(null);
+            try {
+              const result = await post<SitemapImport>(
+                `/api/projects/${project.id}/sitemap`,
+                { sitemapUrl, maxPages, excludedPaths: exclusions },
+              );
+              setSitemapResult(result);
+              setDiscovered((current) =>
+                [...new Set([...current, ...result.urls])].slice(0, 60),
+              );
+              setWarnings([
+                ...result.warnings,
+                ...result.excluded
+                  .slice(0, 10)
+                  .map((url) => `Nicht freigegeben/ausgewählt: ${url}`),
+                "Neue Sitemap-Kandidaten bleiben bis zur ausdrücklichen Auswahl ungeprüft. Die Auswahlliste ist auf 60 Einträge begrenzt.",
+              ]);
+            } catch (err) {
+              setError(message(err));
+            } finally {
+              setBusy("");
+            }
+          }}
+        >
+          {busy === "sitemap"
+            ? "Sitemap wird gelesen …"
+            : "Sitemap importieren"}
+        </button>
+        {sitemapResult && (
+          <div role="status">
+            <p>
+              {sitemapResult.urls.length} Kandidaten ·{" "}
+              {sitemapResult.documents.length} Sitemap-Dokumente ·{" "}
+              {sitemapResult.limited
+                ? "begrenzt"
+                : "Import innerhalb der Grenzen"}
+            </p>
+            <ul>
+              {sitemapResult.documents.map((doc, i) => (
+                <li key={i}>
+                  {doc.url}: {doc.status} · {doc.entries} Einträge ·{" "}
+                  {doc.detail}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </details>
       <div className="section-divider" />
       <div className="panel-head">
         <h3>Ausgewählte Seiten</h3>
@@ -159,9 +238,26 @@ export default function ScanConfig({
         ))}
       </div>
       <p className="hint">
-        Der Scan besucht nur die ausgewählten URLs. Die Entdeckung ist kein
-        vollständiger Index deiner Domain.
+        Der Browsercheck besucht die ausgewählten Seiten. Mit aktivierter
+        SEO-Kontextprüfung werden zusätzlich begrenzte interne HTTP-Ziele
+        geprüft. Die Auswahl ist kein vollständiger Index deiner Domain.
       </p>
+      <label className="check-option">
+        <input
+          type="checkbox"
+          checked={technicalSeo}
+          onChange={(e) => setTechnicalSeo(e.target.checked)}
+        />
+        <span>
+          <strong>SEO-Kontextprüfung</strong>
+          <small>
+            Vergleicht Metadaten und interne Links. Zusätzliche GET-Stichproben:
+            bis zu 40 Ziel-URLs und 60 HTTP-Anfragen inklusive Redirects im
+            freigegebenen Ursprung; maximal 90 Sekunden. Keine Anmeldung oder
+            Formulare.
+          </small>
+        </span>
+      </label>
       <label>Ansichten</label>
       <div className="checkbox-grid">
         {VIEWPORTS.map((viewport) => (

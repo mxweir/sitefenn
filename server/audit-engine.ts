@@ -24,6 +24,13 @@ import type {
   WorkerEvent,
 } from "../shared/types.js";
 import { VIEWPORTS } from "../shared/types.js";
+import {
+  TECHNICAL_RULES,
+  emptySeo,
+  technicalSeo,
+} from "./services/technical-seo.js";
+import { breadcrumbProfile, hasNoindex } from "./services/seo-meta.js";
+import { importSitemap } from "./services/sitemap.js";
 import { auditProvenance } from "./provenance.js";
 import { startAuditProxy, type AuditProxy } from "./network-proxy.js";
 import { parseTarget, validateTarget, type TargetPolicy } from "./security.js";
@@ -83,7 +90,7 @@ export async function closeAuditResources() {
   activeChrome.clear();
   activeProxies.clear();
 }
-export const RULE_VERSION = "rules-1.3.0";
+export const RULE_VERSION = "rules-1.4.0";
 export const PROFILE_VERSION = "responsive-1.0.0";
 const digest = (text: string) =>
   createHash("sha256").update(text).digest("hex").slice(0, 24);
@@ -299,39 +306,20 @@ export async function discoverPages(
     await documentGuards.get(page);
     const queue = [{ url: start, depth: 0 }];
     const seen = new Set([start]);
-    const sitemapUrl = `${new URL(start).origin}/sitemap.xml`;
-    if (
-      !options.demoOrigin &&
-      inScope(sitemapUrl, start, options.excludedPaths) &&
-      depthLimit > 0
-    ) {
-      try {
-        const sitemapResponse = await page.goto(sitemapUrl, {
-          waitUntil: "domcontentloaded",
-          timeout: 5000,
-        });
-        if (sitemapResponse?.ok()) {
-          const locations = await page
-            .locator("urlset url loc")
-            .allTextContents();
-          for (const location of locations.slice(0, limit * 2)) {
-            try {
-              const candidate = normalizeAuditUrl(location.trim());
-              if (
-                inScope(candidate, start, options.excludedPaths) &&
-                !seen.has(candidate)
-              ) {
-                seen.add(candidate);
-                queue.push({ url: candidate, depth: 1 });
-              }
-            } catch {
-              /* Invalid sitemap entry. */
-            }
-          }
+    if (!options.demoOrigin && depthLimit > 0) {
+      const sitemap = await importSitemap({
+        ...options,
+        url: start,
+        sitemapUrl: new URL("/sitemap.xml", start).href,
+        maxPages: limit,
+        excludedPaths: options.excludedPaths ?? [],
+      });
+      for (const url of sitemap.urls)
+        if (!seen.has(url)) {
+          seen.add(url);
+          queue.push({ url, depth: 1 });
         }
-      } catch {
-        /* Sitemaps are optional; link discovery remains available. */
-      }
+      result.warnings.push(...sitemap.warnings);
     }
     while (queue.length && result.urls.length < limit) {
       const next = queue.shift()!;
@@ -620,6 +608,7 @@ export async function runAudit(
       "Keine Seite innerhalb des freigegebenen Zielbereichs ausgewählt.",
     );
   const report: AuditReport = {
+    ...(options.technicalSeo ? { seo: emptySeo() } : {}),
     provenance: await auditProvenance(),
     schemaVersion: 1,
     ruleVersion: RULE_VERSION,
@@ -678,6 +667,10 @@ export async function runAudit(
     report.evidence = previous.evidence.filter((item) =>
       completedKeys.has(`${item.pageUrl}|${item.viewportId}`),
     );
+    if (report.seo)
+      report.seo.pages = (previous.seo?.pages ?? []).filter((item) =>
+        completedKeys.has(`${item.pageUrl}|${item.viewportId}`),
+      );
     report.coverage.completed = report.pages.length;
     report.warnings.push(
       "Abgeschlossene Seiten-/Viewport-Schritte aus einem kompatiblen unterbrochenen Lauf übernommen.",
@@ -695,6 +688,7 @@ export async function runAudit(
     report.rules = [];
     report.findings = [];
     report.evidence = [];
+    if (report.seo) report.seo.pages = [];
     report.coverage.completed = 0;
     report.warnings.push(
       "Browser-Version geändert: frühere Seitenschritte werden nicht als vergleichbare Messungen übernommen.",
@@ -784,6 +778,9 @@ export async function runAudit(
         ["script-errors", "runtime"],
         ["resource-errors", "runtime"],
         ["axe-automated", "accessibility"],
+        ...(options.technicalSeo
+          ? TECHNICAL_RULES.map((id) => [id, "seo"] as const)
+          : []),
       ] as const) {
         addRule(
           id,
@@ -935,6 +932,58 @@ export async function runAudit(
             throw new Error("Ziel ist keine HTML-Seite.");
           await stabilize(page);
           const metadata = await page.evaluate(() => ({
+            canonicals: [
+              ...document.querySelectorAll('link[rel~="canonical" i]'),
+            ]
+              .slice(0, 10)
+              .map((e) => e.getAttribute("href") ?? "")
+              .filter((v) => v.length <= 2048),
+            robotsValues: [
+              ...document.querySelectorAll('meta[name="robots" i]'),
+            ]
+              .slice(0, 20)
+              .map((e) => (e.getAttribute("content") ?? "").slice(0, 1000)),
+            googlebotValues: [
+              ...document.querySelectorAll('meta[name="googlebot" i]'),
+            ]
+              .slice(0, 20)
+              .map((e) => (e.getAttribute("content") ?? "").slice(0, 1000)),
+            signalsTruncated:
+              document.title.length > 2000 ||
+              (
+                document
+                  .querySelector('meta[name="description" i]')
+                  ?.getAttribute("content") ?? ""
+              ).length > 4000 ||
+              document.querySelectorAll('link[rel~="canonical" i]').length >
+                10 ||
+              [...document.querySelectorAll('link[rel~="canonical" i]')].some(
+                (e) => (e.getAttribute("href") ?? "").length > 2048,
+              ) ||
+              document.querySelectorAll(
+                'meta[name="robots" i],meta[name="googlebot" i]',
+              ).length > 20 ||
+              [
+                ...document.querySelectorAll(
+                  'meta[name="robots" i],meta[name="googlebot" i]',
+                ),
+              ].some((e) => (e.getAttribute("content") ?? "").length > 1000),
+            links: [...document.querySelectorAll<HTMLAnchorElement>("a[href]")]
+              .slice(0, 100)
+              .filter((e) => e.href.length <= 2048)
+              .map((e) => ({
+                url: e.href,
+                text: (e.textContent ?? "").trim().slice(0, 160),
+                rel: e.rel.slice(0, 100),
+              })),
+            linksTruncated:
+              document.querySelectorAll("a[href]").length > 100 ||
+              [...document.querySelectorAll<HTMLAnchorElement>("a[href]")].some(
+                (e) => e.href.length > 2048,
+              ),
+            jsonldTruncated:
+              document.querySelectorAll('script[type="application/ld+json"]')
+                .length > 20,
             title: document.title.trim().slice(0, 2000),
             description: (
               document
@@ -944,7 +993,7 @@ export async function runAudit(
             ).slice(0, 4000),
             canonical: (
               document
-                .querySelector('link[rel="canonical"]')
+                .querySelector('link[rel~="canonical" i]')
                 ?.getAttribute("href") || ""
             ).slice(0, 2048),
             robots: (
@@ -1190,12 +1239,22 @@ export async function runAudit(
                 "Eine redaktionell passende Meta Description ist im HTML vorhanden.",
                 "nice-to-have",
               );
-              const noindex = /(?:^|[,\s])noindex(?:$|[,\s])/i.test(
-                metadata.robots +
-                  "," +
-                  (response.headers()["x-robots-tag"] || ""),
+              const noindex = hasNoindex(
+                metadata.robotsValues,
+                metadata.googlebotValues,
+                [response.headers()["x-robots-tag"] ?? ""],
               );
-              if (job.environment === "production")
+              if (metadata.signalsTruncated && !noindex)
+                addRule(
+                  "indexability",
+                  "seo",
+                  "not_run",
+                  "Robots-Metadatenbudget erreicht; vollständige Indexierungsangaben unbekannt.",
+                  pageUrl,
+                  viewport.id,
+                  state,
+                );
+              else if (job.environment === "production")
                 seo(
                   "indexability",
                   !noindex,
@@ -1227,16 +1286,27 @@ export async function runAudit(
                     return false;
                   }
                 })();
-              seo(
-                "canonical-valid",
-                validCanonical,
-                "Canonical-Ziel ist ungültig",
-                validCanonical
-                  ? "Kein syntaktisch ungültiges Canonical gefunden; korrekte Zielabsicht ist nicht geprüft."
-                  : "Canonical kann nicht zu einer HTTP(S)-URL aufgelöst werden.",
-                "Canonical auf die beabsichtigte kanonische URL setzen.",
-                "Canonical ist syntaktisch gültig und redaktionell korrekt.",
-              );
+              if (metadata.signalsTruncated)
+                addRule(
+                  "canonical-valid",
+                  "seo",
+                  "not_run",
+                  "Metadatenerfassung begrenzt; vollständiges Canonical-Syntaxurteil unbekannt.",
+                  pageUrl,
+                  viewport.id,
+                  state,
+                );
+              else
+                seo(
+                  "canonical-valid",
+                  validCanonical,
+                  "Canonical-Ziel ist ungültig",
+                  validCanonical
+                    ? "Kein syntaktisch ungültiges Canonical gefunden; korrekte Zielabsicht ist nicht geprüft."
+                    : "Canonical kann nicht zu einer HTTP(S)-URL aufgelöst werden.",
+                  "Canonical auf die beabsichtigte kanonische URL setzen.",
+                  "Canonical ist syntaktisch gültig und redaktionell korrekt.",
+                );
               const invalidJson = metadata.jsonld.some((item) => {
                 if (item.oversized) return false;
                 try {
@@ -1248,13 +1318,14 @@ export async function runAudit(
               });
               if (
                 !invalidJson &&
-                metadata.jsonld.some((item) => item.oversized)
+                (metadata.jsonldTruncated ||
+                  metadata.jsonld.some((item) => item.oversized))
               )
                 addRule(
                   "structured-data-json",
                   "seo",
                   "not_run",
-                  "Ein JSON-LD-Block überschreitet die Analysegrenze von 100 KB; kein vollständiges Syntaxurteil.",
+                  "JSON-LD-Erfassung überschreitet 20 Blöcke oder 100 KB pro Block; kein vollständiges Syntaxurteil.",
                   pageUrl,
                   viewport.id,
                   state,
@@ -1537,6 +1608,32 @@ export async function runAudit(
                 item.pageUrl === pageUrl && item.viewportId === viewport.id,
             )?.id,
           });
+          if (report.seo)
+            report.seo.pages.push({
+              pageUrl,
+              finalUrl: page.url(),
+              viewportId: viewport.id,
+              evidenceId: report.evidence.find(
+                (e) =>
+                  e.pageUrl === pageUrl &&
+                  e.viewportId === viewport.id &&
+                  e.state === "initial",
+              )?.id,
+              title: metadata.title,
+              description: metadata.description,
+              canonicals: metadata.canonicals,
+              robots: metadata.robotsValues,
+              googlebot: metadata.googlebotValues,
+              headerRobots: [response.headers()["x-robots-tag"] ?? ""],
+              signalsTruncated: metadata.signalsTruncated,
+              links: metadata.links,
+              linksTruncated: metadata.linksTruncated,
+              jsonld: breadcrumbProfile(
+                metadata.jsonld,
+                metadata.jsonldTruncated,
+              ),
+              jsonldTruncated: metadata.jsonldTruncated,
+            });
           report.coverage.completed++;
         } catch (error) {
           const message =
@@ -1576,6 +1673,9 @@ export async function runAudit(
             ["script-errors", "runtime"],
             ["resource-errors", "runtime"],
             ["axe-automated", "accessibility"],
+            ...(options.technicalSeo
+              ? TECHNICAL_RULES.map((id) => [id, "seo"] as const)
+              : []),
           ] as const)
             addRule(
               id,
@@ -1713,6 +1813,66 @@ export async function runAudit(
         device,
         "lighthouse",
         findings,
+      );
+    }
+  }
+  if (options.technicalSeo && report.seo) {
+    const outcome = await technicalSeo(
+      report,
+      { ...policy, url: target, excludedPaths: options.excludedPaths },
+      job.environment ?? "production",
+      {
+        checkpoint: async () => {
+          await control?.checkpoint();
+          if (control?.cancelled()) throw new Error("Prüfung abgebrochen.");
+        },
+        progress: (detail) =>
+          emit({
+            type: "progress",
+            progress: {
+              phase: "technical-seo",
+              message: detail,
+              completed: report.coverage.completed,
+              total: report.coverage.planned,
+              updatedAt: new Date().toISOString(),
+            },
+          }),
+      },
+    );
+    report.seo = outcome.context;
+    for (const check of outcome.checks) {
+      const evidence = report.evidence.find(
+        (e) => e.id === check.page.evidenceId,
+      );
+      const finding =
+        check.status === "fail"
+          ? addFinding({
+              ruleId: check.id,
+              category: "seo",
+              priority:
+                check.kind === "measured" ? "important" : "nice-to-have",
+              title: check.title,
+              detail: check.detail,
+              pageUrl: check.page.pageUrl,
+              viewportId: check.page.viewportId,
+              state: "initial",
+              evidenceId: evidence?.id,
+              evidenceStatus: check.kind,
+              recommendation: check.action,
+              acceptance: check.acceptance,
+              source: check.source,
+            })
+          : undefined;
+      currentEvidence = evidence;
+      addRule(
+        check.id,
+        "seo",
+        check.status,
+        check.detail,
+        check.page.pageUrl,
+        check.page.viewportId,
+        "initial",
+        finding ? [finding] : [],
       );
     }
   }

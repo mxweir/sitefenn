@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { APP_VERSION } from "../shared/version.js";
 import type { AuditProvenance } from "../shared/types.js";
 
@@ -16,6 +17,10 @@ export function auditProvenance(): Promise<AuditProvenance> {
       "network-proxy",
       "security",
       "services/scoring",
+      "services/technical-seo",
+      "services/seo-network",
+      "services/seo-meta",
+      "services/sitemap",
     ];
     const sources = await Promise.all(
       names.map((name) =>
@@ -23,6 +28,16 @@ export function auditProvenance(): Promise<AuditProvenance> {
       ),
     );
     return {
+      seoVersions: {
+        saxes: require("saxes/package.json").version,
+        robotsParser: require("robots-parser/package.json").version,
+        parse5: JSON.parse(
+          await readFile(
+            join(dirname(require.resolve("parse5")), "..", "package.json"),
+            "utf8",
+          ),
+        ).version,
+      },
       appVersion: APP_VERSION,
       engineSha256: sha256(sources.join("\n--module--\n")),
       playwrightVersion: require("playwright/package.json").version,

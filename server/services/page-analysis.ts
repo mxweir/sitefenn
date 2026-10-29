@@ -93,6 +93,66 @@ export function preparePage(
     ...report.performance
       .filter((item) => item.pageUrl === pageUrl)
       .map((item, i) => ({ id: `performance:${i}`, value: item })),
+    ...(report.seo?.pages
+      .filter((p) => p.pageUrl === pageUrl)
+      .flatMap((p, index) => {
+        const { links, ...metadata } = p;
+        return [
+          { id: `seo-page:${index}`, value: metadata },
+          ...links.map((link, j) => ({
+            id: `seo-link:${index}:${j}`,
+            value: link,
+          })),
+        ];
+      }) ?? []),
+    ...(report.seo?.graph
+      .filter((edge) => edge.from === pageUrl)
+      .map((edge, index) => ({ id: `seo-edge:${index}`, value: edge })) ?? []),
+    ...(report.seo?.duplicates
+      .filter((group) => group.pages.includes(pageUrl))
+      .map((group, index) => ({
+        id: `seo-duplicate:${index}`,
+        value: group,
+      })) ?? []),
+    ...(report.seo
+      ? [
+          { id: "seo-coverage", value: report.seo.coverage },
+          {
+            id: "seo-robots",
+            value: {
+              ...report.seo.robots,
+              googlebot: report.seo.robots.googlebot.filter((p) =>
+                report.seo!.pages.some(
+                  (s) => s.pageUrl === pageUrl && s.finalUrl === p.pageUrl,
+                ),
+              ),
+            },
+          },
+          ...report.seo.probes
+            .filter(
+              (probe) =>
+                probe.url === pageUrl ||
+                report.seo!.graph.some(
+                  (edge) => edge.from === pageUrl && edge.to === probe.url,
+                ) ||
+                report
+                  .seo!.pages.filter((p) => p.pageUrl === pageUrl)
+                  .some((p) =>
+                    p.canonicals.some((value) => {
+                      try {
+                        return new URL(value, p.finalUrl).href === probe.url;
+                      } catch {
+                        return false;
+                      }
+                    }),
+                  ),
+            )
+            .map((probe, index) => ({
+              id: `seo-probe:${index}`,
+              value: probe,
+            })),
+        ]
+      : []),
     ...report.warnings.map((item, i) => ({ id: `warning:${i}`, value: item })),
     ...findings.map((item) => ({
       id: `finding:${item.id}`,

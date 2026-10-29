@@ -39,6 +39,7 @@ import ScoreCard from "./ScoreCard.js";
 import LiveScan from "./LiveScan.js";
 import { Report, Tasks } from "./Report.js";
 import Compare from "./Compare.js";
+import SeoReport from "./SeoReport.js";
 import SearchVisibility from "./SearchVisibility.js";
 import Settings from "./Settings.js";
 import PageAnalysis from "./PageAnalysis.js";
@@ -67,6 +68,7 @@ type Tab =
   | "analysis"
   | "tasks"
   | "compare"
+  | "seo"
   | "search";
 const empty: Bootstrap = {
   version: APP_VERSION,
@@ -81,6 +83,7 @@ const tabs = [
   { id: "overview", label: "Übersicht", icon: LayoutDashboard },
   { id: "live", label: "On-Screen-Check", icon: Radio },
   { id: "report", label: "Befunde", icon: FileText },
+  { id: "seo", label: "SEO-Kontext", icon: Globe2 },
   { id: "analysis", label: "Seite erklären", icon: FileText },
   { id: "tasks", label: "Maßnahmenplan", icon: CheckSquare2 },
   { id: "compare", label: "Vergleich", icon: ArrowLeftRight },
@@ -261,7 +264,7 @@ export default function App() {
           {project && (
             <>
               <button
-                className={`nav-item ${screen === "projects" && ["history", "live", "report", "analysis", "compare"].includes(tab) ? "selected" : ""}`}
+                className={`nav-item ${screen === "projects" && ["history", "live", "report", "seo", "analysis", "compare"].includes(tab) ? "selected" : ""}`}
                 onClick={() => {
                   setScreen("projects");
                   setTab("history");
@@ -787,6 +790,16 @@ export default function App() {
                           tasks={tasks}
                         />
                       )}
+                      {tab === "seo" && (
+                        <SeoReport
+                          key={selectedScan?.id}
+                          scan={selectedScan}
+                          onFinding={(id) => {
+                            setReportFinding(id);
+                            setTab("report");
+                          }}
+                        />
+                      )}
                       {tab === "analysis" && (
                         <PageAnalysis
                           key={selectedScan?.id}
@@ -889,7 +902,9 @@ export default function App() {
           }}
         />
       )}
-      {!(screen === "projects" && ["analysis", "compare"].includes(tab)) && (
+      {!(
+        screen === "projects" && ["analysis", "compare", "seo"].includes(tab)
+      ) && (
         <button
           className="fenn-launcher"
           aria-label="Fenn öffnen"

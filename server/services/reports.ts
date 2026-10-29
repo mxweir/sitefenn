@@ -6,6 +6,7 @@ import type {
   Finding,
   Project,
   Scan,
+  SeoContext,
 } from "../../shared/types.js";
 import { calculateScore } from "./scoring.js";
 
@@ -36,6 +37,107 @@ function urlLabel(value: string): string {
   } catch {
     return "[invalid URL]";
   }
+}
+export function exportSeoContext(
+  seo: SeoContext,
+  selection?: Pick<Finding, "pageUrl" | "viewportId">[],
+): SeoContext {
+  if (selection) {
+    const matches = (url: string, viewport: string) =>
+      selection.some((f) => f.pageUrl === url && f.viewportId === viewport);
+    const pages = seo.pages.filter((p) => matches(p.pageUrl, p.viewportId));
+    const graph = seo.graph
+      .filter((e) => e.viewportIds.some((v) => matches(e.from, v)))
+      .map((e) => ({
+        ...e,
+        viewportIds: e.viewportIds.filter((v) => matches(e.from, v)),
+      }));
+    const targets = new Set<string>(
+      pages.flatMap((p) => [p.pageUrl, p.finalUrl]),
+    );
+    for (const page of pages)
+      for (const target of [
+        ...page.canonicals,
+        ...page.links.map((l) => l.url),
+      ]) {
+        try {
+          const u = new URL(target, page.finalUrl);
+          u.hash = "";
+          targets.add(u.href);
+        } catch {
+          /* Invalid values stay in the selected snapshot. */
+        }
+      }
+    seo = {
+      ...seo,
+      pages,
+      graph,
+      probes: seo.probes.filter((p) => targets.has(p.url)),
+      duplicates: seo.duplicates.filter((g) =>
+        g.pages.some((p) => matches(p, g.viewportId)),
+      ),
+      robots: {
+        ...seo.robots,
+        googlebot: seo.robots.googlebot.filter((p) =>
+          pages.some((s) => s.finalUrl === p.pageUrl),
+        ),
+      },
+      warnings: [
+        ...seo.warnings,
+        "SEO snapshots follow the selected findings' pages/profiles; related target URLs and duplicate-group URLs remain context. Coverage counters describe the original complete scan.",
+      ],
+    };
+  }
+  const location = (value: string, base?: string) => {
+    try {
+      return urlLabel(new URL(value, base).href);
+    } catch {
+      return "[invalid URL]";
+    }
+  };
+  return {
+    ...seo,
+    pages: seo.pages.map((page) => ({
+      ...page,
+      pageUrl: location(page.pageUrl),
+      finalUrl: location(page.finalUrl),
+      canonicals: page.canonicals.map((c) => location(c, page.finalUrl)),
+      links: page.links.map((l) => ({
+        ...l,
+        url: location(l.url, page.finalUrl),
+      })),
+      evidenceId: undefined,
+    })),
+    probes: seo.probes.map((p) => ({
+      ...p,
+      url: location(p.url),
+      finalUrl: p.finalUrl ? location(p.finalUrl) : undefined,
+      canonicals: p.canonicals?.map((c) => location(c, p.finalUrl)),
+      redirects: p.redirects.map((r) => ({
+        ...r,
+        url: location(r.url),
+        to: location(r.to),
+      })),
+    })),
+    graph: seo.graph.map((edge) => ({
+      ...edge,
+      from: location(edge.from),
+      to: location(edge.to),
+      probeUrl: edge.probeUrl ? location(edge.probeUrl) : undefined,
+    })),
+    duplicates: seo.duplicates.map((g) => ({
+      ...g,
+      pages: g.pages.map((p) => location(p)),
+    })),
+    robots: {
+      ...seo.robots,
+      url: seo.robots.url ? location(seo.robots.url) : "",
+      googlebot: seo.robots.googlebot.map((p) => ({
+        ...p,
+        pageUrl: location(p.pageUrl),
+      })),
+    },
+  };
 }
 function quote(value: string): string {
   return text(value)
@@ -195,6 +297,14 @@ export function buildJsonReport(
         finishedAt: report.finishedAt,
       },
       score: calculateScore(report),
+      ...(report.seo
+        ? {
+            seo: exportSeoContext(
+              report.seo,
+              options.selectedFindingIds ? findings : undefined,
+            ),
+          }
+        : {}),
       coverage: report.coverage,
       scope: report.pages.map((page) => ({
         pageUrl: urlLabel(page.pageUrl),
@@ -285,9 +395,52 @@ export function buildMarkdownReport(
         `- ${text(urlLabel(page.pageUrl))} · ${text(page.viewportId)} · ${text(page.state)} · ${text(page.status)}`,
     ),
     "",
-    "## Prioritized checklist",
-    "",
   ];
+  if (report.seo) {
+    const seo = exportSeoContext(
+      report.seo,
+      options.selectedFindingIds ? findings : undefined,
+    );
+    lines.push(
+      "",
+      "## Technical SEO context",
+      "",
+      `${seo.pages.length} page/profile snapshots; ${seo.graph.length} observed internal edges; ${seo.coverage.checkedTargets}/${seo.coverage.linkTargets} HTTP targets checked; ${seo.coverage.omittedTargets} not requested.`,
+      "Missing/limited targets are unknown. No orphan-page proof, Google-indexing confirmation, ranking-loss claim or full schema validation.",
+      "",
+      "### HTTP samples and redirect chains",
+      ...seo.probes.flatMap((p) => [
+        `- ${text(p.url)}: ${p.statusCode ?? "unknown"} (${p.outcome}), ${text(p.checkedAt)}`,
+        `  - ${text(p.detail)}`,
+        ...p.redirects.map(
+          (r) => `  - ${r.statusCode}: ${text(r.url)} → ${text(r.to)}`,
+        ),
+      ]),
+      "",
+      "### Metadata similarity candidates",
+      ...seo.duplicates.map(
+        (g) =>
+          `- ${g.kind} / ${text(g.viewportId)}: ${text(g.value)} — ${g.pages.map(text).join(", ")}`,
+      ),
+      "",
+      "### Observed link graph",
+      ...seo.graph
+        .slice(0, 100)
+        .map(
+          (e) =>
+            `- ${text(e.from)} → ${text(e.to)} (${text(e.viewportIds.join(", "))})`,
+        ),
+      ...(seo.graph.length > 100
+        ? [
+            `Only the first 100/${seo.graph.length} edges are shown here. The JSON export contains the full observed graph.`,
+          ]
+        : []),
+      "",
+      `Robots context: ${text(seo.robots.detail)}`,
+      ...seo.warnings.map((w) => `- ${text(w)}`),
+    );
+  }
+  lines.push("", "## Prioritized checklist", "");
   for (const task of tasks) {
     const related = task.findingIds.flatMap((id) =>
       selected.has(id) ? [selected.get(id)!] : [],

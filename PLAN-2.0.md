@@ -8,6 +8,8 @@ Fortschritt 1.2: Fix-Arbeitsbereich, Filter/Bündelung und der erste durchgängi
 
 Fortschritt 1.3: Visuelle Referenzen, Masken, Wisch-/Pixelvergleich und gezielte Maßnahmen-Nachtests sind implementiert. Ein eigener realer Browser-Test bestätigt einen korrigierten Befund, lässt die ausgelassene Seite offen und prüft Backup/Restore der Referenz. Grenzen und tatsächliche Prüfungen stehen in [RELEASE-1.3.md](docs/RELEASE-1.3.md). Keine allgemeine visuelle Erkennungsgenauigkeit oder unabhängige UX-Abnahme wird daraus abgeleitet.
 
+Fortschritt 1.4: Begrenzter Sitemap-Import, gerichteter Linkkontext mit HTTP-/Redirect-Stichproben, Metadaten-Kandidaten, Canonical-/Robots-Kontext und ein getrenntes Breadcrumb-Teilprofil sind implementiert. Kontrollierte positive/negative Fälle und ein echter korrigierter Link-Nachtest sind in [RELEASE-1.4.md](docs/RELEASE-1.4.md) dokumentiert. Kein vollständiger Crawl, Indexierungsnachweis oder Rankingverlust wird daraus abgeleitet.
+
 ## Produktziel
 
 **SiteFenn hilft dir, Website-Probleme nachweisbar zu beheben und neue Fehler vor der Veröffentlichung zu erkennen.**

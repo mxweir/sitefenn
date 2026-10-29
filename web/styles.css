@@ -3038,3 +3038,125 @@ h1 {
     grid-template-columns: 1fr;
   }
 }
+
+/* 1.4 technical SEO context */
+.seo-workspace {
+  display: grid;
+  gap: 22px;
+  min-width: 0;
+}
+.seo-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+.seo-summary .panel {
+  margin: 0;
+  display: grid;
+  gap: 12px;
+}
+.seo-summary strong {
+  font-size: 30px;
+}
+.seo-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.seo-url,
+.seo-workspace td,
+.seo-workspace p {
+  overflow-wrap: anywhere;
+}
+.seo-table-scroll {
+  max-width: 100%;
+  overflow: auto;
+  margin-top: 18px;
+}
+.seo-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 650px;
+  table-layout: fixed;
+  font-size: 13px;
+}
+.seo-table th,
+.seo-table td {
+  padding: 14px 12px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid #1a1a1a33;
+}
+.seo-table small {
+  display: block;
+  margin-top: 8px;
+  color: var(--muted);
+}
+.seo-node-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 20px 0;
+}
+.seo-node {
+  display: grid;
+  gap: 8px;
+  padding: 16px;
+  border: 1px solid var(--ink);
+  background: #eee9f3;
+  max-width: 100%;
+  font-size: 12px;
+}
+.seo-node small {
+  color: var(--muted);
+}
+.seo-probe {
+  border-top: 1px solid #1a1a1a44;
+  padding: 16px 0;
+}
+.seo-probe summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+  line-height: 1.8;
+}
+.seo-workspace .text-button {
+  display: block;
+  margin-top: 15px;
+}
+.sitemap-import {
+  margin: 18px 0;
+  padding: 18px;
+  border: 1px solid var(--ink);
+}
+.sitemap-import p,
+.sitemap-import li {
+  font-size: 13px;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+.sitemap-import input {
+  width: 100%;
+  margin: 10px 0 16px;
+}
+.check-option small {
+  display: block;
+  font-size: 12px;
+  line-height: 1.7;
+  margin-top: 6px;
+}
+@media (max-width: 900px) {
+  .seo-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 560px) {
+  .seo-summary {
+    gap: 10px;
+  }
+  .seo-summary .panel {
+    padding: 16px;
+  }
+  .seo-tabs .button {
+    width: 100%;
+  }
+}

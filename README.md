@@ -8,26 +8,26 @@ Manage websites you own, inspect desktop/tablet/mobile layouts, collect evidence
 
 The repository and package are now **`sitefenn`**. Existing data stays in the legacy `website-audit-hub` directory so the rename does not reset your projects. Name/domain clearance is still pending.
 
-![SiteFenn 1.3 visual before-and-after comparison](docs/screenshots/1.3-visual-comparison.jpg)
+![SiteFenn 1.4 metadata comparison and linked repair candidates](docs/screenshots/1.4-metadata.jpg)
 
 _Actual application, owned synthetic demo. Missing measurements remain unknown._
 
-[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.3.md) · [Changelog](CHANGELOG.md)
+[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.4.md) · [Changelog](CHANGELOG.md)
 
-## What's new in 1.3
+## What's new in 1.4
 
-**See what changed. Retest what matters.** Compare saved captures side by side, reveal them with a keyboard-accessible wipe slider, or highlight changed pixel regions. Explicitly approve a full scan as your visual reference and save rectangular masks for regions you want to exclude from future image comparisons.
+**Technical SEO with context.** Import a bounded XML/gzip sitemap, deliberately choose the pages to capture, and inspect internal links, HTTP failures, redirect chains, repeated metadata and canonical/robots signals together. The new **SEO-Kontext** workspace links observations directly to their finding and repair action.
 
-**Retest this task** creates a separate scan for its affected URLs and device profiles. An explicit matching passing rule can verify the requested task; an omitted page cannot. Partial runs are labeled and keep their own coverage. They do not replace the full project score or produce a project-score improvement.
+Measured HTTP errors remain separate from review candidates: similar titles do not establish a shared template bug or ranking loss. A blocked, excluded, timed-out or unrequested target stays unknown. JSON-LD syntax and the limited inline Breadcrumb profile have distinct results.
 
-Changed pixels are **not detected website errors**. Missing capture metadata, changed environments/browsers, unsettled fonts or different scroll coordinates prevent a numeric pixel comparison. Reference approval does not close rule-based findings. See [1.3 verification and limits](docs/RELEASE-1.3.md).
+The page assistant receives these saved SEO records as bounded context; Markdown/JSON exports carry the observations and scope. Local AI stays optional and unverified; the [1.2 small-model limitations](docs/RELEASE-1.2.md) still apply. Visual comparisons, masks and targeted retests from [1.3](docs/RELEASE-1.3.md) remain available.
 
-The [1.2 fix workspace and report-per-page assistant](docs/RELEASE-1.2.md) remain available. Local AI remains optional and unverified; the tested small models were not established as reliable full-page advisors.
+See [1.4 verification, request budgets and limits](docs/RELEASE-1.4.md).
 
 ## The workflow
 
 1. **Add a project:** production, staging, or an explicitly authorized local target.
-2. **Choose scope:** discover same-origin links, select pages and exclusions, and choose up to three versioned viewport profiles.
+2. **Choose scope:** discover same-origin links or import sitemap candidates, select pages and exclusions, and choose up to three versioned viewport profiles.
 3. **Watch the check:** streamed browser frames show bounded scroll samples and finding overlays. This is a preview, not an interactive remote browser or target iframe.
 4. **Review evidence:** measured observations, heuristic candidates and optional AI suggestions are separate.
 5. **Work the checklist:** related findings are grouped into tasks with acceptance criteria. Export Markdown/JSON or an optional evidence ZIP.
@@ -53,6 +53,28 @@ The built-in demo is an authorized fixture for trying the workflow without an ex
 
 </details>
 
+## Technical SEO in context
+
+In **Übersicht**, expand **Seiten aus einer Sitemap auswählen** and import an XML or gzip sitemap from the authorized origin. Bounded sitemap indexes are supported. Newly imported candidates stay unchecked: importing does not start a browser scan. Choose pages and enable **SEO-Kontextprüfung** before starting. This adds bounded GET requests to internal targets, explained beside the checkbox.
+
+In **SEO-Kontext**, filter by captured page/device or search the observed URLs/text:
+
+- **Links & Redirects:** directed source → target edges, timestamped GET samples, HTTP errors and observed redirect hops. Open the original finding and its acceptance criterion directly.
+- **Metadaten im Vergleich:** title/description snapshots and normalized similarity groups within the same captured device profile. Related findings are grouped into repair tasks; a shared template cause is not inferred.
+- **Canonical & Robots:** captured HTML canonical values, target availability/noindex samples and a bounded Googlebot interpretation of the received robots.txt. Production intent is kept distinct from staging/local intent.
+- **Strukturierte Daten:** JSON syntax separately from a narrow inline schema.org BreadcrumbList profile. Other schema types and unresolved contexts/references are not validated.
+
+![Actual internal link graph and redirect observations](docs/screenshots/1.4-seo-links.jpg)
+
+<details>
+<summary>Sitemap selection in the actual application</summary>
+
+![Imported candidates remain unchecked](docs/screenshots/1.4-sitemap.jpg)
+
+</details>
+
+HTTP sampling is limited to 40 target URLs, 60 request attempts including redirect hops/robots, and 90 seconds; individual requests have a five-second deadline. Only the approved origin and paths may be contacted. Samples are unauthenticated and target HTML is not executed. The graph is partial: zero observed incoming edges do not prove an orphan page. Robots is neither access control nor proof of Google's indexing. See the [full budgets and methodology](docs/RELEASE-1.4.md).
+
 ## Visual references and targeted retests
 
 In **Vergleich**, choose two completed scans and load their image pairs. Each pair records its page, viewport, state, scroll coordinates and capture conditions. Use **Nebeneinander**, **Wischregler** or **Änderungsbereiche**. The diff uses a fixed 24/255 per-channel tolerance and marks changed 32 px tile regions; this is a simple local pixel comparison, not AI vision or a perceptual-quality score.
@@ -76,7 +98,7 @@ From **Maßnahmenplan**, select **Diese Maßnahme nachtesten**. The server deriv
 | ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
 | Layout            | Desktop 1440×900, tablet 768×1024, mobile 390×844; bounded scrolling; overflow and covered-control hit tests | A few captured positions, not every interaction. Clipped-text candidates need review.      |
 | Accessibility     | axe automated WCAG-tagged checks and affected elements                                                       | Not a complete WCAG audit; semantic and incomplete cases need human judgement.             |
-| Technical SEO     | Title/description presence, production noindex indication, canonical syntax, JSON-LD parseability            | Not a ranking prediction, full SEO crawler, schema-eligibility test, or proof of indexing. |
+| Technical SEO     | Metadata presence/similarity, internal link/redirect samples, canonical/robots context, JSON syntax and limited Breadcrumb profile            | Not a ranking prediction, full SEO crawler, schema-eligibility test, or proof of indexing. |
 | Runtime           | Document status, observed script errors and failed own-origin resources                                      | Not a comprehensive functional/security test.                                              |
 | Performance       | Optional separate Lighthouse desktop/mobile reference runs, one or three repetitions                         | Local lab data, not field Core Web Vitals. Tablet is a layout profile.                     |
 | Google visibility | German/English Search Console CSV with provenance and conservative comparisons                               | Historical exported rows, not a universal live Google rank.                                |

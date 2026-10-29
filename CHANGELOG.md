@@ -2,6 +2,34 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 1.4.0 — 2026-10-29
+
+### Technical SEO with context
+
+- Added bounded same-origin XML/gzip sitemap/index import with explicit candidate selection, exclusions, DTD rejection and visible limits. Import alone starts no scan.
+- Added the **SEO-Kontext** workspace: directed internal links, timestamped HTTP samples, observed redirect chains and navigation to the canonical finding/action.
+- Added per-profile normalized title/description similarity groups across captured documents. They remain heuristic review candidates, without inferred template cause or ranking penalty.
+- Added HTML canonical-target checks, Googlebot-aware meta/header noindex parsing and received robots.txt context. Own production noindex conflicts are not imposed on staging/local projects.
+- Kept JSON-LD syntax separate from a limited inline BreadcrumbList profile. Unsupported types, unresolved contexts/references and capped captures are explicit unknowns/out of scope.
+- Included saved SEO observations in page-analysis context and portable Markdown/JSON. Selected-finding exports restrict SEO snapshots/edges to their pages/profiles and retain related target/group URLs; coverage counters stay explicitly scan-wide. Structured URL fields omit queries/fragments. Text still needs review before sharing.
+- Scoped task retests retain SEO mode; a measured matching link pass can verify the requested task. Excluded/restricted/incomplete link scope cannot produce a false full pass.
+
+### Data and verification
+
+Optional SEO report fields require no database schema migration. Existing data paths and historical reports remain unchanged; new checks use `rules-1.4.0` and `technical-seo-1.4`. Parser identities are recorded with execution provenance. Historical comparisons are restricted when identities differ.
+
+86 Node tests and 14 browser tests passed locally, including real HTTP/gzip/XML/Chromium/worker/API and corrected-link retest cases. Type checks, production build, lifecycle smoke and dependency audit passed. See [verification and precise limits](docs/RELEASE-1.4.md).
+
+![Actual 1.4 metadata comparison](docs/screenshots/1.4-metadata.jpg)
+
+<details>
+<summary>Link graph and deliberate sitemap scope</summary>
+
+![Actual link observations](docs/screenshots/1.4-seo-links.jpg)
+![Actual sitemap selection](docs/screenshots/1.4-sitemap.jpg)
+
+</details>
+
 ## 1.3.0 — 2026-10-29
 
 ### Visual before and after

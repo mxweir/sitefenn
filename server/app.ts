@@ -9,6 +9,7 @@ import { dependencies } from "./dependencies.js";
 import { parseTarget, validateTarget, requestAllowed } from "./security.js";
 import { demoPage } from "./demo.js";
 import { discoverPages } from "./scan-worker.js";
+import { importSitemap } from "./services/sitemap.js";
 import { normalizeScanOptions } from "./options.js";
 import { calculateScore } from "./services/scoring.js";
 import { visualPairs, validateMasks, diffPng } from "./services/visual.js";
@@ -277,6 +278,42 @@ export async function createApp(options: {
       }
     },
   );
+  app.post<{ Params: { id: string } }>(
+    "/api/projects/:id/sitemap",
+    async (request) => {
+      requireProject(request.params.id);
+      idle();
+      const body = object(request.body),
+        url = projectUrl(request.params.id);
+      const sitemapUrl = body.sitemapUrl ?? new URL("/sitemap.xml", url).href;
+      if (typeof sitemapUrl !== "string" || sitemapUrl.length > 2048)
+        throw bad("Vollständige Sitemap-URL eingeben.");
+      let normalized;
+      try {
+        normalized = normalizeScanOptions(
+          { maxPages: body.maxPages, excludedPaths: body.excludedPaths },
+          url,
+          policy(request.params.id).demoOrigin,
+        );
+      } catch (error) {
+        throw bad((error as Error).message);
+      }
+      operation = "discovery";
+      try {
+        return await importSitemap({
+          url,
+          sitemapUrl,
+          maxPages: normalized.maxPages,
+          excludedPaths: normalized.excludedPaths,
+          ...policy(request.params.id),
+        });
+      } catch (error) {
+        throw bad((error as Error).message);
+      } finally {
+        operation = null;
+      }
+    },
+  );
   const startScan = (
     projectId: string,
     rawOptions?: unknown,
@@ -367,6 +404,7 @@ export async function createApp(options: {
           excludedPaths: report.options.excludedPaths,
           performance: findings.some((f) => f.category === "performance"),
           performanceRuns: report.options.performanceRuns,
+          technicalSeo: report.options.technicalSeo === true,
         },
         {
           sourceScanId: source.id,

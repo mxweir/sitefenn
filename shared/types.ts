@@ -82,6 +82,7 @@ export interface RetestScope {
   findingIds: string[];
 }
 export interface ScanOptions {
+  technicalSeo?: boolean;
   retest?: RetestScope;
   pages: string[];
   maxPages: number;
@@ -181,6 +182,7 @@ export interface PerformanceSample {
   spread?: number;
 }
 export interface AuditProvenance {
+  seoVersions?: { saxes: string; robotsParser: string; parse5: string };
   appVersion: string;
   engineSha256: string;
   playwrightVersion: string;
@@ -191,6 +193,7 @@ export interface AuditProvenance {
   arch: string;
 }
 export interface AuditReport {
+  seo?: SeoContext;
   provenance?: AuditProvenance;
   schemaVersion: 1;
   ruleVersion: string;
@@ -447,4 +450,78 @@ export interface VisualDiff {
   threshold: number;
   regions: Rect[];
   image: string;
+}
+
+export interface SitemapImport {
+  urls: string[];
+  documents: {
+    url: string;
+    status: "read" | "skipped" | "failed";
+    entries: number;
+    detail: string;
+  }[];
+  excluded: string[];
+  warnings: string[];
+  limited: boolean;
+}
+export interface SeoSnapshot {
+  signalsTruncated: boolean;
+  pageUrl: string;
+  finalUrl: string;
+  viewportId: string;
+  evidenceId?: string;
+  title: string;
+  description: string;
+  canonicals: string[];
+  robots: string[];
+  googlebot: string[];
+  headerRobots: string[];
+  links: { url: string; text: string; rel: string }[];
+  linksTruncated: boolean;
+  jsonld: { status: RuleStatus; detail: string; types: string[] };
+  jsonldTruncated: boolean;
+}
+export interface SeoProbe {
+  url: string;
+  finalUrl?: string;
+  statusCode: number | null;
+  redirects: { url: string; statusCode: number; to: string }[];
+  outcome: "checked" | "restricted" | "unknown";
+  detail: string;
+  checkedAt: string;
+  noindex?: boolean;
+  canonicals?: string[];
+}
+export interface SeoContext {
+  version: "technical-seo-1.4";
+  pages: SeoSnapshot[];
+  probes: SeoProbe[];
+  robots: {
+    url: string;
+    statusCode: number | null;
+    googlebot: { pageUrl: string; allowed: boolean | null }[];
+    detail: string;
+  };
+  graph: {
+    from: string;
+    to: string;
+    text: string;
+    rel: string;
+    viewportIds: string[];
+    probeUrl?: string;
+  }[];
+  duplicates: {
+    kind: "title" | "description";
+    value: string;
+    pages: string[];
+    viewportId: string;
+  }[];
+  coverage: {
+    linkTargets: number;
+    checkedTargets: number;
+    limit: number;
+    omittedTargets: number;
+    linksTruncated: boolean;
+  };
+  warnings: string[];
 }
