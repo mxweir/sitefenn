@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { APP_VERSION } from "../shared/version.js";
 import {
   Activity,
   ArrowLeftRight,
@@ -60,7 +61,7 @@ interface ScanDetail {
 }
 type Tab = "overview" | "live" | "report" | "tasks" | "compare" | "search";
 const empty: Bootstrap = {
-  version: "1.0.0",
+  version: APP_VERSION,
   projects: [],
   scans: [],
   dependencies: [],

@@ -1,6 +1,6 @@
 # SiteFenn · Brand & Character System
 
-Stand: 28. Oktober 2026. In der 1.0-Oberfläche umgesetzt. Name weiterhin ohne abschließende Domain-/Markenprüfung. Technisches Repository und Datenverzeichnis heißen unverändert `website-audit-hub`; der Markenwechsel migriert oder löscht keine Projekte.
+Stand: 29. Oktober 2026. In der Oberfläche umgesetzt. Name weiterhin ohne abschließende Domain-/Markenprüfung. Repository und Paket heißen seit 1.1 `sitefenn`; das bestehende Datenverzeichnis `website-audit-hub` bleibt erhalten. Die Umbenennung löscht oder verschiebt keine Projekte.
 
 ## Identität
 

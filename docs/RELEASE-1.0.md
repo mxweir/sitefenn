@@ -15,7 +15,7 @@ Date: 2026-10-28. This records tests actually run, not an independent certificat
 
 Local result: **65/65 Node tests**, **9/9 browser tests**, typecheck and production build passed. `npm audit --omit=dev --audit-level=high` reported zero production vulnerabilities. CI results are available in the repository Actions history; they are separate from this local test record.
 
-The complete code at `d6caa7b` passed both macOS and Ubuntu CI, including the sandbox namespace setup, Node tests, build and browser end-to-end tests: [CI run](https://github.com/mxweir/website-audit-hub/actions/runs/40742478088).
+The complete code at `d6caa7b` passed both macOS and Ubuntu CI, including the sandbox namespace setup, Node tests, build and browser end-to-end tests: [CI run](https://github.com/mxweir/sitefenn/actions/runs/40742478088).
 
 Coverage includes URL/origin restrictions, DNS-pinned proxy behavior, excluded redirects, local API session/CSRF protection, schema migration and backup/restore corruption checks, deterministic scoring and unknown bounds, conservative comparison, report export privacy, Search Console parsing, model locality/output validation, worker pause/resume/cancel and checkpoint reuse.
 

@@ -1,5 +1,6 @@
 import { createApp } from "./app.js";
 import { getConfig } from "./config.js";
+import { APP_VERSION } from "../shared/version.js";
 
 const config = getConfig();
 const { app, runner } = await createApp({
@@ -9,7 +10,7 @@ const { app, runner } = await createApp({
 try {
   await app.listen({ host: config.host, port: config.port });
   console.log(
-    `SiteFenn 1.0.0\nLocal: http://${config.host}:${config.port}\nData: ${config.dataDir}\nOnly scan trusted websites you own or are authorized to test.`,
+    `SiteFenn ${APP_VERSION}\nLocal: http://${config.host}:${config.port}\nData: ${config.dataDir}\nOnly scan trusted websites you own or are authorized to test.`,
   );
   runner.enqueue();
 } catch (error) {

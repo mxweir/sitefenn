@@ -28,6 +28,16 @@ const project: Project = {
 };
 function report(): AuditReport {
   return {
+    provenance: {
+      appVersion: "1.1.0",
+      engineSha256: "a".repeat(64),
+      playwrightVersion: "fixture",
+      axeVersion: "fixture",
+      lighthouseVersion: "fixture",
+      nodeVersion: "fixture",
+      platform: "fixture",
+      arch: "fixture",
+    },
     schemaVersion: 1,
     ruleVersion: "rules-v1",
     profileVersion: "profile-v1",
@@ -436,12 +446,14 @@ test("AI calls fixed local endpoint with bounded schema and validated evidence r
   assert.equal(result.model, "test:small");
   assert.equal(result.recommendations[0]?.findingId, "f-1");
   assert.equal(requests[0]?.url, "http://127.0.0.1:11434/api/show");
-  assert.equal(requests[1]?.url, "http://127.0.0.1:11434/api/chat");
+  assert.equal(requests[1]?.url, "http://127.0.0.1:11434/api/tags");
   assert.deepEqual(JSON.parse(requests[0]!.body!), {
     model: "test:small",
     verbose: false,
   });
-  const body = JSON.parse(requests[1]!.body!);
+  const body = JSON.parse(
+    requests.find((request) => request.url.endsWith("/api/chat"))!.body!,
+  );
   assert.equal(body.stream, false);
   assert.equal(body.think, false);
   assert.ok(body.format);
@@ -643,5 +655,70 @@ test("Ollama thinking-only local models use supported thinking mode and larger b
       (requestBodies[1]?.options as Record<string, unknown>).num_predict,
       expected ? 4096 : 3072,
     );
+  }
+});
+
+test("comparison refuses missing or changed execution identity without rewriting historical reports", () => {
+  const before = report(),
+    after = report();
+  after.provenance!.engineSha256 = "";
+  assert.equal(
+    compareScans(scan("before", before), scan("partial", after)).comparable,
+    false,
+  );
+  after.provenance!.engineSha256 = before.provenance!.engineSha256;
+  after.provenance!.axeVersion = "changed";
+  assert.equal(
+    compareScans(scan("before", before), scan("after", after)).comparable,
+    false,
+  );
+  delete after.provenance;
+  const original = JSON.stringify(after);
+  assert.equal(
+    compareScans(scan("before", before), scan("legacy", after)).comparable,
+    false,
+  );
+  assert.equal(JSON.stringify(after), original);
+});
+
+test("AI records prompt/context/weight identity and rejects changing weight digests", async () => {
+  const input = {
+    model: "local:small",
+    findings: [finding()],
+    evidence: report().evidence,
+  };
+  for (const changed of [false, true]) {
+    let tags = 0;
+    const local = (async (url: string | URL | Request) => {
+      if (String(url).endsWith("/api/show"))
+        return Response.json({
+          model_info: { "general.architecture": "qwen" },
+        });
+      if (String(url).endsWith("/api/tags"))
+        return Response.json({
+          models: [
+            {
+              name: input.model,
+              digest: (changed && ++tags > 1 ? "b" : "a").repeat(64),
+            },
+          ],
+        });
+      return Response.json({
+        message: { content: JSON.stringify(modelResult()) },
+      });
+    }) as typeof fetch;
+    if (changed)
+      await assert.rejects(
+        generateAiPlan(input, undefined, { fetch: local }),
+        /Modellidentität/,
+      );
+    else {
+      const plan = await generateAiPlan(input, undefined, { fetch: local });
+      assert.equal(plan.provenance?.modelDigest, "a".repeat(64));
+      assert.equal(plan.provenance?.promptVersion, "explanation-1.1.0");
+      assert.match(plan.provenance!.promptSha256, /^[a-f0-9]{64}$/);
+      assert.match(plan.provenance!.contextSha256, /^[a-f0-9]{64}$/);
+      assert.match(plan.provenance!.modelMetadataSha256, /^[a-f0-9]{64}$/);
+    }
   }
 });

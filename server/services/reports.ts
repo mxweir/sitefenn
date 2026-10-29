@@ -184,6 +184,7 @@ export function buildJsonReport(
         finishedAt: scan.finishedAt,
       },
       provenance: {
+        toolchain: report.provenance ?? null,
         ruleVersion: report.ruleVersion,
         profileVersion: report.profileVersion,
         browserVersion: report.browserVersion,
@@ -248,6 +249,7 @@ export function buildMarkdownReport(
     `Project: ${text(urlLabel(project.url))}`,
     `Scan: ${text(scan.id)} · ${text(scan.status)}`,
     `Rules: ${text(report.ruleVersion)} · Profile: ${text(report.profileVersion)} · Browser: ${text(report.browserVersion)}`,
+    `Toolchain: ${report.provenance ? text(JSON.stringify(report.provenance)) : "Legacy report: execution identity was not recorded."}`,
     `Recorded: ${text(report.startedAt)} → ${text(report.finishedAt)}`,
     "",
     `Audit score for captured scope: ${number(score.lower)}–${number(score.upper)}/100 (${score.final ? "final for captured scope" : "provisional"}); weighted coverage ${number(score.coverage)}%.`,

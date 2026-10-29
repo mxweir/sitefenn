@@ -1,6 +1,6 @@
 {
-  "name": "website-audit-hub",
-  "version": "1.0.0",
+  "name": "sitefenn",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -14,7 +14,10 @@
     "test": "tsx --test tests/*.test.ts",
     "test:e2e": "playwright test",
     "browser:install": "playwright install chromium",
-    "restore": "tsx scripts/restore-backup.ts"
+    "restore": "tsx scripts/restore-backup.ts",
+    "benchmark": "tsx scripts/benchmark.ts",
+    "test:readiness": "tsx scripts/readiness.ts",
+    "test:ai-local": "tsx scripts/ai-identity-smoke.ts"
   },
   "dependencies": {
     "@fastify/static": "10.1.8",

@@ -2740,3 +2740,8 @@ h1 {
 .report-measurements {
   margin-top: 20px;
 }
+.identity-hash {
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}

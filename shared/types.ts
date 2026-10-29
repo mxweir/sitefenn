@@ -163,7 +163,18 @@ export interface PerformanceSample {
   error?: string;
   spread?: number;
 }
+export interface AuditProvenance {
+  appVersion: string;
+  engineSha256: string;
+  playwrightVersion: string;
+  axeVersion: string;
+  lighthouseVersion: string;
+  nodeVersion: string;
+  platform: string;
+  arch: string;
+}
 export interface AuditReport {
+  provenance?: AuditProvenance;
   schemaVersion: 1;
   ruleVersion: string;
   profileVersion: string;
@@ -280,6 +291,17 @@ export interface AiRecommendation {
   uncertainty: string;
 }
 export interface AiPlan {
+  provenance?: {
+    promptVersion: string;
+    promptSha256: string;
+    contextSha256: string;
+    modelDigest: string | null;
+    modelMetadataSha256: string;
+    temperature: number;
+    contextTokens: number;
+    predictionLimit: number;
+    durationMs: number;
+  };
   id?: string;
   model: string;
   createdAt: string;

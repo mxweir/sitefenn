@@ -39,5 +39,7 @@ jobs:
         run: npm test
       - name: Build
         run: npm run build
+      - name: Service lifecycle and local OAuth protocol contract
+        run: npm run test:readiness -- "$RUNNER_TEMP/sitefenn-readiness"
       - name: Browser end-to-end tests
         run: npm run test:e2e

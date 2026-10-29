@@ -24,6 +24,7 @@ import type {
   WorkerEvent,
 } from "../shared/types.js";
 import { VIEWPORTS } from "../shared/types.js";
+import { auditProvenance } from "./provenance.js";
 import { startAuditProxy, type AuditProxy } from "./network-proxy.js";
 import { parseTarget, validateTarget, type TargetPolicy } from "./security.js";
 
@@ -82,7 +83,7 @@ export async function closeAuditResources() {
   activeChrome.clear();
   activeProxies.clear();
 }
-export const RULE_VERSION = "rules-1.0.0";
+export const RULE_VERSION = "rules-1.1.0";
 export const PROFILE_VERSION = "responsive-1.0.0";
 const digest = (text: string) =>
   createHash("sha256").update(text).digest("hex").slice(0, 24);
@@ -403,6 +404,7 @@ export async function discoverPages(
 }
 
 interface GeometryIssue {
+  uncertain?: boolean;
   selector: string;
   rect: { x: number; y: number; width: number; height: number };
   detail: string;
@@ -428,6 +430,13 @@ async function inspectGeometry(page: Page) {
     const visible = (element: Element) => {
       const box = element.getBoundingClientRect();
       const style = getComputedStyle(element);
+      let ancestor = element.parentElement;
+      while (ancestor) {
+        const inherited = getComputedStyle(ancestor);
+        if (Number(inherited.opacity) <= 0.01 || inherited.display === "none")
+          return false;
+        ancestor = ancestor.parentElement;
+      }
       return (
         box.width > 2 &&
         box.height > 2 &&
@@ -461,57 +470,75 @@ async function inspectGeometry(page: Page) {
     }
     const covered: GeometryIssue[] = [];
     // Background controls intentionally covered by a modal are not a defect.
-    const modal = document.querySelector(
-      'dialog[open], [role="dialog"][aria-modal="true"]',
-    );
-    if (!modal)
-      for (const element of [
-        ...document.querySelectorAll(
-          'button, a[href], input:not([type="hidden"]), select, textarea',
-        ),
-      ].slice(0, 250)) {
-        if (
-          !visible(element) ||
-          element.hasAttribute("disabled") ||
-          element.getAttribute("aria-hidden") === "true"
-        )
-          continue;
-        const box = element.getBoundingClientRect();
-        if (
-          box.left < 0 ||
-          box.right > innerWidth ||
-          box.top < 0 ||
-          box.bottom > innerHeight
-        )
-          continue;
-        const points = [
-          [0.5, 0.5],
-          [0.2, 0.2],
-          [0.8, 0.2],
-          [0.2, 0.8],
-          [0.8, 0.8],
-        ];
-        const blocked = points.filter(([x, y]) => {
-          const top = document.elementFromPoint(
+    const modal = [
+      ...document.querySelectorAll(
+        'dialog[open], [role="dialog"][aria-modal="true"]',
+      ),
+    ]
+      .filter(visible)
+      .at(-1);
+    for (const element of [
+      ...document.querySelectorAll(
+        'button, a[href], input:not([type="hidden"]), select, textarea',
+      ),
+    ].slice(0, 250)) {
+      if (
+        !visible(element) ||
+        element.matches(":disabled") ||
+        element.closest('[inert], [aria-hidden="true"]') ||
+        (modal && !modal.contains(element))
+      )
+        continue;
+      const box = element.getBoundingClientRect();
+      if (
+        box.left < 0 ||
+        box.right > innerWidth ||
+        box.top < 0 ||
+        box.bottom > innerHeight
+      )
+        continue;
+      const points = [
+        [0.5, 0.5],
+        [0.2, 0.2],
+        [0.8, 0.2],
+        [0.2, 0.8],
+        [0.8, 0.8],
+      ];
+      const blocked = points.filter(([x, y]) => {
+        const top = document.elementFromPoint(
+          box.left + box.width * x!,
+          box.top + box.height * y!,
+        );
+        return (
+          top &&
+          top !== element &&
+          !element.contains(top) &&
+          !top.contains(element)
+        );
+      });
+      if (blocked.length === 5) {
+        const fixedOccluder = points.some(([x, y]) => {
+          let top = document.elementFromPoint(
             box.left + box.width * x!,
             box.top + box.height * y!,
           );
-          return (
-            top &&
-            top !== element &&
-            !element.contains(top) &&
-            !top.contains(element)
-          );
+          while (top) {
+            if (["fixed", "sticky"].includes(getComputedStyle(top).position))
+              return true;
+            top = top.parentElement;
+          }
+          return false;
         });
-        if (blocked.length === 5)
-          covered.push({
-            selector: selector(element),
-            rect: rect(element),
-            detail:
-              "Alle fünf untersuchten Punkte der sichtbaren Bedienfläche treffen ein anderes, nicht zugehöriges Element.",
-          });
-        if (covered.length >= 5) break;
+        covered.push({
+          uncertain: fixedOccluder,
+          selector: selector(element),
+          rect: rect(element),
+          detail:
+            "Alle fünf untersuchten Punkte der sichtbaren Bedienfläche treffen ein anderes, nicht zugehöriges Element.",
+        });
       }
+      if (covered.length >= 5) break;
+    }
     const clipped: GeometryIssue[] = [];
     for (const element of [
       ...document.querySelectorAll("h1,h2,h3,p,button,a,label"),
@@ -592,6 +619,7 @@ export async function runAudit(
       "Keine Seite innerhalb des freigegebenen Zielbereichs ausgewählt.",
     );
   const report: AuditReport = {
+    provenance: await auditProvenance(),
     schemaVersion: 1,
     ruleVersion: RULE_VERSION,
     profileVersion: PROFILE_VERSION,
@@ -622,6 +650,8 @@ export async function runAudit(
   };
   if (
     job.resumeReport?.ruleVersion === RULE_VERSION &&
+    JSON.stringify(job.resumeReport.provenance) ===
+      JSON.stringify(report.provenance) &&
     job.resumeReport.profileVersion === PROFILE_VERSION &&
     JSON.stringify(job.resumeReport.options) === JSON.stringify(report.options)
   ) {
@@ -995,6 +1025,13 @@ export async function runAudit(
                 evidenceStatus: "measured",
                 evidenceId,
                 ...extra,
+                rect: extra.rect
+                  ? {
+                      ...extra.rect,
+                      x: extra.rect.x + geometry.scrollX,
+                      y: extra.rect.y + geometry.scrollY,
+                    }
+                  : undefined,
               });
             const overflows = geometry.overflow.map((issue) =>
               make(
@@ -1035,18 +1072,32 @@ export async function runAudit(
               make(
                 "covered-control",
                 "layout",
-                "Bedienfläche wird von anderem Element verdeckt",
-                issue.detail,
-                "Überlagerndes Element, Stacking und Pointer-Events im Quellprojekt prüfen.",
+                issue.uncertain
+                  ? "Bedienfläche hinter fester Ebene — Absicht prüfen"
+                  : "Bedienfläche wird von anderem Element verdeckt",
+                issue.detail +
+                  (issue.uncertain
+                    ? " Die feste/haftende Ebene kann ein beabsichtigter Hinweis, eine Navigation oder eine Kopfzeile sein. Kein automatisch bestätigter Websitefehler."
+                    : ""),
+                "Zuerst beabsichtigten Zustand und Schließmöglichkeit prüfen; danach bei Bedarf Stacking und Pointer-Events im Quellprojekt untersuchen.",
                 "An den untersuchten Punkten trifft der Hit-Test das Bedienelement oder dessen Inhalt.",
-                { selector: issue.selector, rect: issue.rect },
+                {
+                  selector: issue.selector,
+                  rect: issue.rect,
+                  evidenceStatus: issue.uncertain ? "heuristic" : "measured",
+                  priority: issue.uncertain ? "nice-to-have" : "important",
+                },
               ),
             );
             addRule(
               "covered-control",
               "layout",
-              covers.length ? "fail" : "pass",
-              `${covers.length} vollständig an fünf Punkten verdeckte Bedienflächen im sichtbaren Bereich. Kein vollständiger Funktionstest.`,
+              covers.some((item) => item.evidenceStatus === "measured")
+                ? "fail"
+                : covers.length
+                  ? "not_run"
+                  : "pass",
+              `${covers.length} an fünf Punkten verdeckte Bedienflächen. Feste/haftende Ebenen sind Prüfkandidaten mit unbekannter Fehlerbewertung. Kein vollständiger Funktionstest.`,
               pageUrl,
               viewport.id,
               state,
@@ -1379,7 +1430,11 @@ export async function runAudit(
             addRule(
               ruleId,
               "layout",
-              sampled.some((item) => item.status === "fail") ? "fail" : "pass",
+              sampled.some((item) => item.status === "fail")
+                ? "fail"
+                : sampled.some((item) => item.status === "not_run")
+                  ? "not_run"
+                  : "pass",
               `${sampled.length} begrenzte Scroll-Stichprobe(n); ${findings.length} zugehörige Befunde. Kein vollständiger Seiten-/Interaktionstest.`,
               pageUrl,
               viewport.id,

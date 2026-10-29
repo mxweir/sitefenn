@@ -44,8 +44,27 @@ function samePageViewport(
     a.viewportId === b.viewportId
   );
 }
+function recordedIdentity(report: AuditReport): boolean {
+  const value = report.provenance;
+  return (
+    !!value &&
+    /^[a-f0-9]{64}$/.test(value.engineSha256) &&
+    [
+      value.appVersion,
+      value.playwrightVersion,
+      value.axeVersion,
+      value.lighthouseVersion,
+      value.nodeVersion,
+      value.platform,
+      value.arch,
+    ].every((item) => typeof item === "string" && !!item.trim())
+  );
+}
 function compatible(a: AuditReport, b: AuditReport): boolean {
   return (
+    recordedIdentity(a) &&
+    recordedIdentity(b) &&
+    canonical(a.provenance) === canonical(b.provenance) &&
     a.ruleVersion === b.ruleVersion &&
     a.profileVersion === b.profileVersion &&
     a.browserVersion === b.browserVersion &&
@@ -168,7 +187,9 @@ export function compareScans(before: Scan, after: Scan): ScanComparison {
     comparable,
     reason: comparable
       ? "Gleiche Regeln, Profile, Browser-Version, Optionen, geplante Regelinstanzen und Seitenzustände."
-      : "Prüfumfang oder Ausführungsprofil haben sich geändert. Kein Score-Delta; fehlende oder nicht vergleichbare Belege bestätigen keine Behebung.",
+      : !recordedIdentity(a) || !recordedIdentity(b)
+        ? "Historische Ausführungsidentität fehlt. Bitte neue Checks mit derselben Engine starten; kein belastbares Score-Delta und keine verifizierte Behebung."
+        : "Prüfumfang, Engine-Identität oder Ausführungsprofil haben sich geändert. Kein Score-Delta; fehlende oder nicht vergleichbare Belege bestätigen keine Behebung.",
     scoreDelta:
       comparable &&
       beforeScore.final &&

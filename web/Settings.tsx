@@ -10,6 +10,7 @@ import {
 import type { Dependency, HubSettings } from "../shared/types.js";
 import { api, message, patch } from "./api.js";
 import { Notice, Success } from "./ui.js";
+import { QUALITY_REFERENCE } from "../shared/quality.js";
 
 export default function Settings({
   dependencies,
@@ -70,6 +71,53 @@ export default function Settings({
         </button>
       </section>
       <div className="settings-grid">
+        <section
+          className="panel workspace-form"
+          aria-label="Prüfqualität und Referenzbasis"
+        >
+          <div className="panel-head">
+            <h2>Prüfqualität & Referenzbasis</h2>
+            <ShieldCheck size={23} />
+          </div>
+          <span className="pill confirmed">
+            Referenzstand {QUALITY_REFERENCE.date}
+          </span>
+          <p>
+            {QUALITY_REFERENCE.cases} zusätzliche synthetische Layoutfälle ·{" "}
+            {QUALITY_REFERENCE.profiles} Geräteprofile ·{" "}
+            {QUALITY_REFERENCE.repeats} Wiederholungen.
+          </p>
+          <p>
+            {QUALITY_REFERENCE.uniqueLabels} unterschiedliche
+            Regel-/Seiten-/Profil-Erwartungen für zwei eng begrenzte
+            Layoutprüfungen. Wiederholungen sind keine zusätzlichen unabhängigen
+            Fälle.
+          </p>
+          <ul>
+            {QUALITY_REFERENCE.fixes.map((fix) => (
+              <li key={fix}>{fix}</li>
+            ))}
+          </ul>
+          <p className="hint">
+            {QUALITY_REFERENCE.realSites} autorisierte Websites wurden in{" "}
+            {QUALITY_REFERENCE.realRuns} begrenzten Real-Läufen geprüft. Das
+            bestätigt Ausführung und Wiederholbarkeit, keine allgemeine
+            Erkennungsgenauigkeit.
+          </p>
+          <p className="plan-note">
+            Implementierungsseitig beschriftete Testfälle, keine unabhängige
+            menschliche Wirksamkeitsstudie. Nicht geprüfte Zustände bleiben
+            unbekannt.
+          </p>
+          <a
+            className="text-button"
+            href="https://github.com/mxweir/sitefenn/blob/main/docs/BASELINE-1.1.md"
+            target="_blank"
+            rel="noreferrer"
+          >
+            Messbericht und Grenzen lesen
+          </a>
+        </section>
         <section className="panel workspace-form">
           <div className="panel-head">
             <h2>Fenn & lokale KI</h2>

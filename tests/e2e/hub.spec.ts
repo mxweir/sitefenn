@@ -39,6 +39,15 @@ test("real responsive demo produces evidence, a report and persisted history", a
   await expect(
     page.getByRole("heading", { name: "Dein Prüfbericht", exact: true }),
   ).toBeVisible();
+  await page
+    .getByText("Ausführungsidentität dieses Berichts", { exact: true })
+    .click();
+  await expect(
+    page.getByText("Playwright / axe / Lighthouse", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".identity-hash").first()).toHaveText(
+    /^[a-f0-9]{64}$/,
+  );
   await expect(
     page.getByRole("heading", { name: "Basisbefunde", exact: true }),
   ).toBeVisible();
@@ -115,6 +124,21 @@ test("real responsive demo produces evidence, a report and persisted history", a
   await expect(
     page.getByRole("heading", { name: "Prüf-Browser", exact: true }),
   ).toBeVisible();
+  await expect(
+    page.getByRole("heading", {
+      name: "Prüfqualität & Referenzbasis",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", {
+      name: "Messbericht und Grenzen lesen",
+      exact: true,
+    }),
+  ).toHaveAttribute(
+    "href",
+    "https://github.com/mxweir/sitefenn/blob/main/docs/BASELINE-1.1.md",
+  );
   await expect(
     page.getByText("Chromium installiert", { exact: true }),
   ).toBeVisible();

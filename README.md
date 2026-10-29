@@ -6,15 +6,21 @@
 
 Manage websites you own, inspect desktop/tablet/mobile layouts, collect evidence, and turn observations into a practical repair checklist. The rule-based workflow works without AI. Optional Ollama explanations require a verified locally backed model, not a cloud alias.
 
-The repository/package name and existing data directory remain `website-audit-hub`; branding does not reset projects. Name/domain clearance is still pending.
+The repository and package are now **`sitefenn`**. Existing data stays in the legacy `website-audit-hub` directory so the rename does not reset your projects. Name/domain clearance is still pending.
 
-![SiteFenn 1.0 report with score bounds and test coverage](docs/screenshots/1.0-report.jpg)
+![SiteFenn 1.1 report with score bounds and execution identity](docs/screenshots/1.1-report.jpg)
 
 _Actual application, owned synthetic demo. Missing measurements remain unknown._
 
 [Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.0.md) · [Changelog](CHANGELOG.md)
 
-## The 1.0 workflow
+## What's new in 1.1
+
+More reliable covered-control checks, conservative fixed-overlay candidates, corrected scrolled markers and recorded execution/model identities. A repeatable reference corpus and three authorized real websites were exercised on the M5 Pro/24 GiB target machine. See the [measured baseline and its limits](docs/BASELINE-1.1.md), [release verification](docs/RELEASE-1.1.md) and [desktop/OAuth feasibility checks](docs/FEASIBILITY-1.1.md).
+
+Existing clones can update their remote with `git remote set-url origin https://github.com/mxweir/sitefenn.git`. Existing local folder names and data directories do not need renaming.
+
+## The workflow
 
 1. **Add a project:** production, staging, or an explicitly authorized local target.
 2. **Choose scope:** discover same-origin links, select pages and exclusions, and choose up to three versioned viewport profiles.
@@ -66,8 +72,8 @@ Score deltas require compatible rules, browser/profiles and page-state cohorts. 
 Requirements: **Node.js 24**, npm and Playwright Chromium. Ollama is optional.
 
 ```sh
-git clone https://github.com/mxweir/website-audit-hub.git
-cd website-audit-hub
+git clone https://github.com/mxweir/sitefenn.git
+cd sitefenn
 npm ci
 npm run browser:install
 npm run dev

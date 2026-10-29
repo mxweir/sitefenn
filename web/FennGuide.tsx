@@ -126,6 +126,37 @@ export default function FennGuide({
                 {warning}
               </p>
             ))}
+            <details className="plan-note">
+              <summary>Identität der lokalen Auswertung</summary>
+              {plan.provenance ? (
+                <dl>
+                  <dt>Promptversion</dt>
+                  <dd>{plan.provenance.promptVersion}</dd>
+                  <dt>Modell SHA-256</dt>
+                  <dd className="identity-hash">
+                    {plan.provenance.modelDigest ??
+                      "Nicht erfasst — Gewichtsidentität unbekannt"}
+                  </dd>
+                  <dt>Prompt / Kontext SHA-256</dt>
+                  <dd className="identity-hash">
+                    {plan.provenance.promptSha256}
+                    <br />
+                    {plan.provenance.contextSha256}
+                  </dd>
+                  <dt>Dauer / Kontext / Vorhersagelimit</dt>
+                  <dd>
+                    {Math.round(plan.provenance.durationMs / 1000)} s /{" "}
+                    {plan.provenance.contextTokens} /{" "}
+                    {plan.provenance.predictionLimit}
+                  </dd>
+                </dl>
+              ) : (
+                <p>
+                  Historische Auswertung: Prompt- und Gewichtsidentität wurden
+                  noch nicht aufgezeichnet.
+                </p>
+              )}
+            </details>
           </>
         ) : (
           <p>

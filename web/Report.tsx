@@ -102,6 +102,35 @@ export function Report({
         {report?.ruleVersion ?? "legacy"} · Chromium{" "}
         {report?.browserVersion ?? "nicht dokumentiert"}
       </p>
+      <details className="plan-note">
+        <summary>Ausführungsidentität dieses Berichts</summary>
+        {report?.provenance ? (
+          <dl>
+            <dt>SiteFenn / Node</dt>
+            <dd>
+              {report.provenance.appVersion} / {report.provenance.nodeVersion}
+            </dd>
+            <dt>Playwright / axe / Lighthouse</dt>
+            <dd>
+              {report.provenance.playwrightVersion} /{" "}
+              {report.provenance.axeVersion} /{" "}
+              {report.provenance.lighthouseVersion}
+            </dd>
+            <dt>System</dt>
+            <dd>
+              {report.provenance.platform} / {report.provenance.arch}
+            </dd>
+            <dt>Engine SHA-256</dt>
+            <dd className="identity-hash">{report.provenance.engineSha256}</dd>
+          </dl>
+        ) : (
+          <p>
+            Historischer Bericht: Die genaue Ausführungsidentität wurde noch
+            nicht erfasst. Für einen belastbaren Vergleich einen neuen Check
+            starten.
+          </p>
+        )}
+      </details>
       <ScoreCard score={score} />
       {report && (
         <div className="metric-strip">

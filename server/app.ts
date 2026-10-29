@@ -33,7 +33,7 @@ import type {
   TaskStatus,
 } from "../shared/types.js";
 
-const VERSION = "1.0.0";
+import { APP_VERSION as VERSION } from "../shared/version.js";
 const bad = (message: string, statusCode = 400) =>
   Object.assign(new Error(message), { statusCode });
 function object(value: unknown): Record<string, unknown> {
@@ -122,12 +122,9 @@ export async function createApp(options: {
         !/^[a-f0-9]{64}$/.test(cookie) ||
         !timingSafeEqual(Buffer.from(cookie), Buffer.from(session))
       )
-        return reply
-          .code(401)
-          .send({
-            error:
-              "Bitte den Hub neu laden, um eine lokale Sitzung zu starten.",
-          });
+        return reply.code(401).send({
+          error: "Bitte den Hub neu laden, um eine lokale Sitzung zu starten.",
+        });
       if (
         !["GET", "HEAD"].includes(request.method) &&
         request.headers["x-hub-request"] !== "1"
@@ -148,14 +145,12 @@ export async function createApp(options: {
   app.setErrorHandler((error, _request, reply) => {
     const typed = error as { statusCode?: number; message?: string };
     const status = typed.statusCode || 500;
-    reply
-      .code(status)
-      .send({
-        error:
-          status < 500
-            ? typed.message
-            : "Die Anfrage konnte nicht verarbeitet werden. Prüfe den Umfang und versuche es erneut.",
-      });
+    reply.code(status).send({
+      error:
+        status < 500
+          ? typed.message
+          : "Die Anfrage konnte nicht verarbeitet werden. Prüfe den Umfang und versuche es erneut.",
+    });
   });
   app.get("/api/bootstrap", async () => {
     const scans = store.scans();
@@ -222,15 +217,13 @@ export async function createApp(options: {
             body.environment === "local" ? url.origin : undefined,
           hubOrigin: origin,
         });
-        return reply
-          .code(201)
-          .send({
-            project: store.createProject(
-              body.name.trim(),
-              url.href,
-              body.environment,
-            ),
-          });
+        return reply.code(201).send({
+          project: store.createProject(
+            body.name.trim(),
+            url.href,
+            body.environment,
+          ),
+        });
       } catch (error) {
         throw bad(error instanceof Error ? error.message : "Ungültiges Ziel.");
       }
@@ -319,17 +312,15 @@ export async function createApp(options: {
         "local",
         true,
       );
-    return reply
-      .code(201)
-      .send({
-        project,
-        scan: startScan(project.id, {
-          pages: ["", "/work", "/contact"].map(
-            (path) => `${origin}/demo-site${path}`,
-          ),
-          performance: false,
-        }),
-      });
+    return reply.code(201).send({
+      project,
+      scan: startScan(project.id, {
+        pages: ["", "/work", "/contact"].map(
+          (path) => `${origin}/demo-site${path}`,
+        ),
+        performance: false,
+      }),
+    });
   });
   for (const path of ["/demo-site", "/demo-site/*"])
     app.get(path, async (request, reply) => {
