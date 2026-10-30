@@ -31,7 +31,7 @@ test(
     const address = fixture.address();
     assert.ok(address && typeof address !== "string");
     const url = `http://127.0.0.1:${address.port}/`;
-    const { app, store } = await createApp({
+    const { app, store, runner } = await createApp({
       port: 4310,
       dataDir: join(dir, "workspace"),
     });
@@ -61,7 +61,7 @@ test(
           const s = store.scan(id)!;
           if (!["queued", "running", "paused"].includes(s.status)) {
             assert.equal(s.status, "completed", s.error ?? "");
-            return s;
+            if (!runner.isBusy()) return s;
           }
           await delay(100);
         }
