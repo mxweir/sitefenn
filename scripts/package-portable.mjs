@@ -36,6 +36,8 @@ for (const p of [
   "public",
   "docs",
   "examples",
+  "tests",
+  "playwright.config.ts",
   "scripts",
   "package.json",
   "package-lock.json",

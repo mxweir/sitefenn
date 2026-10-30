@@ -1,275 +1,147 @@
-<p align="center"><img src="public/brand/fenn-flat-v2.png" width="140" alt="Fenn, the SiteFenn fennec companion"></p>
+<p align="center"><img src="public/brand/fenn-flat-v2.png" width="140" alt="Fenn, your SiteFenn companion"></p>
 
-# SiteFenn
+<h1 align="center">SiteFenn</h1>
+<p align="center"><strong>Deine Site. Klarer Blick.</strong><br>A local-first workspace for finding website problems — and checking the fix.</p>
+<p align="center"><a href="https://github.com/mxweir/sitefenn/actions/workflows/ci.yml"><img alt="CI status" src="https://github.com/mxweir/sitefenn/actions/workflows/ci.yml/badge.svg"></a> <a href="LICENSE"><img alt="MIT license" src="https://img.shields.io/badge/license-MIT-ece65b"></a> <img alt="Node.js 24" src="https://img.shields.io/badge/Node.js-24-8d85b8"></p>
 
-**Deine Site. Klarer Blick.** A local-first website audit workspace with Fenn, your fennec companion.
+**Inspect → understand → hand off → retest.** Manage authorized websites, watch bounded Chromium checks, inspect evidence and turn findings into a practical checklist. SiteFenn keeps measured facts, review candidates and optional local AI suggestions separate. The core workflow needs no model, cloud account or paid service.
 
-Manage websites you own, inspect desktop/tablet/mobile layouts, collect evidence, and turn observations into a practical repair checklist. The rule-based workflow works without AI. Optional Ollama explanations require a verified locally backed model, not a cloud alias.
+![Actual SiteFenn 2.0 workspace](docs/screenshots/2.0-workspace.jpg)
 
-The repository and package are now **`sitefenn`**. Existing data stays in the legacy `website-audit-hub` directory so the rename does not reset your projects. Name/domain clearance is still pending.
+_Actual application with an owned synthetic fixture. A checked box is not a verified fix; missing measurements stay unknown._
 
-![SiteFenn 1.6 measured element context beside original evidence](docs/screenshots/1.6-element-context.jpg)
+[Get started](#quick-start) · [What it checks](#what-it-checks) · [Local AI](#optional-local-ai) · [CLI gate](#developer-handoff-and-cli) · [2.0 verification](docs/RELEASE-2.0.md) · [Changelog](CHANGELOG.md)
 
-_Actual application, owned synthetic demo. Missing measurements remain unknown._
+## A complete repair workflow
 
-[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.9.md) · [Changelog](CHANGELOG.md)
-
-## What's new in 1.9
-
-**A workspace you can keep using.** Start the local web app with an explicit setup launcher, check GitHub releases on demand, save a pre-update backup, inspect storage and move old unreferenced checks through a reversible trash. Optional daily/weekly checks run only while the app is open and resources are free; missed runs stay visible.
-
-The portable release ZIP is a **Web/CLI package, not a signed native installer**. Node 24 and explicitly installed Chromium are required. [Setup, update/recovery and actual checks](docs/RELEASE-1.9.md).
-
-![Actual 1.9 maintenance](docs/screenshots/1.9-maintenance.jpg)
-
-## What's new in 1.8
-
-**Hand off a concrete fix and check its release.** Each action can produce a selected Markdown work package with original findings and acceptance tests. Optional read-only source previews show explicitly selected literal candidates, without pretending to know the runtime cause. Export a check profile and use the standalone CLI gate to distinguish new regressions from incomplete measurements.
-
-[CLI usage, actual regression test and source limits](docs/RELEASE-1.8.md) · [Actions integration example](examples/sitefenn-check.yml)
-
-![Actual 1.8 handoff](docs/screenshots/1.8-developer-handoff.jpg)
-
-## What's new in 1.7
-
-**Work on the right fixes first.** Open the actions workspace's work-priority view, explicitly choose page reach and adjust project weights. The view explains its ordering, keeps missing reach unknown and leaves the Audit-Score intact. Low-CTR/high-impression rows become investigation candidates.
-
-Search Console CSV remains available. An optional **experimental read-only Google connector** adds bounded direct imports with Desktop OAuth/PKCE and macOS Keychain storage. Real account authorization/import/revocation remains unvalidated; other platforms keep CSV. [Setup, checks and limitations](docs/RELEASE-1.7.md).
-
-![Actual 1.7 priorities — owned synthetic metrics](docs/screenshots/1.7-priority-results.jpg)
-
-## What's new in 1.6
-
-**Give Fenn better evidence, and keep its limits visible.** New scans capture bounded computed styles and geometry for uniquely observed elements. Page explanations keep each finding with its related rules/evidence/state, accept optional page purpose/user goal/audience, and can include existing task snapshots and a compatible earlier check.
-
-New proposals show known evidence references, possible relevance, hypotheses, concrete steps, optional alternatives, missing information and an illustrative code example. A known reference is **not proof that the explanation is true**. Targeted guards reject several observed contradictions; unknown, rejected and omitted records remain explicit.
-
-The page-analysis path requires **Ollama 0.40.0+** and disables native prompt truncation/context shifting. Oversized provider context fails visibly. The published [1.6 evaluation](docs/EVALUATION-1.6.md) separates contract fixtures, real local-model output and remaining factual errors. Models stay optional; canonical reports/tasks work without them.
-
-[Release checks and budgets](docs/RELEASE-1.6.md) · [Versioned test corpus](tests/fixtures/page-eval-1.6.json)
+1. **Choose the scope.** Add a production/staging/authorized local project, discover same-origin pages or import a bounded sitemap, and choose desktop/tablet/mobile views.
+2. **Approve relevant states.** Explicitly define supported menu/dialog/accordion actions and expected results. Editing revokes approval. No autonomous multi-page exploration or forms.
+3. **Watch and inspect.** Streamed browser frames and overlays lead to the original finding, device/state, screenshot and bounded measured styles. The stream is a preview, not a remote interactive browser.
+4. **Choose useful work.** Grouped tasks have acceptance criteria. Optional page-reach imports and project weights explain work priority without changing the Audit-Score.
+5. **Hand off concretely.** Export a selected developer work package; optional read-only Git previews add only explicitly selected literal source candidates.
+6. **Check the fix.** Targeted retests revisit the affected scope and original captured layout positions. Only compatible observed passes verify a task. Historical evidence remains intact; a partial retest does not replace the full-project score.
+7. **Keep it reproducible.** Visual references, versioned profiles, CLI gates, exports and portable backups preserve the reasoning behind the result.
 
 <details>
-<summary>Actual 1.6 page interpretation and mobile evidence</summary>
+<summary>See real evidence, handoff and maintenance</summary>
 
-![Actual completed processing, still unverified](docs/screenshots/1.6-page-analysis.jpg)
-![Actual partial-result handling](docs/screenshots/1.6-partial-analysis.jpg)
-![Actual 390 px evidence view](docs/screenshots/1.6-mobile.jpg)
+**Measured element context beside the finding:**
 
-</details>
+![Actual computed styles and evidence](docs/screenshots/1.6-element-context.jpg)
 
-## The workflow
+**Selected developer work package:**
 
-1. **Add a project:** production, staging, or an explicitly authorized local target.
-2. **Choose scope:** discover same-origin links or import sitemap candidates, select pages and exclusions, and choose up to three versioned viewport profiles.
-3. **Optionally approve page states:** define the start page, devices, UI/scroll actions and expected results; review the preview before approving.
-4. **Watch the check:** streamed browser frames show bounded scroll samples and finding overlays. This is a preview, not an interactive remote browser or target iframe.
-5. **Review evidence:** measured observations, heuristic candidates and optional AI suggestions are separate.
-6. **Work the checklist:** related findings are grouped into tasks with acceptance criteria. Export Markdown/JSON or an optional evidence ZIP.
-7. **Retest:** launch a scoped task retest or another full check. A manual checkbox means ready for review; an explicit compatible passing check verifies a fix.
-8. **Compare visually:** choose a saved reference, inspect paired page/device/scroll captures, explicitly mask regions and review changed pixels separately from rule findings.
+![Actual handoff preview](docs/screenshots/1.8-developer-handoff.jpg)
 
-The built-in demo is an authorized fixture for trying the workflow without an external website. No external user pilot or security certification is implied; [release verification](docs/RELEASE-1.0.md) lists the actual checks and remaining validation.
+**Protected retention, manual update and backup tools:**
 
-<details>
-<summary>See the real check and repair workflow</summary>
-
-**Pause between steps and inspect the captured browser state:**
-
-![Actual paused browser check](docs/screenshots/1.0-live-paused.jpg)
-
-**Turn related observations into a checklist with acceptance criteria:**
-
-![Actual grouped repair checklist](docs/screenshots/1.0-tasks.jpg)
-
-**Explain a page, with visible context and partial-result handling:**
-
-![Actual SiteFenn page-analysis workspace](docs/screenshots/1.2-page-analysis.jpg)
+![Actual maintenance](docs/screenshots/1.9-maintenance.jpg)
 
 </details>
-
-## Explain a page with evidence
-
-In **Seite erklären → Analyse ausrichten**, optionally add the page's purpose, the user's goal and audience. Include the existing task snapshot and choose a compatible earlier full check when useful. **Diesen Befund erklären** sets that finding as the first analysis focus while retaining the rest of the page report.
-
-Each explanation is displayed beside the canonical observation and its future acceptance criterion. Open **Belegverweise ansehen** for the referenced record excerpt, and inspect the original evidence/DOM measurements. References are checked against the transmitted records; causes, code and business impact remain unverified proposals. **Noch zu klären** makes missing source/context explicit.
-
-New element context includes allowlisted computed styles, dimensions and immediate-parent styles. No raw HTML, page text, input values, arbitrary DOM attributes or screenshot images are added to this context. Selectors and other original report strings can still contain private content; review exports before sharing. Ambiguous or capped element context is marked unavailable rather than guessed.
-
-A large report is split into bounded parts, with omissions listed. Page analyses never replace measurements or the score. Follow-ups retain the saved measurement/intent/task/comparison snapshot. Adopting a reviewed proposal annotates the existing task, keeps it open and avoids duplicates. A new compatible rule-based retest is still needed to verify a fix.
-
-## Approved page states
-
-In **Übersicht → Seitenabläufe**, choose a selected start page and devices, then add up to five steps. Supported actions are a declared UI switch and a vertical scroll position. Each step states a target and an expectation: rendered visible/hidden, or a native details/dialog open/closed. The preview shows the complete sequence and stop conditions. Approve the recipe explicitly; editing it revokes approval. Starting a check is disabled while a recipe is unapproved.
-
-Selectors are deliberately small: `#id`, `[data-testid="…"]` or `[aria-label="…"]`. Clicks support native `button type="button"` controls with `aria-controls` and disclosure/dialog semantics, or a `summary` controlling its own `details`. Links, forms, arbitrary scripts, login and transactional actions are outside this feature. Navigation is the explicit fresh start page per recipe, not autonomous multi-page exploration.
-
-In **Seitenzustände**, inspect the saved sequence, before/after images and findings for each step. Opening a finding leads to its rule, screenshot and repair criterion. **Retest this task** retains the relevant recipe and checks the same state identity. A partial run does not replace the full-project score.
-
-![Actual approved state evidence](docs/screenshots/1.5-state-evidence.jpg)
-
-<details>
-<summary>Editor, mobile layout and corrected-state retest</summary>
-
-![Actual recipe preview and approval](docs/screenshots/1.5-journey-editor.jpg)
-![Actual mobile state report](docs/screenshots/1.5-mobile.jpg)
-![Actual corrected-state retest](docs/screenshots/1.5-state-retest.jpg)
-
-</details>
-
-Each recipe/device starts in a fresh browser context. Up to three recipes, five steps each and 18 step/device combinations are allowed. A 30-second execution deadline closes that recipe's context; start navigation has its own bounded timeout. Missing/ambiguous controls, unfulfilled expectations, blocked requests or URL changes stop the remaining steps. Before/after images and records remain local; sharing exports needs review. Approval of a recipe is not proof its site's JavaScript has no side effects. Use authorized trusted sites only. See [precise boundaries and tests](docs/RELEASE-1.5.md).
-
-## Technical SEO in context
-
-In **Übersicht**, expand **Seiten aus einer Sitemap auswählen** and import an XML or gzip sitemap from the authorized origin. Bounded sitemap indexes are supported. Newly imported candidates stay unchecked: importing does not start a browser scan. Choose pages and enable **SEO-Kontextprüfung** before starting. This adds bounded GET requests to internal targets, explained beside the checkbox.
-
-In **SEO-Kontext**, filter by captured page/device or search the observed URLs/text:
-
-- **Links & Redirects:** directed source → target edges, timestamped GET samples, HTTP errors and observed redirect hops. Open the original finding and its acceptance criterion directly.
-- **Metadaten im Vergleich:** title/description snapshots and normalized similarity groups within the same captured device profile. Related findings are grouped into repair tasks; a shared template cause is not inferred.
-- **Canonical & Robots:** captured HTML canonical values, target availability/noindex samples and a bounded Googlebot interpretation of the received robots.txt. Production intent is kept distinct from staging/local intent.
-- **Strukturierte Daten:** JSON syntax separately from a narrow inline schema.org BreadcrumbList profile. Other schema types and unresolved contexts/references are not validated.
-
-![Actual internal link graph and redirect observations](docs/screenshots/1.4-seo-links.jpg)
-
-<details>
-<summary>Sitemap selection in the actual application</summary>
-
-![Imported candidates remain unchecked](docs/screenshots/1.4-sitemap.jpg)
-
-</details>
-
-HTTP sampling is limited to 40 target URLs, 60 request attempts including redirect hops/robots, and 90 seconds; individual requests have a five-second deadline. Only the approved origin and paths may be contacted. Samples are unauthenticated and target HTML is not executed. The graph is partial: zero observed incoming edges do not prove an orphan page. Robots is neither access control nor proof of Google's indexing. See the [full budgets and methodology](docs/RELEASE-1.4.md).
-
-## Visual references and targeted retests
-
-In **Vergleich**, choose two completed scans and load their image pairs. Each pair records its page, viewport, state, scroll coordinates and capture conditions. Use **Nebeneinander**, **Wischregler** or **Änderungsbereiche**. The diff uses a fixed 24/255 per-channel tolerance and marks changed 32 px tile regions; this is a simple local pixel comparison, not AI vision or a perceptual-quality score.
-
-Mask by dragging on the before image or entering an integer rectangle in original screenshot pixels. At most 30 masks are allowed per reference. They affect both images of that capture state, not the scan or rule checks. The result reports excluded pixels and the remaining comparison denominator; an entirely masked image is not assessed. Approve the baseline and masks explicitly to save a new reference record. Earlier approvals remain available (up to 50 per project).
-
-From **Maßnahmenplan**, select **Diese Maßnahme nachtesten**. The server derives scope from the original findings; it does not discover extra pages. The affected page/device combinations run the existing bounded initial/scroll checks. Performance tasks request lab runs for the selected supported device profiles. A matching completed rule pass can verify the requested task; changed document destinations, missing coverage or incompatible identities do not. Scroll findings still need their captured position to have been sampled again. Partial results and their source task are recorded in history and exports.
-
-![Actual masked pixel comparison](docs/screenshots/1.3-difference-mask.jpg)
-
-<details>
-<summary>A targeted run keeps a distinct scope and score</summary>
-
-![Actual targeted retest report](docs/screenshots/1.3-partial-retest.jpg)
-
-</details>
-
-## What gets checked
-
-| Area              | Implemented scope                                                                                            | Limit                                                                                      |
-| ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| Layout            | Desktop 1440×900, tablet 768×1024, mobile 390×844; bounded scrolling and explicitly approved UI states; overflow and covered-control hit tests | A few captured positions, not every interaction. Clipped-text candidates need review.      |
-| Accessibility     | axe automated WCAG-tagged checks and affected elements                                                       | Not a complete WCAG audit; semantic and incomplete cases need human judgement.             |
-| Technical SEO     | Metadata presence/similarity, internal link/redirect samples, canonical/robots context, JSON syntax and limited Breadcrumb profile            | Not a ranking prediction, full SEO crawler, schema-eligibility test, or proof of indexing. |
-| Runtime           | Document status, observed script errors and failed own-origin resources                                      | Not a comprehensive functional/security test.                                              |
-| Performance       | Optional separate Lighthouse desktop/mobile reference runs, one or three repetitions                         | Local lab data, not field Core Web Vitals. Tablet is a layout profile.                     |
-| Google visibility | German/English Search Console CSV with provenance and conservative comparisons                               | Historical exported rows, not a universal live Google rank.                                |
-
-### An explainable score
-
-The **audit score for the captured scope** uses versioned rules: layout 25%, automated accessibility 20%, technical SEO 25%, runtime 15%, performance 15%. The LLM does not assign points.
-
-Passed checks add known credit; failures do not; missing checks stay unknown. Incomplete runs show a range and coverage, not a pretend final score. Disabled performance does not give free points. Ignoring a finding or accepting its risk does not improve the raw score.
-
-Score deltas require compatible rules, browser/profiles and page-state cohorts. Missing pages are not fixed pages. Critical measured findings remain visible separately. A 100 score does not certify accessibility, SEO success, or untested pages.
 
 ## Quick start
 
-Requirements: **Node.js 24**, npm and Playwright Chromium. Ollama is optional.
+Download the **Web/CLI ZIP and checksum** from [Releases](https://github.com/mxweir/sitefenn/releases), or clone the repository. Node.js **24** is required. This is a local web/CLI application, **not a signed native installer**.
 
 ```sh
 git clone https://github.com/mxweir/sitefenn.git
 cd sitefenn
+# Explicitly installs locked dependencies and Chromium, builds and starts:
+node scripts/launch.mjs --setup
+# Later starts, without implicit downloads:
+node scripts/launch.mjs
+```
+
+Open [http://127.0.0.1:4310](http://127.0.0.1:4310) and choose **Demo laden** to try an owned fixture. Optional Ollama does not block rule checks. macOS `.command` and experimental Windows `.cmd` convenience starters are included; real Windows and signed/native packaging remain unvalidated.
+
+For development:
+
+```sh
 npm ci
 npm run browser:install
 npm run dev
 ```
 
-Open [http://127.0.0.1:4310](http://127.0.0.1:4310) and choose **Demo laden**, or add a trusted website you are authorized to test. Linux may require `npx playwright install --with-deps chromium` with appropriate OS privileges.
+Production without the launcher: `npm run build`, then `npm start`. `PORT` defaults to `4310`; binding remains loopback. Stop another instance before reusing its port/data directory.
 
-On recent Ubuntu versions, downloaded Chromium may also need a suitable AppArmor user-namespace profile. If startup reports `No usable sandbox`, follow the [official Chromium sandbox guidance](https://github.com/chromium/chromium/blob/main/docs/security/apparmor-userns-restrictions.md) for your system. SiteFenn keeps Chromium's sandbox enabled and does not change your host policy automatically. The repository's sandbox setup script is exclusively for ephemeral GitHub-hosted CI runners.
+On Linux, Chromium may require `npx playwright install --with-deps chromium` with appropriate OS privileges. Recent Ubuntu systems may require a suitable AppArmor user-namespace profile: use [Chromium's official guidance](https://github.com/chromium/chromium/blob/main/docs/security/apparmor-userns-restrictions.md). SiteFenn keeps the sandbox enabled; it does not silently alter host security policy. The repository helper is for ephemeral hosted CI runners.
 
-For the built local application:
+## What it checks
 
-```sh
-npm run build
-npm start
-```
+| Area | Included | Practical boundary |
+| --- | --- | --- |
+| Layout | 1440×900 desktop, 768×1024 tablet, 390×844 mobile; bounded scrolls and approved states; overflow and covered-control checks | Captured Chromium states, not every interaction or real iPhone/Safari |
+| Accessibility | Automated axe checks and affected elements | Not a complete WCAG audit or screenreader certification |
+| Technical SEO | Metadata, bounded internal links/redirects, canonical/robots, JSON syntax and limited BreadcrumbList profile | Not full crawling, Google indexing proof or ranking prediction |
+| Runtime | Document status, observed script errors and failed own-origin resources | Not a full functional or security test |
+| Performance | Optional separate Lighthouse desktop/mobile lab runs | Lab data, not CrUX/field Core Web Vitals |
+| Visibility | Search Console CSV; optional experimental read-only Google imports | Historical scoped rows, not a universal live Google rank |
+| Repair verification | Grouped tasks, compatible targeted retests, visual references/diffs and CLI gate | Manual review/accepted risk never changes measured findings or raw score |
 
-Stop the development process first if it uses the same port. `PORT` defaults to `4310`; binding remains loopback. Never expose this single-user app through a public tunnel or reverse proxy.
+The versioned **Audit-Score** uses layout 25%, accessibility 20%, SEO 25%, runtime 15%, performance 15%. Passed checks earn known credit; missing checks produce bounds and coverage. Disabled performance earns no free points. Score deltas require compatible execution identity, rules and scope. Work-priority points, Google data and model output never assign the Audit-Score.
 
-## Optional local AI and speech
+In **Vergleich**, compare approved image pairs side by side, with a wipe or simple pixel/tile differences. Explicit masks affect only the visual comparison. This is not AI vision, a design-quality score or evidence a masked rule violation is fixed. See [visual comparison boundaries](docs/RELEASE-1.3.md), [technical SEO budgets](docs/RELEASE-1.4.md) and [approved state limits](docs/RELEASE-1.5.md).
 
-Install/run Ollama separately, explicitly download a suitable model, and select it in settings. The hub does not download or train models, change global Ollama settings, or enable cloud inference automatically.
+## Optional local AI
 
-The integration was exercised with `qwen2.5:3b` (approximately 1.9 GB, Q4_K_M). It is lightweight, but the full-page test exposed semantic errors; it is not a verified audit expert. If you still want to try it and its separate license fits your use, download it explicitly:
+In **Seite erklären**, Fenn interprets the selected page's structured report across captured devices/states. Optional purpose, goal, audience, existing task snapshot and a compatible earlier check help frame the question. The UI keeps original observations beside relevance, hypotheses, suggested steps/code, alternatives and missing information. Follow-ups retain their saved report/context identity.
 
-```sh
-ollama pull qwen2.5:3b
-```
+Requires a verified locally backed installed model at `http://127.0.0.1:11434` and **Ollama 0.40.0+** for the new page-analysis path. Native truncation/context shifting is disabled; oversized input fails rather than silently discarding records. Processing is sequential and bounded to 24 parts/8,500 record characters per part; a finding packet stays with its relevant evidence. Omissions, invalid replies and interrupted/partial jobs remain visible.
 
-The 3B model uses the **Qwen Research License, not this app's MIT license or Apache 2.0**; read the [official model information and license](https://ollama.com/library/qwen2.5:3b). Model weights are not bundled with SiteFenn.
+No screenshot images, raw DOM/page dump, cookies, source repository or browser tools are supplied to the model. Additional element context is an allowlist of computed layout styles/geometry; it is not source-code mapping. There is no model download, training, automatic repair, cloud fallback or canned replacement for failed inference. macOS system speech is optional and only reads text after a click.
 
-The 1.2 tests exposed factual contradictions from the 3B model; 1.6 adds explicit style context, known references, narrower inference packets and targeted regression guards. Real small-model failures remain published in the [1.6 evaluation](docs/EVALUATION-1.6.md). Guard acceptance, valid JSON and model availability do not establish factual reliability. Weights are not bundled with SiteFenn. The Qwen3 4B variant used here is thinking-only; its larger bounded page-inference profile is recorded in provenance.
+**Model suggestions remain unverified.** Known references and valid JSON do not guarantee good CSS or correct SEO advice. Actual 3B/4B/7B failures and resource samples are published in [the 1.6 evaluation](docs/EVALUATION-1.6.md); [2.0 verification](docs/RELEASE-2.0.md) records the current prompt/guard checks. No model is promoted to a verified audit expert. `qwen2.5:3b` uses a separate Qwen Research License; tested `qwen3:4b` and `qwen2.5:7b` tags have their own licenses. Weights are never bundled with SiteFenn.
 
-- Fixed endpoint: `http://127.0.0.1:11434`.
-- Local-backing metadata is checked before sharing observations; remote-backed aliases, cloud tags and unverifiable locality are rejected.
-- The selected page's structured report is processed in **up to 24 parts**, each with an 8,500-character record budget and at most two findings. This includes numeric-only performance findings. Oversize individual records and the part limit produce explicit omissions and a partial result.
-- No screenshot images, raw page dump, source repository, cookies or browser-control tools are supplied.
-- Each part has a bounded provider request, schema/reference checks and one correction attempt for invalid output. The overall job has a ten-minute limit. Failed parts remain visible; there is no cloud fallback or canned replacement answer.
-- Progress and accepted partial answers persist. A restart marks unfinished analyses interrupted; run a new analysis to complete them. Follow-ups stay bound to the same scan/page/context hash.
-- Proposals stay unverified. Adopting one annotates an existing task, does not execute code or mark it fixed, and does not change scores. Historical verified tasks are preserved.
-- Contract regressions: `npm run test:ai-contract` (no model required). Optional real-model comparison: `npm run test:ai-contract -- --model <installed-tag>`; raw synthetic outputs stay in ignored `.local-data/`.
-- Optional real-model smoke: `npm run test:page-ai-local`. It exits unsuccessfully for partial/failed output and leaves private diagnostics in ignored `.local-data/`. This is separate from deterministic CI tests using a mocked provider.
+## Developer handoff and CLI
 
-The page-analysis path needs Ollama 0.40.0+ for explicit no-truncation/no-shift requests; old or unverifiable versions fail before report transmission. The integration is text-based; screenshot vision analysis is not implemented. Thinking-only models can require much larger inference budgets and may fail validation within the bounded request. Do not interpret model availability as a quality benchmark.
+Each action can export **1–20 selected findings** with measured scope and a reproducible acceptance test. Optional read-only Git-root scanning excludes ignored/sensitive paths and symlinks, within explicit file/byte limits. Only selected literal ID/test-ID candidates are exported; hashes are checked again. A literal source hit is **not proof of runtime mapping or cause**. Review snippets for embedded secrets. No project script, commit or patch is executed. [Handoff limits](docs/RELEASE-1.8.md).
 
-On macOS, selected text can be read through system `say` using Anna after explicit activation. The voice must be available on your system. Speech is off by default and can be stopped; this is not a cloud voice service. Other platforms currently lack this integration.
-
-## Google visibility: bring your own CSV
-
-Export a supported Search Console performance table and specify its property, inclusive ISO date range, dimension and filters. Supported dimensions: date, page, query, country, device. Each import is one table, not a join across independent exports. UI file limit: 2 MiB.
-
-Common German/English headers, decimal formats and quoted comma/semicolon CSV are supported. Unknown filters remain unknown. Totals are explicitly labelled exported-row subsets; average position is not incorrectly averaged into a fake property rank. Comparable daily exports can show equal-length period changes.
-
-No Google OAuth, automatic SERP scraping, paid rank tracker or CrUX integration is included. Google visibility is separate from the audit score. CSV processing itself does not contact Google.
-
-## Reports and privacy
-
-Markdown/JSON reports work without the hub. ZIP screenshots are **opt-in**. Locations omit URL queries/fragments, but arbitrary page-derived text can still reveal secrets; review all text and images before sharing with another person or AI.
-
-Exports distinguish observations, recommendations, acceptance criteria and limits. With no source repository attached, exact filenames, line numbers and root causes are not verified. Website-derived strings are untrusted data, not instructions for another AI to execute.
-
-## Local data and backups
-
-| Platform | Default directory                                                                |
-| -------- | -------------------------------------------------------------------------------- |
-| macOS    | `~/Library/Application Support/website-audit-hub`                                |
-| Linux    | `$XDG_DATA_HOME/website-audit-hub`, otherwise `~/.local/share/website-audit-hub` |
-| Windows  | `%LOCALAPPDATA%/website-audit-hub`                                               |
-
-`HUB_DATA_DIR` selects another directory. Projects, scans, evidence, tasks, saved page analyses, visual references/masks, settings and imported search data stay local, but are not encrypted by this app.
-
-The UI can create a portable backup while no scan/analysis is active: database snapshot, evidence and checksum manifest. Limits: 250 MiB and 2,000 evidence files. For larger workspaces, stop the app and back up the full data directory normally.
-
-Restore into a **new, nonexistent directory**:
+Download a check profile in the export dialog, then:
 
 ```sh
-npm run restore -- /absolute/path/sitefenn-backup.zip /absolute/path/NEW-workspace
+# First run produces a report; exit 2 because no baseline exists yet:
+npm run audit:check -- --profile profile.json --out first-run --authorized
+# Review and use the baseline under the same tool/browser/OS identity:
+npm run audit:check -- --profile profile.json --out next-run --baseline first-run/report.json --authorized
 ```
 
-Stop the old hub before starting with `HUB_DATA_DIR` pointing at the restored directory. Paths, limits, checksums and database integrity are validated. Hashes detect corruption, not trustworthy authorship. Restore only trusted backups and keep the old workspace until the restored copy is checked.
+Exit **0**: no new measured blockers under the explicit compatible policy. **1**: new measured regression. **2**: missing/incompatible/error. Non-success document responses cannot yield a layout-only green result. This gate does not claim a flawless site or fix existing baseline problems. [GitHub Actions template](examples/sitefenn-check.yml) deliberately includes no automatic private artifact upload.
 
-## Safe use and boundaries
+## Search visibility and useful priorities
 
-**Trusted websites you own/administer only.** Proxy/DNS checks, local session protections and bounded jobs reduce risk but are not kernel isolation or a guarantee against hostile websites and browser vulnerabilities. Loading a page can itself cause side effects.
+Import your authorized Search Console CSV with property, dates, dimension and filters, or explicitly enable the **experimental** read-only Desktop OAuth connector on macOS. The direct connector uses PKCE, bounded requests and Keychain refresh-token storage. **Live Google account authorization/import/revocation is still unvalidated**; CSV remains available on other systems. [Setup and limitations](docs/RELEASE-1.7.md).
 
-Public targets use standard HTTP(S) ports. Local mode explicitly authorizes one origin, not the private network in general; the hub and Ollama ports are not valid local project targets. No authenticated sessions, autonomous form submissions, purchases, destructive actions or automatic repairs are provided.
+Returned/imported rows are subsets, not guaranteed complete property totals. Average position stays historical/aggregated. Low CTR/high impressions are investigation candidates, not a proven technical cause. No SERP scraping, CrUX or promised ranking gain. In the actions workspace, explicitly select a page dataset and project weights to explain work ordering; unknown reach remains unknown.
 
-Live checks do not explore every menu, dialog, login or user journey. Chromium emulation is not a Safari/iPhone test. macOS/Linux automation does not establish Windows stability. Read [SECURITY.md](SECURITY.md).
+## Local data, updates and backups
+
+| Platform | Default directory |
+| --- | --- |
+| macOS | `~/Library/Application Support/website-audit-hub` |
+| Linux | `$XDG_DATA_HOME/website-audit-hub` or `~/.local/share/website-audit-hub` |
+| Windows | `%LOCALAPPDATA%/website-audit-hub` |
+
+The legacy directory is retained across the rename and upgrades. `HUB_DATA_DIR` selects another directory. Reports/evidence are local but not encrypted by this app; the optional Google credential lives separately in macOS Keychain and is excluded from backup/export.
+
+In **System & Setup**, check public release metadata on demand and create a pre-update backup. Extract a reviewed update into a new program folder; preserve the existing data path. There is no automatic code exchange or independently signed updater. Checksums detect changed bytes, not publisher authenticity.
+
+Storage cleanup always starts with a bounded preview. Referenced/active history stays protected. Trash is reversible; permanent removal is a separate explicitly selected/typed action. Optional daily/weekly checks run only while the app is open and idle, with visible missed occurrences and no hidden system service.
+
+Portable backups contain a SQLite snapshot, evidence and checksum manifest (250 MiB / 2,000-image limit). For larger workspaces stop the app and back up the directory. Restore trusted backups into a **new nonexistent directory**:
+
+```sh
+npm run restore -- /absolute/path/backup.zip /absolute/path/NEW-workspace
+```
+
+Stop the old instance before using `HUB_DATA_DIR` for the restored directory. Schedules are disabled after restore until renewed acknowledgment. Keep the original copy until recovery is checked. [Distribution, update and storage verification](docs/RELEASE-1.9.md).
+
+## Scope, privacy and validation
+
+Use only **trusted websites you own or are explicitly authorized to test**. Navigation itself and approved site JavaScript can have side effects. Session/DNS/proxy checks reduce risk; they are not kernel isolation against hostile websites. No authenticated sessions, autonomous submissions, purchases or destructive target actions. Never expose this single-user loopback service through a public tunnel. Read [SECURITY.md](SECURITY.md).
+
+Exports omit URL queries/fragments where documented, but page text, screenshots and selected source snippets may still contain private information. Images are opt-in for portable report ZIPs. Treat website-derived content as untrusted data and review every export before sharing it with another person or AI.
+
+2.0 is released as tested **local web/CLI software**. Independent user pilots, held-out human accuracy evaluation, full screenreader review, real Google authorization and native/Windows distribution remain open. The [release verification](docs/RELEASE-2.0.md) distinguishes actual integration runs, controlled fixtures and unavailable external checks. No general accuracy or SEO-effectiveness certification is claimed.
 
 ## Development and contribution
 
@@ -278,19 +150,15 @@ npm run check
 npm test
 npm run build
 npm run test:e2e
+npm run package:portable
+npm run test:portable
+npm run test:ai-contract
+# Optional real installed local model; no model download:
+npm run test:ai-contract -- --model qwen2.5:7b
 ```
 
-Tests cover pure services, API/persistence/security, owned browser fixtures and end-to-end flows. Fixture success is not proof that every website works. Mocked model adapters and real-model checks must be reported separately.
+[Contributing](CONTRIBUTING.md) · [Architecture](docs/ARCHITECTURE.md) · [Stack](docs/STACK.md) · [Roadmap and approved scope](PLAN-2.0.md) · [Brand](docs/branding/BRAND.md)
 
-- [Contributing](CONTRIBUTING.md)
-- [Stack](docs/STACK.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [Changelog](CHANGELOG.md)
-- [Original 1.0 plan](PLAN-1.0.md) — design intent, not evidence every aspiration shipped
-- [Brand guide](docs/branding/BRAND.md)
+## License
 
-## License and attribution
-
-MIT; see [LICENSE](LICENSE). Dependencies, Chromium, local models and website content retain their own licenses. The app license grants no rights to republish someone else's website screenshots.
-
-Archivo Black and DM Sans are locally bundled under SIL OFL 1.1; see [public/licenses](public/licenses). Fenn's generated illustration and provenance are documented in [docs/branding](docs/branding). No proprietary font files or existing mascot artwork from the style reference are included.
+MIT — [LICENSE](LICENSE). Dependencies, Chromium, models and website content retain their own licenses. Archivo Black and DM Sans are locally bundled under SIL OFL 1.1; see [public/licenses](public/licenses). Fenn's generated illustration/provenance is in [docs/branding](docs/branding). Name/domain clearance remains pending.

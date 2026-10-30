@@ -1,0 +1,113 @@
+{
+  "appVersion": "2.0.0",
+  "createdAt": "2026-10-30T20:35:02.815Z",
+  "dataset": {
+    "version": "supplemental-layout-1.1-v3",
+    "sha256": "81790d8504263760ed3fe70085164f1dd5e0883151229113eb7c00219868cf49",
+    "cases": 20,
+    "labelsPerCase": 2,
+    "labelSource": "Synthetic implementation-agent labels. No independent human review or held-out accuracy claim."
+  },
+  "hardware": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M5 Pro",
+    "logicalCpus": 18,
+    "memoryGiB": 24
+  },
+  "method": {
+    "repeats": 1,
+    "viewports": [
+      {
+        "id": "desktop",
+        "width": 1440,
+        "height": 900,
+        "deviceScaleFactor": 1
+      },
+      {
+        "id": "tablet",
+        "width": 768,
+        "height": 1024,
+        "hasTouch": true,
+        "deviceScaleFactor": 1
+      },
+      {
+        "id": "mobile",
+        "width": 390,
+        "height": 844,
+        "isMobile": true,
+        "hasTouch": true,
+        "deviceScaleFactor": 1
+      }
+    ],
+    "performance": false,
+    "ai": false,
+    "rssSamplingMs": 200,
+    "memoryBoundary": "Worker and observed descendant processes. Sum of RSS can double-count shared pages; sampled maximum is not exact total physical peak. Hub, Ollama and parent excluded.",
+    "latencyBoundary": "Capture timestamp to worker IPC receipt, not UI paint or HTTP polling latency.",
+    "realSitesHaveGroundTruth": false
+  },
+  "evaluation": [
+    {
+      "ruleId": "covered-control",
+      "total": 60,
+      "truePositive": 15,
+      "trueNegative": 39,
+      "falsePositive": 0,
+      "falseNegative": 0,
+      "unknown": 6,
+      "expectedUnknown": 6,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "ruleId": "horizontal-overflow",
+      "total": 60,
+      "truePositive": 6,
+      "trueNegative": 51,
+      "falsePositive": 0,
+      "falseNegative": 0,
+      "unknown": 3,
+      "expectedUnknown": 3,
+      "precision": 1,
+      "recall": 1
+    }
+  ],
+  "measurements": [
+    {
+      "kind": "synthetic",
+      "run": 1,
+      "durationMs": 13989,
+      "peakSummedProcessRssMiB": 655.921875,
+      "rssSamples": 69,
+      "frameCaptureToIpcP95Ms": 80,
+      "frameSamples": 66,
+      "provenance": {
+        "seoVersions": {
+          "saxes": "6.0.0",
+          "robotsParser": "3.0.1",
+          "parse5": "8.0.0"
+        },
+        "appVersion": "2.0.0",
+        "engineSha256": "244643b5505bc545e7ec377570621df27928df2c40ad1e88caec896e64685e46",
+        "playwrightVersion": "1.64.1",
+        "axeVersion": "4.14.0",
+        "lighthouseVersion": "13.6.0",
+        "nodeVersion": "v24.19.0",
+        "platform": "darwin",
+        "arch": "arm64"
+      },
+      "browser": "156.0.8078.4",
+      "coverage": {
+        "planned": 60,
+        "completed": 57,
+        "skipped": [
+          "Owned denied-redirect fixture: expected blocked target; remains unknown.",
+          "Owned denied-redirect fixture: expected blocked target; remains unknown.",
+          "Owned denied-redirect fixture: expected blocked target; remains unknown."
+        ]
+      }
+    }
+  ],
+  "scope": "20 owned implementation-labeled synthetic cases × 3 profiles × 1 run. Not independent/held-out or general accuracy evidence. URLs/images omitted from this public summary."
+}

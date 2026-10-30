@@ -1,0 +1,165 @@
+{
+  "version": "page-eval-2.0.0-supplement",
+  "labelOrigin": "Agent-authored regressions for observed 1.6 mistakes; not independent or held-out quality data.",
+  "cases": [
+    {
+      "id": "ranking-factor-observed-in-1.6",
+      "finding": {
+        "id": "fixture-description",
+        "fingerprint": "owned-fixture",
+        "ruleId": "meta-description",
+        "category": "seo",
+        "priority": "nice-to-have",
+        "title": "Meta Description fehlt",
+        "detail": "Die Meta Description fehlt oder ist leer. Kein Rankingverlust wurde gemessen.",
+        "pageUrl": "https://owned-fixture.test/",
+        "viewportId": "mobile",
+        "state": "initial",
+        "evidenceStatus": "measured",
+        "recommendation": "Passende Zusammenfassung im HTML ergänzen.",
+        "acceptance": "Nach Änderung dieselbe Seite prüfen und nicht-leere Meta Description im HTML nachweisen."
+      },
+      "counts": {
+        "findings": 1,
+        "unknownRules": 1
+      },
+      "output": {
+        "summary": "Ein begrenzter Metadatenbefund liegt vor; unbekannte Prüfungen bleiben offen.",
+        "solutions": [
+          {
+            "findingId": "fixture-description",
+            "evidenceRefs": [
+              "finding:fixture-description"
+            ],
+            "explanation": "Die erfasste Meta Description fehlt oder ist leer.",
+            "relevance": "Die Meta Description ist ein wichtiger Rankingfaktor.",
+            "cause": "Hypothese: Die Zusammenfassung wurde nicht hinterlegt.",
+            "steps": [
+              "Die Description-Einstellung der gemessenen Seite im Quellprojekt prüfen.",
+              "Eine passende Beschreibung ergänzen und die gleiche Seite erneut prüfen."
+            ],
+            "alternatives": [
+              "Bei einem CMS die Metadateneinstellung nutzen; Vorteil: redaktionell pflegbar, der tatsächliche Einbauort bleibt unbekannt."
+            ],
+            "missingInformation": [
+              "CMS und zugehöriger Quellcode sind nicht zugeordnet."
+            ],
+            "code": {
+              "language": "html",
+              "text": "<meta name=\"description\" content=\"Passende Zusammenfassung\">"
+            },
+            "acceptance": "Nach Änderung dieselbe Seite prüfen und nicht-leere Meta Description im HTML nachweisen.",
+            "uncertainty": "Kein Quellcode und kein Google-Indexierungsnachweis vorhanden."
+          }
+        ]
+      },
+      "expected": "rejected"
+    },
+    {
+      "id": "negative-ranking-factor-statement",
+      "finding": {
+        "id": "fixture-description",
+        "fingerprint": "owned-fixture",
+        "ruleId": "meta-description",
+        "category": "seo",
+        "priority": "nice-to-have",
+        "title": "Meta Description fehlt",
+        "detail": "Die Meta Description fehlt oder ist leer. Kein Rankingverlust wurde gemessen.",
+        "pageUrl": "https://owned-fixture.test/",
+        "viewportId": "mobile",
+        "state": "initial",
+        "evidenceStatus": "measured",
+        "recommendation": "Passende Zusammenfassung im HTML ergänzen.",
+        "acceptance": "Nach Änderung dieselbe Seite prüfen und nicht-leere Meta Description im HTML nachweisen."
+      },
+      "counts": {
+        "findings": 1,
+        "unknownRules": 1
+      },
+      "output": {
+        "summary": "Ein begrenzter Metadatenbefund liegt vor; unbekannte Prüfungen bleiben offen.",
+        "solutions": [
+          {
+            "findingId": "fixture-description",
+            "evidenceRefs": [
+              "finding:fixture-description"
+            ],
+            "explanation": "Die erfasste Meta Description fehlt oder ist leer.",
+            "relevance": "Die Meta Description ist kein direkter Rankingfaktor.",
+            "cause": "Hypothese: Die Zusammenfassung wurde nicht hinterlegt.",
+            "steps": [
+              "Die Description-Einstellung der gemessenen Seite im Quellprojekt prüfen.",
+              "Eine passende Beschreibung ergänzen und die gleiche Seite erneut prüfen."
+            ],
+            "alternatives": [
+              "Bei einem CMS die Metadateneinstellung nutzen; Vorteil: redaktionell pflegbar, der tatsächliche Einbauort bleibt unbekannt."
+            ],
+            "missingInformation": [
+              "CMS und zugehöriger Quellcode sind nicht zugeordnet."
+            ],
+            "code": {
+              "language": "html",
+              "text": "<meta name=\"description\" content=\"Passende Zusammenfassung\">"
+            },
+            "acceptance": "Nach Änderung dieselbe Seite prüfen und nicht-leere Meta Description im HTML nachweisen.",
+            "uncertainty": "Kein Quellcode und kein Google-Indexierungsnachweis vorhanden."
+          }
+        ]
+      },
+      "expected": "accepted"
+    },
+    {
+      "id": "summary-ranking-factor",
+      "finding": {
+        "id": "fixture-description",
+        "fingerprint": "owned-fixture",
+        "ruleId": "meta-description",
+        "category": "seo",
+        "priority": "nice-to-have",
+        "title": "Meta Description fehlt",
+        "detail": "Die Meta Description fehlt oder ist leer. Kein Rankingverlust wurde gemessen.",
+        "pageUrl": "https://owned-fixture.test/",
+        "viewportId": "mobile",
+        "state": "initial",
+        "evidenceStatus": "measured",
+        "recommendation": "Passende Zusammenfassung im HTML ergänzen.",
+        "acceptance": "Nach Änderung dieselbe Seite prüfen und nicht-leere Meta Description im HTML nachweisen."
+      },
+      "counts": {
+        "findings": 1,
+        "unknownRules": 1
+      },
+      "output": {
+        "summary": "Die Meta Description ist ein wichtiger Rankingfaktor.",
+        "solutions": [
+          {
+            "findingId": "fixture-description",
+            "evidenceRefs": [
+              "finding:fixture-description"
+            ],
+            "explanation": "Die erfasste Meta Description fehlt oder ist leer.",
+            "relevance": "Eine passende Zusammenfassung kann den Seiteninhalt beschreiben; Wirkung auf Suchergebnisse ist nicht gemessen.",
+            "cause": "Hypothese: Die Zusammenfassung wurde nicht hinterlegt.",
+            "steps": [
+              "Die Description-Einstellung der gemessenen Seite im Quellprojekt prüfen.",
+              "Eine passende Beschreibung ergänzen und die gleiche Seite erneut prüfen."
+            ],
+            "alternatives": [
+              "Bei einem CMS die Metadateneinstellung nutzen; Vorteil: redaktionell pflegbar, der tatsächliche Einbauort bleibt unbekannt."
+            ],
+            "missingInformation": [
+              "CMS und zugehöriger Quellcode sind nicht zugeordnet."
+            ],
+            "code": {
+              "language": "html",
+              "text": "<meta name=\"description\" content=\"Passende Zusammenfassung\">"
+            },
+            "acceptance": "Nach Änderung dieselbe Seite prüfen und nicht-leere Meta Description im HTML nachweisen.",
+            "uncertainty": "Kein Quellcode und kein Google-Indexierungsnachweis vorhanden."
+          }
+        ]
+      },
+      "expected": "rejected"
+    }
+  ]
+}

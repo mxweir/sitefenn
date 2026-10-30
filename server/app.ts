@@ -455,6 +455,23 @@ export async function createApp(options: {
           sourceScanId: source.id,
           taskId: task.id,
           findingIds: task.findingIds,
+          samples: report.evidence
+            .filter(
+              (e) =>
+                findings.some(
+                  (f) => f.evidenceId === e.id && f.category === "layout",
+                ) && /^(?:initial|scroll-[12])$/.test(e.state),
+            )
+            .slice(0, 270)
+            .map((e) => ({
+              pageUrl: e.pageUrl,
+              viewportId: e.viewportId,
+              state: e.state,
+              scrollX: e.scrollX,
+              scrollY: e.scrollY,
+              width: e.width,
+              height: e.height,
+            })),
         },
       );
       return reply.code(202).send({ scan: next });

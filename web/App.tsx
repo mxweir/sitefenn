@@ -1,3 +1,4 @@
+import ProjectFlow from "./ProjectFlow.js";
 import JourneyReport from "./JourneyReport.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { APP_VERSION } from "../shared/version.js";
@@ -661,6 +662,28 @@ export default function App() {
                       </nav>
                       {tab === "overview" && (
                         <>
+                          <ProjectFlow
+                            scan={selectedScan}
+                            tasks={tasks}
+                            verifiedCount={
+                              data.tasks.filter(
+                                (t) =>
+                                  t.projectId === project.id &&
+                                  t.status === "verified" &&
+                                  t.verifiedByScanId,
+                              ).length
+                            }
+                            onNavigate={setTab}
+                            onConfigure={() => {
+                              const config =
+                                document.getElementById("scan-config");
+                              config?.focus({ preventScroll: true });
+                              config?.scrollIntoView({
+                                behavior: "smooth",
+                                block: "start",
+                              });
+                            }}
+                          />
                           <section
                             className="stats-grid"
                             aria-label="Projektübersicht"

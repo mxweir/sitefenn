@@ -1,0 +1,156 @@
+{
+  "kind": "owned-actual-page-interpretation-2.0",
+  "reviewOrigin": "Coding-agent review, not independent human evaluation.",
+  "model": "qwen2.5:7b",
+  "promptVersion": "page-report-2.0.0",
+  "status": "partial",
+  "parts": [
+    {
+      "status": "completed",
+      "summary": "Die Seite enthält einen Befund für horizontal-overflow, wobei der rechte Rand des Elements #wide 700px überschreitet die 390px breite Ansicht. Es gibt keine Metadaten-Befunde oder andere relevante Prüfungsergebnisse.",
+      "solutions": [
+        {
+          "findingId": "887d178a-a172-4c43-b539-45955cc0a6f7",
+          "evidenceRefs": [
+            "finding:887d178a-a172-4c43-b539-45955cc0a6f7"
+          ],
+          "relevance": "Die horizontale Überlaufung kann Benutzer bei kleineren Geräten beeinträchtigen, indem sie den Zugriff auf Inhalte behindern.",
+          "alternatives": [
+            "Setzen Sie eine Flex- oder Grid-Layout, um den Inhalt flexibel an die Breite anzupassen.",
+            "Begrenzen Sie die Breite des Elements #wide durch eine CSS-Mindestbreite oder Flexbox-Properties."
+          ],
+          "missingInformation": [
+            "Die genaue Struktur und CSS-Regeln des Elements #wide."
+          ],
+          "explanation": "Das Element #wide überschreitet die Breite der Ansicht. Dies kann durch eine Flex- oder Grid-Layout oder durch die Festlegung einer Mindestbreite für das Element behebt werden.",
+          "cause": "Die Breite des Elements #wide ist größer als die Ansichtsbreite.",
+          "steps": [
+            "Prüfen Sie die Breite des Elements #wide und die CSS-Regeln, die diese Breite bestimmen.",
+            "Fügen Sie eine Mindestbreite für das Element #wide hinzu, z.B. `min-width: 350px;`.",
+            "Versuchen Sie eine Flex- oder Grid-Layout, um den Inhalt flexibel an die Breite anzupassen.",
+            "Testen Sie die Seite auf dem Zielgerät, um sicherzustellen, dass der horizontale Scrollbar nicht mehr benötigt wird."
+          ],
+          "code": {
+            "language": "css",
+            "text": ".wide {\n  min-width: 350px;\n  flex: 1 1 auto;\n}"
+          },
+          "acceptance": "Nach Änderung erneut prüfen, ob der horizontale Scrollbar nicht mehr benötigt wird und der Inhalt erreichbar ist.",
+          "uncertainty": "Die genaue Breite des Elements #wide und die verwendeten CSS-Regeln sind nicht bekannt."
+        }
+      ],
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 4417,
+        "generatedTokens": 611,
+        "promptVersion": "page-report-2.0.0",
+        "promptSha256": "ff7cf4485c1e0abf859cb19e365760588623bf2dbcc6035d5a127cb180d8fdc5",
+        "contextSha256": "afb2312aa0fcfd84cb719fd9d439ddbeb228b2ea4fc6b46a71ec96633ea5721f",
+        "modelDigest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+        "modelMetadataSha256": "2a3b5178bccd9e1fd2d7e0e2ca972d5273065056556998e6dd1ca60d0deafd40",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 16873
+      }
+    },
+    {
+      "status": "completed",
+      "summary": "Die Seite enthält einen Befund, der einen horizontal überlaufenden Inhalt auf dem mobilen Ansichtsmodell zeigt. Dies führt zu unbeabsichtigtem horizontalem Scrollen, was die Erreichbarkeit von Inhalten beeinträchtigen kann.",
+      "solutions": [
+        {
+          "findingId": "fba6fcd1-e47e-454b-8dc1-b5f5b2d9caf7",
+          "evidenceRefs": [
+            "finding:fba6fcd1-e47e-454b-8dc1-b5f5b2d9caf7"
+          ],
+          "relevance": "Der horizontale Überlauf kann die Benutzererfahrung negativ beeinflussen, da der Inhalt nicht vollständig sichtbar ist und das Scrollen erforderlich wird, um den gesamten Inhalt zu sehen.",
+          "alternatives": [
+            "Setzen einer flexiblen Breite für den betroffenen Inhalt, z.B. mit `width: 100%;` und `max-width: 350px;`",
+            "Verwendung von Flexbox oder Grid, um den Inhalt so zu organisieren, dass er sich anpasst"
+          ],
+          "missingInformation": [
+            "Die genaue Struktur und die CSS-Klassen des betroffenen Elements sind nicht bekannt."
+          ],
+          "explanation": "Das betroffene Element (#wide) überschreitet die Breite der mobilen Ansicht, was zu unbeabsichtigtem horizontalem Scrollen führt.",
+          "cause": "Die Elementbreite (680px) ist größer als die maximale Breite des mobilen Ansichtsmodells (390px).",
+          "steps": [
+            "Prüfen Sie die Breite des Elements #wide und die Box-Modell-Einstellungen.",
+            "Ändern Sie die Breite des Elements, z.B. mit `width: 100%;` und `max-width: 350px;`.",
+            "Überprüfen Sie, ob der Inhalt sich anpasst, ohne den Inhalt zu beeinträchtigen.",
+            "Testen Sie die Seite im mobilen Ansichtsmodell, um sicherzustellen, dass der horizontale Überlauf vermieden wird."
+          ],
+          "code": {
+            "language": "css",
+            "text": ".wide {\n  width: 100%;\n  max-width: 350px;\n}"
+          },
+          "acceptance": "Nach Änderung erneut prüfen, ob der horizontale Überlauf vermieden wird und der Inhalt erreichbar bleibt.",
+          "uncertainty": "Die genaue Struktur und die CSS-Klassen des betroffenen Elements sind nicht bekannt."
+        }
+      ],
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 2671,
+        "generatedTokens": 638,
+        "promptVersion": "page-report-2.0.0",
+        "promptSha256": "579c07a980d263d65ab1c857bec17cbd52e1d19a830d4ef64cc96e67c64945c0",
+        "contextSha256": "12e8d0bef6179bf547e2dd266bda69b76df8dd76c1f3558ad9006de21249797f",
+        "modelDigest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+        "modelMetadataSha256": "2a3b5178bccd9e1fd2d7e0e2ca972d5273065056556998e6dd1ca60d0deafd40",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 15487
+      }
+    },
+    {
+      "status": "failed",
+      "error": "Die Zusammenfassung behauptet Fehlerfreiheit trotz vorhandener Befunde.",
+      "solutions": []
+    },
+    {
+      "status": "completed",
+      "summary": "Es gibt zwei Befunde: Ein horizontaler Scroll-Befund auf dem Desktop-Viewport und ein horizontaler Scroll-Befund auf dem Tablet-Viewport. Beide Befunde sind unbekannter Natur, da keine spezifischen Messungen oder Ursachen identifiziert wurden.",
+      "solutions": [],
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 3646,
+        "generatedTokens": 81,
+        "promptVersion": "page-report-2.0.0",
+        "promptSha256": "cff47269dd034e0378b32dd8c8f61596f2f28d02a09ac11fe6205ac77b45eaaf",
+        "contextSha256": "eda7893b23efec1a5c78d7a9b103b084d344e7b1a523d7ab37a88efd1d63e237",
+        "modelDigest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+        "modelMetadataSha256": "2a3b5178bccd9e1fd2d7e0e2ca972d5273065056556998e6dd1ca60d0deafd40",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 2004
+      }
+    }
+  ],
+  "summary": "Die Seite zeigt horizontal überlaufende Inhalte auf den Desktop- und Tablet-Viewport, was zu unbeabsichtigtem horizontalem Scrollen führt. Dies kann die Erreichbarkeit von Inhalten beeinträchtigen.",
+  "summaryProvenance": {
+    "providerVersion": "0.40.12",
+    "truncation": "disabled",
+    "promptEvalCount": 1519,
+    "generatedTokens": 66,
+    "promptVersion": "page-report-2.0.0",
+    "promptSha256": "1679e7b1376d088a03d7a23e83721bb63d02bc3ac22dd49593cf44772a57f539",
+    "contextSha256": "0ec8083f57997c02d5599334f8207836db69b3db5b68a74b78fb8a4cf688130a",
+    "modelDigest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+    "modelMetadataSha256": "2a3b5178bccd9e1fd2d7e0e2ca972d5273065056556998e6dd1ca60d0deafd40",
+    "temperature": 0,
+    "contextTokens": 8192,
+    "predictionLimit": 3072,
+    "durationMs": 2199
+  },
+  "omitted": [],
+  "unexplainedFindingIds": [],
+  "semanticReview": [
+    "Measured overflow was mobile-only. Synthesis falsely attributes overflow to desktop/tablet.",
+    "Both generated CSS examples use class .wide while the observed selector is ID #wide.",
+    "One accepted solution adds min-width without removing the observed 680 px width; this does not fix the measured problem.",
+    "Background false error-free scope was rejected; job remains partial. No generated proposal was adopted."
+  ]
+}

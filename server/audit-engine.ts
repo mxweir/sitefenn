@@ -99,7 +99,7 @@ export async function closeAuditResources() {
   activeChrome.clear();
   activeProxies.clear();
 }
-export const RULE_VERSION = "rules-1.6.0";
+export const RULE_VERSION = "rules-2.0.0";
 export const PROFILE_VERSION = "responsive-1.0.0";
 const digest = (text: string) =>
   createHash("sha256").update(text).digest("hex").slice(0, 24);
@@ -1624,12 +1624,36 @@ export async function runAudit(
               });
             return currentEvidence!;
           };
-          for (const [stateIndex, y] of positions.entries()) {
-            await page.evaluate((y) => scrollTo(0, y), y);
+          const captures = new Map(
+            positions.map((y, index) => [
+              index === 0 ? "initial" : `scroll-${index}`,
+              { x: 0, y },
+            ]),
+          );
+          for (const sample of options.retest?.samples ?? []) {
+            if (
+              sample.pageUrl === pageUrl &&
+              sample.viewportId === viewport.id &&
+              /^(?:initial|scroll-[12])$/.test(sample.state) &&
+              sample.width === viewport.width &&
+              sample.height === viewport.height &&
+              Number.isFinite(sample.scrollX) &&
+              Number.isFinite(sample.scrollY) &&
+              Math.abs(sample.scrollX) <= 30000 &&
+              sample.scrollY >= 0 &&
+              sample.scrollY <= 30000
+            )
+              captures.set(sample.state, {
+                x: sample.scrollX,
+                y: sample.scrollY,
+              });
+          }
+          for (const [captureStateName, point] of captures) {
+            await page.evaluate(({ x, y }) => scrollTo(x, y), point);
             await page.waitForTimeout(80);
             await captureState(
-              stateIndex === 0 ? "initial" : `scroll-${stateIndex}`,
-              stateIndex === 0,
+              captureStateName,
+              captureStateName === "initial",
             );
           }
           const state = "initial";

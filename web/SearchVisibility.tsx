@@ -183,7 +183,7 @@ export default function SearchVisibility({ project }: { project: Project }) {
           <textarea
             id="search-filters"
             rows={2}
-            placeholder={'{"country":"DE","device":"MOBILE"}'}
+            placeholder={'{"country":"deu","device":"MOBILE"}'}
             value={filters}
             onChange={(e) => setFilters(e.target.value)}
           />

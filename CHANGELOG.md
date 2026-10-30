@@ -2,6 +2,30 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 2.0.0 — 2026-10-30
+
+### Close the loop: inspect → hand off → verify
+
+- Added project guidance for checking, evidence, selected developer work and compatible retesting. The project counter includes actual scan-verified tasks; manual review is not a verified fix.
+- Fixed a real layout-retest edge case: after a correction changes the natural capture count, targeted retests revisit the selected original captured positions/state identities. Actual coordinate/dimension proof remains required; unreachable/clamped positions stay unknown.
+- Added a full real-service test from measured overflow through source handoff, source-hash refusal, actual correction/retest, compatible full check and portable backup/restore. A separate real UI run records the verified task without deleting its original evidence.
+- Current rule identity is `rules-2.0.0`; prompt identity is `page-report-2.0.0`. Added targeted false Rankingfaktor/summary regressions and a supported negation. Historical outputs stay historical; no general semantic accuracy guarantee.
+- Refreshed README, actual desktop/mobile screenshots, portable Web/CLI package, current resource benchmark and explicit external acceptance boundaries.
+
+124 Node tests and 20 browser tests passed locally, plus types/build/lifecycle/audit. The owned 20-page/three-profile benchmark took 13.989 s with 655.9 MiB maximum sampled summed worker RSS; these are narrow controlled observations. Actual 7B inference still produced wrong advice; a real page job remained partial (3/4 parts), so the strict optional complete-result smoke failed and no model is qualified as a verified expert. [Full release verification and remaining work](docs/RELEASE-2.0.md).
+
+**Release scope:** tested local Web/CLI software. Live Google account acceptance, native signing/distribution, real Windows and independent pilot/screenreader validation remain open under the user's explicitly approved scope adjustment.
+
+![Actual 2.0 guided workspace](docs/screenshots/2.0-workspace.jpg)
+
+<details>
+<summary>Actual confirmed task and mobile view</summary>
+
+![Actual verified task](docs/screenshots/2.0-verified-fix.jpg)
+![Actual mobile task](docs/screenshots/2.0-mobile-verified.jpg)
+
+</details>
+
 ## 1.9.0 — 2026-10-30
 
 ### Start, protect and maintain the workspace

@@ -10,7 +10,7 @@ import type {
 import { localStructuredCompletion, type AiDependencies } from "./ai.js";
 import { sha256 } from "../provenance.js";
 
-export const PAGE_PROMPT_VERSION = "page-report-1.6.0";
+export const PAGE_PROMPT_VERSION = "page-report-2.0.0";
 const BUDGET = 8500,
   MAX_PARTS = 24;
 export const SYSTEM =
@@ -639,6 +639,7 @@ export function validatePagePart(
     const own = known.get(id)!;
     if (own.ruleId === "meta-description") {
       const lines = [
+        summary,
         explanation,
         entry.cause,
         extra.relevance ?? "",
@@ -647,6 +648,16 @@ export function validatePagePart(
       ]
         .join(". ")
         .split(/[.!?\n]/);
+      if (
+        lines.some(
+          (line) =>
+            /rankingfaktor|ranking factor/i.test(line) &&
+            !/\bkein(?:e|en|er|em|es)?(?:\s+(?:direkt\w*|gemessen\w*|nachgewiesen\w*|belegt\w*|wichtig\w*)){0,2}\s+rankingfaktor\b|nicht\s+(?:als\s+|ein(?:e|en|er)?\s+)?(?:direkt\w*\s+)?rankingfaktor|not\s+(?:a\s+)?(?:direct\s+)?ranking factor/i.test(
+              line,
+            ),
+        )
+      )
+        throw Error("Unbelegte Rankingfaktor-Behauptung zur Meta Description.");
       if (
         lines.some(
           (line) =>

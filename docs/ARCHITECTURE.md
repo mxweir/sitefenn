@@ -91,3 +91,13 @@ The page interpreter places a focus finding with its fitting rules/evidence/nume
 `page-report-1.6.0` proposals add a known primary finding reference, relevance, alternatives and missing information. The UI/export preserves canonical observations beside hypotheses/code. Reference excerpts are display-only and mark truncation. Targeted guards reject a finite set of known contradictions; this is not a truth verifier. The versioned corpus and actual-model errors are published in [EVALUATION-1.6.md](EVALUATION-1.6.md).
 
 The new structured page path verifies Ollama 0.40.0+ and requests native no-truncation/no-shift. Provider errors stay partial/failed. Non-thinking calls use 8,192/3,072 context/output limits; thinking-only calls use 12,288/6,144. Local-backing checks, weight identity, response limits, 90-second calls and ten-minute jobs remain bounded. Historical/legacy selected-finding paths are not silently relabeled as the new contract. No new database migration, source repository access, vision inference, training or autonomous repair is introduced.
+
+## 1.7–2.0 workflow additions
+
+Work priority is a separate explainable ordering over canonical open tasks, explicit page reach and project weights; it never modifies the Audit-Score. The optional Google connector has a fixed read-only OAuth/PKCE path and a separate macOS Keychain vault, without backup token storage. Other systems keep CSV.
+
+Developer handoff reads an explicitly selected Git root within fixed file/byte budgets and exposes literal source candidates rather than runtime mappings. Selected source hashes are rechecked on export. The standalone CLI uses existing scanner/provenance/comparison services and distinct pass/regression/inconclusive exits. Non-success documents cannot be layout-only passes.
+
+Maintenance preferences and reversible scan trash are additive SQLite tables. Referenced sources are protected; permanent removal is a separately confirmed action. Scheduling is app-local, resource bounded and disabled after portable restore. Program updates remain manual with explicit pre-update backup. Portable packaging allowlists code/build/tests/docs, excluding private workspace data.
+
+2.0 targeted layout retests additionally carry selected original capture coordinates/state labels, while comparison still requires an actual matching observation. Old unreachable coordinates do not gain synthetic passing evidence. Project guidance links canonical evidence/actions and counts only scan-verified tasks. Local model content remains separate and unverified; public real-model failures are part of release evidence.

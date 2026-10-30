@@ -22,6 +22,8 @@ Fortschritt 1.8: Gezielte Arbeitspakete, begrenzte lesende Git-Quellvorschau als
 
 Fortschritt 1.9: Expliziter Web-/CLI-Start mit portablem Quell-/Buildpaket, manuelle Updateprüfung/Vorsicherung, geschützte Speichervorschau mit Papierkorb/Wiederherstellung sowie freiwillige App-interne Intervalle sind umgesetzt und lokal geprüft. Native signierte Installer, gebündelte Laufzeit und echter Windows-Lauf bleiben nach bestätigter Umfangsänderung offen. [RELEASE-1.9.md](docs/RELEASE-1.9.md).
 
+Fortschritt 2.0: Der ausdrücklich angepasste lokale Web-/CLI-Freigabeumfang ist umgesetzt. Ein neuer durchgängiger Diensttest und echter UI-Lauf bestätigen Befund → ausgewählte Quell-/Entwicklerübergabe → Korrektur → tatsächlicher Nachtest → Vollcheck → Wiederherstellung. Ein dabei entdeckter Scroll-Stichprobenfehler ist behoben. [RELEASE-2.0.md](docs/RELEASE-2.0.md) veröffentlicht aktuelle Tests, Ressourcen und weiterhin falsche/teilweise Modellantworten; unabhängige Pilot-, Google-, Windows-/native und Screenreader-Abnahme bleiben offen.
+
 ## Produktziel
 
 **SiteFenn hilft dir, Website-Probleme nachweisbar zu beheben und neue Fehler vor der Veröffentlichung zu erkennen.**

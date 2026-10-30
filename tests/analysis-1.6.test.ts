@@ -147,3 +147,22 @@ test(
     }
   },
 );
+
+const releaseCorpus = JSON.parse(
+  await readFile(
+    new URL("./fixtures/page-eval-2.0.json", import.meta.url),
+    "utf8",
+  ),
+);
+for (const c of releaseCorpus.cases)
+  test(`page-eval-2.0 / ${c.id} / ${c.expected}`, () => {
+    const run = () =>
+      validatePagePart(c.output, [c.finding], [], c.counts, {
+        units: [
+          { id: `finding:${c.finding.id}`, value: c.finding },
+          { id: "rule:unknown", value: { status: "not_run" } },
+        ],
+      });
+    if (c.expected === "rejected") assert.throws(run);
+    else assert.equal(run().solutions[0]?.findingId, c.finding.id);
+  });

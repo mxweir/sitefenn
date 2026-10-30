@@ -70,7 +70,12 @@ export default function ScanConfig({
     ...(journeys.length ? { journeys } : {}),
   };
   return (
-    <div className="panel workspace-form">
+    <div
+      id="scan-config"
+      tabIndex={-1}
+      aria-label="Prüfumfang konfigurieren"
+      className="panel workspace-form"
+    >
       <div className="panel-head">
         <div>
           <p className="eyebrow">BEWUSST PRÜFEN, NICHT BLIND CRAWLEN</p>

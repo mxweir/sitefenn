@@ -16,12 +16,23 @@ const validatorSha256 = sha256(
     "utf8",
   ),
 );
-const corpus = JSON.parse(
+const baseCorpus = JSON.parse(
   await readFile(
     new URL("../tests/fixtures/page-eval-1.6.json", import.meta.url),
     "utf8",
   ),
 );
+const supplement = JSON.parse(
+  await readFile(
+    new URL("../tests/fixtures/page-eval-2.0.json", import.meta.url),
+    "utf8",
+  ),
+);
+const corpus = {
+  ...baseCorpus,
+  version: "page-eval-2.0.0",
+  cases: [...baseCorpus.cases, ...supplement.cases],
+};
 const units = (finding: Finding) => [
   {
     id: `finding:${finding.id}`,
@@ -71,7 +82,7 @@ if (!process.argv.includes("--model")) {
   const model = process.argv[process.argv.indexOf("--model") + 1];
   if (!model) throw Error("Select an already installed local model.");
   const dir = resolve(
-    `.local-data/page-eval-1.6-${model.replace(/[^a-z0-9]/gi, "-")}-${Date.now()}`,
+    `.local-data/page-eval-2.0-${model.replace(/[^a-z0-9]/gi, "-")}-${Date.now()}`,
   );
   await mkdir(dir, { recursive: true, mode: 0o700 });
   const base = structuredClone(corpus.cases[0].finding) as Finding;

@@ -1286,3 +1286,46 @@ test("maintenance keeps irreversible purge behind explicit selection and typed c
     390,
   );
 });
+
+test("2.0 project guidance navigates the repair flow without treating review as verification", async ({
+  page,
+}) => {
+  const state = await mockWorkspace(page);
+  await page.goto("/");
+  const guide = page.getByRole("region", {
+    name: "Vom Check zum bestätigten Fix",
+  });
+  await expect(guide).toContainText(
+    "0 durch Nachtest verifizierte Aufgaben im Projekt",
+  );
+  await guide
+    .getByRole("button", { name: "3 · Bearbeiten", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Dein Maßnahmenplan", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", {
+      name: "Zur Prüfung markieren: Seitentitel ergänzen",
+    })
+    .click();
+  await expect.poll(() => state.tasks[0].status).toBe("review");
+  await expect(page.getByLabel("STATUS", { exact: true })).toHaveValue(
+    "review",
+  );
+  await page.getByRole("button", { name: "Übersicht", exact: true }).click();
+  await expect(guide).toContainText(
+    "0 durch Nachtest verifizierte Aufgaben im Projekt",
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await expect(
+    guide.getByRole("button", { name: "2 · Belegen", exact: true }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    390,
+  );
+  await guide.getByRole("button", { name: "2 · Belegen", exact: true }).click();
+  await expect(
+    page.getByRole("heading", { name: "Dein Prüfbericht", exact: true }),
+  ).toBeVisible();
+});

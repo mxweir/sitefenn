@@ -42,7 +42,11 @@ export interface Scan {
 }
 
 export type Category =
-  "layout" | "accessibility" | "seo" | "runtime" | "performance";
+  | "layout"
+  | "accessibility"
+  | "seo"
+  | "runtime"
+  | "performance";
 export type Priority = "critical" | "important" | "nice-to-have";
 export type RuleStatus = "pass" | "fail" | "not_run" | "not_applicable";
 export type EvidenceStatus = "measured" | "heuristic" | "ai";
@@ -73,6 +77,15 @@ export const VIEWPORTS: ViewportProfile[] = [
   },
 ];
 export interface RetestScope {
+  samples?: {
+    pageUrl: string;
+    viewportId: string;
+    state: string;
+    scrollX: number;
+    scrollY: number;
+    width: number;
+    height: number;
+  }[];
   sourceScanId: string;
   taskId: string;
   findingIds: string[];
@@ -317,7 +330,11 @@ export interface ScoreSummary {
   warnings: string[];
 }
 export type TaskStatus =
-  "open" | "in-progress" | "review" | "verified" | "accepted";
+  | "open"
+  | "in-progress"
+  | "review"
+  | "verified"
+  | "accepted";
 export interface AuditTask {
   aiProposal?: PageSolution & { analysisId: string };
   id: string;
