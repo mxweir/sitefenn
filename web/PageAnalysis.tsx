@@ -35,6 +35,7 @@ const labels: Record<Analysis["status"], string> = {
 export default function PageAnalysis({
   scan,
   requestedPage,
+  requestedFocusId,
   legacyPlan,
   settings,
   speechAvailable,
@@ -43,6 +44,7 @@ export default function PageAnalysis({
 }: {
   scan?: Scan;
   requestedPage?: string;
+  requestedFocusId?: string;
   legacyPlan?: AiPlan;
   settings: HubSettings;
   speechAvailable: boolean;
@@ -55,6 +57,14 @@ export default function PageAnalysis({
   const [history, setHistory] = useState<Summary[]>([]);
   const [selected, setSelected] = useState("");
   const [job, setJob] = useState<Analysis | null>(null);
+  const [purpose, setPurpose] = useState(""),
+    [goal, setGoal] = useState(""),
+    [audience, setAudience] = useState("");
+  const [includeTasks, setIncludeTasks] = useState(true),
+    [comparisonId, setComparisonId] = useState("");
+  const [comparisons, setComparisons] = useState<
+    { id: string; createdAt: string }[]
+  >([]);
   const [question, setQuestion] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -136,6 +146,22 @@ export default function PageAnalysis({
       clearTimeout(timer);
     };
   }, [selected, url]);
+  useEffect(() => {
+    setComparisonId("");
+    setComparisons([]);
+    if (!scan?.id) return;
+    let alive = true;
+    void api<{ comparisons: { id: string; createdAt: string }[] }>(
+      `/api/scans/${scan.id}/analysis-sources`,
+    )
+      .then((data) => {
+        if (alive) setComparisons(data.comparisons);
+      })
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [scan?.id]);
   if (!report)
     return (
       <Empty title="Für die Seitenanalyse zuerst einen Check durchführen.">
@@ -163,6 +189,25 @@ export default function PageAnalysis({
           pageUrl: url,
           model: settings.model,
           question: question.trim(),
+          ...(!(
+            question.trim() &&
+            current &&
+            ["completed", "partial"].includes(current.status)
+          )
+            ? {
+                context: {
+                  purpose,
+                  goal,
+                  audience,
+                  ...(requestedFocusId &&
+                  findings.some((f) => f.id === requestedFocusId)
+                    ? { focusFindingId: requestedFocusId }
+                    : {}),
+                },
+                includeTasks,
+                ...(comparisonId ? { comparisonScanId: comparisonId } : {}),
+              }
+            : {}),
           ...(question.trim() &&
           current &&
           ["completed", "partial"].includes(current.status)
@@ -220,7 +265,8 @@ export default function PageAnalysis({
           <p>
             Enthalten sind Beobachtungen, bestandene und fehlgeschlagene
             Prüfungen, unbekannte Bereiche, Messwerte, Selektoren und
-            Nachweisreferenzen.
+            Nachweisreferenzen. Neue Checks enthalten bei eindeutig erfassten
+            Elementen außerdem begrenzte DOM-/Style-Messwerte.
           </p>
           <p className="hint">
             Keine Quellcode-Dateien, Zugangsdaten oder Screenshot-Bilder. Große
@@ -250,6 +296,69 @@ export default function PageAnalysis({
                 Performance-Datensätze
               </li>
             </ul>
+          </details>
+          {requestedFocusId &&
+            findings.some((f) => f.id === requestedFocusId) && (
+              <p className="notice">
+                Schwerpunkt für die neue Analyse:{" "}
+                {findings.find((f) => f.id === requestedFocusId)!.title}. Der
+                übrige Seitenbericht bleibt Kontext.
+              </p>
+            )}
+          <details className="analysis-intent">
+            <summary>Analyse ausrichten</summary>
+            <label htmlFor="analysis-purpose">Seitenzweck (optional)</label>
+            <input
+              id="analysis-purpose"
+              maxLength={500}
+              value={purpose}
+              onChange={(e) => setPurpose(e.target.value)}
+              placeholder="z. B. Leistungen eines Studios vorstellen"
+            />
+            <label htmlFor="analysis-goal">Nutzerziel (optional)</label>
+            <input
+              id="analysis-goal"
+              maxLength={500}
+              value={goal}
+              onChange={(e) => setGoal(e.target.value)}
+              placeholder="z. B. passende Leistung finden und Kontakt aufnehmen"
+            />
+            <label htmlFor="analysis-audience">Zielgruppe (optional)</label>
+            <input
+              id="analysis-audience"
+              maxLength={500}
+              value={audience}
+              onChange={(e) => setAudience(e.target.value)}
+            />
+            <label className="check-option">
+              <input
+                type="checkbox"
+                checked={includeTasks}
+                onChange={(e) => setIncludeTasks(e.target.checked)}
+              />
+              Bestehende Maßnahmen als Kontext einbeziehen
+            </label>
+            <label htmlFor="analysis-comparison">
+              Kompatibler früherer Check
+            </label>
+            <select
+              id="analysis-comparison"
+              value={comparisonId}
+              onChange={(e) => setComparisonId(e.target.value)}
+            >
+              <option value="">Ohne Vergleich</option>
+              {comparisons.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {stamp(c.createdAt)}
+                </option>
+              ))}
+            </select>
+            <p className="hint">
+              Nur kompatible vollständige Checks aus den letzten 20 Kandidaten.
+              Unbekannte Ziele bleiben unbekannt. Rückfragen behalten den
+              gespeicherten Kontext; geänderte Angaben gelten für eine neue
+              Analyse.
+            </p>
           </details>
           <label htmlFor="analysis-history">Gespeicherte Auswertung</label>
           <select
@@ -290,7 +399,12 @@ export default function PageAnalysis({
               </p>
             )}
             <p className="small-label">
-              LOKALES MODELL · {settings.model || "KEIN MODELL AUSGEWÄHLT"}
+              LOKALES MODELL FÜR DEN AUFRUF ·{" "}
+              {settings.model || "KEIN MODELL AUSGEWÄHLT"}
+            </p>
+            <p className="hint">
+              Seitenanalysen benötigen Ollama ab 0.40.0. Bekannte Referenzen und
+              gültiges JSON sind keine Qualitätsgarantie.
             </p>
             <button
               className="button primary"
@@ -374,6 +488,22 @@ export default function PageAnalysis({
                   ausgewertet · {current.totalUnits} Datensätze im vorgesehenen
                   Kontext
                 </p>
+                {current.context && (
+                  <details>
+                    <summary>Gespeicherte Analyseausrichtung</summary>
+                    <p>Seitenzweck: {current.context.purpose || "Unbekannt"}</p>
+                    <p>Nutzerziel: {current.context.goal || "Unbekannt"}</p>
+                    <p>Zielgruppe: {current.context.audience || "Unbekannt"}</p>
+                    <p>
+                      {current.context.tasks?.length ?? 0} Aufgaben im
+                      Kontext-Snapshot · Vergleich:{" "}
+                      {current.context.comparison?.scanId ?? "Ohne Vergleich"}
+                    </p>
+                    {current.context.omissions?.map((x, i) => (
+                      <p key={i}>{x}</p>
+                    ))}
+                  </details>
+                )}
                 <progress
                   aria-label="Fortschritt der Seitenanalyse"
                   max={current.parts.length + 1}
@@ -544,6 +674,51 @@ export default function PageAnalysis({
                       </p>
                       <p className="small-label">KI-EINORDNUNG · UNGEPRÜFT</p>
                       <p>{solution.explanation}</p>
+                      {finding.elementContext && (
+                        <details className="solution-references">
+                          <summary>Gemessenen Elementkontext ansehen</summary>
+                          <pre>
+                            {JSON.stringify(finding.elementContext, null, 2)}
+                          </pre>
+                        </details>
+                      )}
+                      {solution.relevance && (
+                        <>
+                          <h4>Mögliche Relevanz</h4>
+                          <p>{solution.relevance}</p>
+                        </>
+                      )}
+                      {solution.evidenceRefs?.length ? (
+                        <details className="solution-references">
+                          <summary>
+                            Belegverweise ansehen (
+                            {solution.evidenceRefs.length})
+                          </summary>
+                          <p className="hint">
+                            IDs stammen aus dem übergebenen Kontext. Das
+                            bestätigt keine semantische Richtigkeit der
+                            Erklärung.
+                          </p>
+                          {solution.evidenceRefs.map((id) => (
+                            <div key={id}>
+                              <code>{id}</code>
+                              {current.sources?.find((s) => s.id === id)
+                                ?.truncated && (
+                                <p className="hint">
+                                  Anzeige auf 1400 Zeichen gekürzt; der
+                                  Modellkontext enthielt den vollständigen
+                                  Datensatz innerhalb seines Budgets.
+                                </p>
+                              )}
+                              <pre>
+                                {current.sources?.find((s) => s.id === id)
+                                  ?.excerpt ??
+                                  "Historischer Referenzauszug nicht gespeichert."}
+                              </pre>
+                            </div>
+                          ))}
+                        </details>
+                      ) : null}
                       <h4>Mögliche Ursache</h4>
                       <p>{solution.cause}</p>
                       <h4>Konkrete Lösungsschritte</h4>
@@ -552,6 +727,26 @@ export default function PageAnalysis({
                           <li key={i}>{step}</li>
                         ))}
                       </ol>
+                      {!!solution.alternatives?.length && (
+                        <>
+                          <h4>Alternativen abwägen</h4>
+                          <ul>
+                            {solution.alternatives.map((x, i) => (
+                              <li key={i}>{x}</li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
+                      {!!solution.missingInformation?.length && (
+                        <>
+                          <h4>Noch zu klären</h4>
+                          <ul>
+                            {solution.missingInformation.map((x, i) => (
+                              <li key={i}>{x}</li>
+                            ))}
+                          </ul>
+                        </>
+                      )}
                       {solution.code.text && (
                         <>
                           <div className="panel-head">

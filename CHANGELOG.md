@@ -2,6 +2,38 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 1.6.0 — 2026-10-30
+
+### Better evidence for page explanations
+
+- Added bounded computed element/parent styles and geometry to uniquely observed finding anchors. No raw HTML, text or form values are read by this additional context routine. Ambiguous/capped context remains unavailable.
+- Reworked inference packets around one focus finding and its related rules, evidence, numeric/state records and fitting task/comparison data. Remaining records are processed separately or explicitly omitted; base profiles and interactive states have distinct counts.
+- Added optional page purpose, user goal/audience, existing task snapshots and a compatible earlier full-scan comparison. Follow-ups keep the saved context and cannot silently replace it.
+- Added known primary evidence references, possible relevance, alternatives and missing information to new proposals. The UI shows bounded reference excerpts and original DOM/evidence separately; reference membership does not prove factual correctness.
+- Added targeted rejection of observed bad proposals, including invented references/files/URLs, false completed repairs, unknown-scope success, unsupported meta-description ranking claims, empty-description alternatives, overflow masking and changing the measured viewport. Remaining errors can still pass.
+
+### Provider, workflow and evaluation
+
+- The new page path requires verifiable Ollama 0.40.0+ and sends native no-truncation/no-shift requests. Context overflow is a visible failure. Provider version, actual token counters when supplied, model weights and request/prompt identities are recorded.
+- Added a larger bounded thinking-only page profile after a shorter generation budget failed. Calls and complete jobs retain their deadlines; no cloud fallback or canned model reply is introduced.
+- Extended proposal display and Markdown with measured element context, known references, user intent, alternatives and missing information. Reviewed adoption still annotates the original open task and cannot verify a fix.
+- Added a public 20-case contract corpus and opt-in actual-model evaluator. [Evaluation and real model failures](docs/EVALUATION-1.6.md) distinguish structural acceptance from semantic correctness. No training, independent accuracy study or screenshot vision is claimed.
+
+### Data and checks
+
+113 Node tests, 17 browser tests, type checks, build, lifecycle smoke and dependency audit passed locally. Existing data paths and database schema remain unchanged; new optional report/analysis JSON preserves historical records. New scans use `rules-1.6.0`; old reports do not gain invented style snapshots or compatible score deltas. [Verification, budgets and limits](docs/RELEASE-1.6.md).
+
+![Actual measured element context](docs/screenshots/1.6-element-context.jpg)
+
+<details>
+<summary>Actual 1.6 page interpretation and mobile evidence</summary>
+
+![Actual completed processing, still unverified](docs/screenshots/1.6-page-analysis.jpg)
+![Actual partial-result handling](docs/screenshots/1.6-partial-analysis.jpg)
+![Actual 390 px evidence view](docs/screenshots/1.6-mobile.jpg)
+
+</details>
+
 ## 1.5.0 — 2026-10-30
 
 ### Explicit page states

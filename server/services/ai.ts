@@ -35,10 +35,6 @@ function remoteBacked(value: Record<string, unknown>): boolean {
   );
 }
 async function readJson(response: Response): Promise<unknown> {
-  if (!response.ok)
-    throw new Error(
-      `Local Ollama request failed (${response.status}). No AI result was produced.`,
-    );
   const reader = response.body?.getReader();
   if (!reader) throw new Error("Ollama returned no response body.");
   const chunks: Uint8Array[] = [];
@@ -55,11 +51,33 @@ async function readJson(response: Response): Promise<unknown> {
   } finally {
     await reader.cancel().catch(() => {});
   }
+  let parsed: unknown;
   try {
-    return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+    parsed = JSON.parse(Buffer.concat(chunks).toString("utf8"));
   } catch {
-    throw new Error("Ollama returned invalid JSON.");
+    throw new Error(
+      response.ok
+        ? "Ollama returned invalid JSON."
+        : `Local Ollama request failed (${response.status}). No AI result was produced.`,
+    );
   }
+  if (!response.ok) {
+    if (
+      response.status === 400 &&
+      parsed &&
+      typeof parsed === "object" &&
+      /exceeds.{0,80}context|context.{0,80}exceed/i.test(
+        String((parsed as { error?: unknown }).error),
+      )
+    )
+      throw Error(
+        "Lokaler Modellkontext ist zu klein. Die Eingabe wurde nicht automatisch gekürzt; dieser Teil bleibt unverarbeitet.",
+      );
+    throw new Error(
+      `Local Ollama request failed (${response.status}). No AI result was produced.`,
+    );
+  }
+  return parsed;
 }
 function boundedSignal(signal: AbortSignal | undefined, timeoutMs: number) {
   const timeout = AbortSignal.timeout(
@@ -464,8 +482,24 @@ export async function localStructuredCompletion(
     );
   const started = Date.now();
   const caps = await assertLocalOllamaModel(input.model, signal, dependencies);
+  const versionData = await readJson(
+    await (dependencies.fetch ?? fetch)(`${OLLAMA}/api/version`, {
+      redirect: "error",
+      signal: boundedSignal(signal, 3000),
+    }),
+  );
+  const version =
+    object(versionData) && typeof versionData.version === "string"
+      ? versionData.version
+      : "";
+  const numbers = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
+  if (!numbers || (+numbers[1] === 0 && +numbers[2] < 40))
+    throw Error(
+      "Seitenanalyse benötigt Ollama ab 0.40.0 mit überprüfbarer Versionsangabe; keine automatische Kontextkürzung erlaubt.",
+    );
   const digest = await installedDigest(input.model, signal, dependencies);
-  const limit = caps.thinkingOnly ? 4096 : 3072;
+  const limit = caps.thinkingOnly ? 6144 : 3072;
+  const contextTokens = caps.thinkingOnly ? 12288 : 8192;
   const envelope = await readJson(
     await (dependencies.fetch ?? fetch)(`${OLLAMA}/api/chat`, {
       method: "POST",
@@ -475,9 +509,11 @@ export async function localStructuredCompletion(
       body: JSON.stringify({
         model: input.model,
         stream: false,
+        truncate: false,
+        shift: false,
         think: caps.thinkingOnly,
         format: input.schema,
-        options: { temperature: 0, num_ctx: 8192, num_predict: limit },
+        options: { temperature: 0, num_ctx: contextTokens, num_predict: limit },
         messages: [
           { role: "system", content: input.system },
           { role: "user", content: input.content },
@@ -507,13 +543,21 @@ export async function localStructuredCompletion(
   return {
     value,
     provenance: {
+      providerVersion: version,
+      truncation: "disabled",
+      ...(typeof envelope.prompt_eval_count === "number"
+        ? { promptEvalCount: envelope.prompt_eval_count }
+        : {}),
+      ...(typeof envelope.eval_count === "number"
+        ? { generatedTokens: envelope.eval_count }
+        : {}),
       promptVersion: input.promptVersion,
       promptSha256: sha256(input.system + JSON.stringify(input.schema)),
       contextSha256: sha256(input.content),
       modelDigest: digest,
       modelMetadataSha256: caps.metadataSha256,
       temperature: 0,
-      contextTokens: 8192,
+      contextTokens,
       predictionLimit: limit,
       durationMs: Date.now() - started,
     },

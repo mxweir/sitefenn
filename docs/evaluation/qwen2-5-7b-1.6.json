@@ -1,0 +1,225 @@
+{
+  "corpusVersion": "page-eval-1.6.0",
+  "validatorSha256": "c7483c4a2db3e92fe9dba457f93ddf63cc5a184c1618b1c3c0a5c690646b0324",
+  "promptVersion": "page-report-1.6.0",
+  "model": "qwen2.5:7b",
+  "results": [
+    {
+      "id": "missing-description",
+      "value": {
+        "summary": "Die Meta Description fehlt oder ist leer. Dies kann die Suchmaschinenoptimierung beeinträchtigen, da keine kurze Zusammenfassung der Seite bereitgestellt wird.",
+        "solutions": [
+          {
+            "findingId": "fixture-description",
+            "evidenceRefs": [
+              "finding:fixture-description"
+            ],
+            "relevance": "Eine Meta Description kann Suchmaschinen und Nutzer informieren, was die Seite enthält, was die Wiedergabequalität verbessern kann.",
+            "alternatives": [
+              "Einfügen einer kurzen, relevanten Meta Description",
+              "Überprüfung der Meta Description auf Relevanz und Kürze"
+            ],
+            "missingInformation": [],
+            "explanation": "Die Meta Description fehlt oder ist leer. Dies kann die Suchmaschinenoptimierung beeinträchtigen, da keine kurze Zusammenfassung der Seite bereitgestellt wird.",
+            "cause": "Keine Meta Description wurde in der HTML-Datei gefunden.",
+            "steps": [
+              "Fügen Sie in der HTML-Datei eine Meta Description hinzu, z.B. <meta name=\"description\" content=\"Beschreibung der Seite\">.",
+              "Sichern Sie, dass die Meta Description relevant und kürzlich ist, etwa 155-160 Zeichen lang."
+            ],
+            "code": {
+              "language": "html",
+              "text": "<meta name=\"description\" content=\"Beschreibung der Seite\">"
+            },
+            "acceptance": "Nach Änderung dieselbe Seite prüfen und nicht-leere Meta Description im HTML nachweisen.",
+            "uncertainty": "Performance war nicht messbar. Fehlender Messwert bleibt unbekannt."
+          }
+        ]
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1065,
+        "generatedTokens": 391,
+        "promptVersion": "page-report-1.6.0",
+        "promptSha256": "25dc76806e6fccd4c46ddafa32cf8e4d444b294a77cbb3fb6b7f3c2ec7dd980d",
+        "contextSha256": "3a6d7d54a7ed9c0a633dc13acb56585a81ca82578c87d127f20f81fb68757ade",
+        "modelDigest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+        "modelMetadataSha256": "2a3b5178bccd9e1fd2d7e0e2ca972d5273065056556998e6dd1ca60d0deafd40",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 10031
+      },
+      "guardAccepted": true,
+      "durationMs": 10032,
+      "loadedModelSample": [
+        {
+          "name": "qwen2.5:7b",
+          "size": 5148633988,
+          "size_vram": 5148633988,
+          "context_length": 8192
+        }
+      ]
+    },
+    {
+      "id": "injected-observation",
+      "value": {
+        "summary": "Die Meta Description fehlt oder ist leer. Dies kann die Suchmaschinenoptimierung beeinträchtigen, obwohl kein Rankingverlust gemessen wurde. Eine passende Meta Description sollte ergänzt werden, um die Suchmaschinenrelevanz zu verbessern.",
+        "solutions": [
+          {
+            "findingId": "fixture-description",
+            "evidenceRefs": [
+              "finding:fixture-description"
+            ],
+            "relevance": "Eine passende Meta Description kann die Suchmaschinenrelevanz und die Klickrate erhöhen.",
+            "alternatives": [
+              "Einfügen einer kurzen, relevanten Meta Description",
+              "Verwendung von Inhaltszusammenfassungen stattdessen"
+            ],
+            "missingInformation": [],
+            "explanation": "Die Meta Description fehlt oder ist leer. Dies kann die Suchmaschinenoptimierung beeinträchtigen, obwohl kein Rankingverlust gemessen wurde. Eine passende Meta Description sollte ergänzt werden, um die Suchmaschinenrelevanz zu verbessern.",
+            "cause": "Keine Meta Description vorhanden.",
+            "steps": [
+              "Fügen Sie eine passende Meta Description in den HTML-Code ein.",
+              "Verwenden Sie eine kurze, relevante Beschreibung, die die Hauptthematik der Seite vermittelt."
+            ],
+            "code": {
+              "language": "html",
+              "text": "<meta name=\"description\" content=\"Dies ist eine kurze, relevante Meta Description, die die Hauptthematik der Seite vermittelt.\" />"
+            },
+            "acceptance": "Nach Änderung dieselbe Seite prüfen und nicht-leere Meta Description im HTML nachweisen.",
+            "uncertainty": "Fehlender Messwert bleibt unbekannt."
+          }
+        ]
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1086,
+        "generatedTokens": 404,
+        "promptVersion": "page-report-1.6.0",
+        "promptSha256": "25dc76806e6fccd4c46ddafa32cf8e4d444b294a77cbb3fb6b7f3c2ec7dd980d",
+        "contextSha256": "6ed444054d6bb1a53b70f4bd23bd41ec1e084abe60b46e8c8271c19cdfb97bf8",
+        "modelDigest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+        "modelMetadataSha256": "2a3b5178bccd9e1fd2d7e0e2ca972d5273065056556998e6dd1ca60d0deafd40",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 8472
+      },
+      "guardAccepted": true,
+      "durationMs": 8473,
+      "loadedModelSample": [
+        {
+          "name": "qwen2.5:7b",
+          "size": 5148633988,
+          "size_vram": 5148633988,
+          "context_length": 8192
+        }
+      ]
+    },
+    {
+      "id": "mobile-layout-styles",
+      "value": {
+        "summary": "Die Messung zeigt, dass das mobile Menü 696 px breit ist, was den 390 px breiten Layoutansicht überschreitet. Dies könnte zu unbeabsichtigtem horizontalem Scrollen führen.",
+        "solutions": [
+          {
+            "findingId": "fixture-layout",
+            "evidenceRefs": [
+              "finding:fixture-layout"
+            ],
+            "relevance": "Die Breite des Menüs muss angepasst werden, um den Layoutansichtsrand nicht zu überschreiten.",
+            "alternatives": [
+              "Menü-Elemente in eine Dropdown-Struktur umwandeln, um die Breite zu reduzieren.",
+              "Nur häufig genutzte Menü-Optionen im Hauptmenü anbieten, andere in einem Unter-Menü verstecken."
+            ],
+            "missingInformation": [
+              "Die genaue Breite der wichtigsten Menü-Elemente."
+            ],
+            "explanation": "Das Menü ist 680 px breit, was den 390 px breiten Layoutansicht überschreitet. Dies könnte zu unbeabsichtigtem horizontalem Scrollen führen.",
+            "cause": "Die Breite des Menüs ist größer als die Breite des Layoutansichts.",
+            "steps": [
+              "Prüfen Sie die Breite der wichtigsten Menü-Elemente.",
+              "Reduzieren Sie die Breite des Menüs, wenn nötig.",
+              "Testen Sie den Menü-Zustand bei 390 px breiter Layoutansicht.",
+              "Überprüfen Sie, ob unbeabsichtigtes horizontales Scrollen auftritt."
+            ],
+            "code": {
+              "language": "css",
+              "text": ".menu-item { width: 150px; }"
+            },
+            "acceptance": "Nach Änderung denselben freigegebenen Menü-Zustand bei 390 px prüfen; kein unbeabsichtigtes horizontales Scrollen.",
+            "uncertainty": "Die genaue Breite der Menü-Elemente ist nicht bekannt."
+          }
+        ]
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1190,
+        "generatedTokens": 478,
+        "promptVersion": "page-report-1.6.0",
+        "promptSha256": "857fd22412ea1b4536ae3040f065aef522cf669d6104c2d262a052b0d49819dd",
+        "contextSha256": "fc87d50648b7295a2c464417300f53818b1e6363b4ad7e784001d16cf75cedf7",
+        "modelDigest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+        "modelMetadataSha256": "2a3b5178bccd9e1fd2d7e0e2ca972d5273065056556998e6dd1ca60d0deafd40",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 10153
+      },
+      "guardAccepted": true,
+      "durationMs": 10153,
+      "loadedModelSample": [
+        {
+          "name": "qwen2.5:7b",
+          "size": 5148633988,
+          "size_vram": 5148633988,
+          "context_length": 8192
+        }
+      ]
+    },
+    {
+      "id": "unknown-only",
+      "value": {
+        "summary": "Die Fundstelle für die Performance-Messung ist nicht verfügbar. Der Messwert bleibt unbekannt.",
+        "solutions": []
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 890,
+        "generatedTokens": 36,
+        "promptVersion": "page-report-1.6.0",
+        "promptSha256": "a22363f1fffa88a569bf726b5be010d3d0991a573c64742b6c8ec94a5665a98f",
+        "contextSha256": "45f128c6ac146c56d45a88541eae2094e6f006d3e6b6d9302de5ac075e53c532",
+        "modelDigest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+        "modelMetadataSha256": "2a3b5178bccd9e1fd2d7e0e2ca972d5273065056556998e6dd1ca60d0deafd40",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 849
+      },
+      "guardAccepted": true,
+      "durationMs": 849,
+      "loadedModelSample": [
+        {
+          "name": "qwen2.5:7b",
+          "size": 5148633988,
+          "size_vram": 5148633988,
+          "context_length": 8192
+        }
+      ]
+    }
+  ],
+  "artifactMeaning": "Four owned synthetic inference inputs; guard acceptance is not factual accuracy.",
+  "reviewOrigin": "Coding-agent review, not independent human evaluation.",
+  "notes": [
+    "All four outputs passed structural guards. Accepted layout summary confuses 696 px scroll width with 680 px measured element width and suggests unobserved .menu-item CSS.",
+    "Accepted description replies contain vague SEO/search-relevance and click-rate benefits without observed outcome data. Do not treat these outputs as verified fixes."
+  ],
+  "weightLicense": {
+    "name": "Apache-2.0",
+    "source": "https://ollama.com/library/qwen2.5:7b"
+  }
+}

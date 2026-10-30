@@ -159,7 +159,7 @@ export function Report({
       )}
       <p className="report-meta">
         Scan {scan.id.slice(0, 8)} · {stamp(scan.createdAt)} ·{" "}
-        {report?.pages.length ?? 1} Seitenansichten · Regeln{" "}
+        {report?.pages.length ?? 1} Seiten-/Zustandsansichten · Regeln{" "}
         {report?.ruleVersion ?? "legacy"} · Chromium{" "}
         {report?.browserVersion ?? "nicht dokumentiert"}
       </p>
@@ -404,6 +404,18 @@ export function Report({
                       <dt>Abnahmekriterium</dt>
                       <dd>{finding.acceptance}</dd>
                     </dl>
+                    {finding.elementContext && (
+                      <details className="solution-references">
+                        <summary>Gemessener DOM-/Style-Kontext</summary>
+                        <p>
+                          Begrenzte berechnete Styles und Geometrie, keine
+                          Quellcodezuordnung und kein Ursachenbeweis.
+                        </p>
+                        <pre>
+                          {JSON.stringify(finding.elementContext, null, 2)}
+                        </pre>
+                      </details>
+                    )}
                     <details>
                       <summary>Fundstelle und technische Details</summary>
                       <dl>

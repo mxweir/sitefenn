@@ -105,6 +105,7 @@ export default function App() {
   const [screen, setScreen] = useState<"projects" | "system">("projects");
   const [tab, setTab] = useState<Tab>("overview");
   const [busy, setBusy] = useState("");
+  const [analysisFocus, setAnalysisFocus] = useState<string>();
   const [analysisPage, setAnalysisPage] = useState<string>();
   const [reportFinding, setReportFinding] = useState<string>();
   const addButton = useRef<HTMLButtonElement>(null);
@@ -218,6 +219,7 @@ export default function App() {
   };
   const explain = (finding?: Finding, pageUrl?: string) => {
     setAnalysisPage(finding?.pageUrl ?? pageUrl);
+    setAnalysisFocus(finding?.id);
     setScreen("projects");
     setTab("analysis");
   };
@@ -819,6 +821,7 @@ export default function App() {
                           key={selectedScan?.id}
                           scan={selectedScan}
                           requestedPage={analysisPage}
+                          requestedFocusId={analysisFocus}
                           legacyPlan={detail?.aiPlan}
                           settings={data.settings}
                           speechAvailable={!!data.speechAvailable}

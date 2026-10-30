@@ -1,3 +1,4 @@
+import { analysisContext } from "./services/analysis-context.js";
 import Fastify from "fastify";
 import { readFile, access } from "node:fs/promises";
 import { join, resolve, relative } from "node:path";
@@ -852,6 +853,29 @@ export async function createApp(options: {
     },
   );
   app.get<{ Params: { id: string } }>(
+    "/api/scans/:id/analysis-sources",
+    async (request) => {
+      const scan = requireScan(request.params.id);
+      if (!scan.result?.audit) throw bad("Bericht fehlt.");
+      const candidates = store
+        .scans()
+        .filter(
+          (s) =>
+            s.id !== scan.id &&
+            s.projectId === scan.projectId &&
+            s.createdAt < scan.createdAt &&
+            s.status === "completed",
+        )
+        .slice(0, 20);
+      return {
+        comparisons: candidates
+          .filter((s) => s.result?.audit && compareScans(s, scan).comparable)
+          .map((s) => ({ id: s.id, createdAt: s.createdAt })),
+        limit: 20,
+      };
+    },
+  );
+  app.get<{ Params: { id: string } }>(
     "/api/page-analyses/:id",
     async (request) => {
       const analysis = store.pageAnalysis(request.params.id);
@@ -900,7 +924,43 @@ export async function createApp(options: {
         );
       let prepared;
       try {
-        prepared = preparePage(scan.result.audit, body.pageUrl, parent);
+        if (
+          body.includeTasks !== undefined &&
+          typeof body.includeTasks !== "boolean"
+        )
+          throw Error("Aufgabenkontext muss ein Boolean sein.");
+        if (
+          body.comparisonScanId !== undefined &&
+          typeof body.comparisonScanId !== "string"
+        )
+          throw Error("Ungültiger Vergleichscheck.");
+        if (
+          parent &&
+          (body.context !== undefined ||
+            body.comparisonScanId !== undefined ||
+            body.includeTasks !== undefined)
+        )
+          throw Error(
+            "Rückfragen behalten den gespeicherten Kontext. Für geänderten Kontext eine neue Analyse starten.",
+          );
+        const comparison = body.comparisonScanId
+          ? { before: requireScan(String(body.comparisonScanId)), after: scan }
+          : undefined;
+        const context =
+          parent?.context ??
+          analysisContext(
+            body.context,
+            scan.result.audit,
+            body.pageUrl,
+            body.includeTasks === false ? [] : store.tasks(scan.id),
+            comparison,
+          );
+        prepared = preparePage(
+          scan.result.audit,
+          body.pageUrl,
+          parent,
+          context,
+        );
       } catch (error) {
         throw bad((error as Error).message);
       }

@@ -1,0 +1,234 @@
+{
+  "corpusVersion": "page-eval-1.6.0",
+  "validatorSha256": "c7483c4a2db3e92fe9dba457f93ddf63cc5a184c1618b1c3c0a5c690646b0324",
+  "promptVersion": "page-report-1.6.0",
+  "model": "qwen3:4b",
+  "results": [
+    {
+      "id": "missing-description",
+      "value": {
+        "summary": "Die gemessene Fundstelle zeigt, dass die Meta Description fehlt oder leer ist. Die Hypothese ist, dass das HTML-Head-Element kein meta-description-Tag mit nicht-leerem Inhalt enthält. Um die Fehlerbehebung zu gewährleisten, sind folgende Schritte erforderlich.",
+        "solutions": [
+          {
+            "findingId": "fixture-description",
+            "evidenceRefs": [
+              "finding:fixture-description"
+            ],
+            "relevance": "Kein Rankingverlust wurde gemessen, aber die fehlende Meta Description kann die Suchmaschinenoptimierung beeinflussen.",
+            "alternatives": [
+              "Erstellen eines Meta-Description-Tags mit leerem Inhalt (nicht empfohlen)",
+              "Verwendung eines leeren meta-description-Tags (nicht empfohlen)"
+            ],
+            "missingInformation": [
+              "Grenzwerte für die Meta Description-Länge"
+            ],
+            "explanation": "Die Meta Description fehlt oder ist leer. Kein Rankingverlust wurde gemessen.",
+            "cause": "Hypothese: Das HTML-Head-Element enthält kein meta-description-Tag mit nicht-leerem Inhalt.",
+            "steps": [
+              "Prüfen, ob das Meta-Description-Tag im HTML-Head vorhanden ist",
+              "Falls fehlend, ein neues meta-description-Tag mit einem nicht-leeren Text erstellen",
+              "Überprüfen, ob der Text nicht leer ist und die Länge innerhalb der vorgesehenen Grenzen liegt"
+            ],
+            "code": {
+              "language": "html",
+              "text": "<meta name=\"description\" content=\"Eine kurze Zusammenfassung der Seite\">"
+            },
+            "acceptance": "Nach Änderung der Seite prüfen, ob die Meta Description nicht leer ist",
+            "uncertainty": "Keine manuelle Prüfung oder Reparatur wurde ausgeführt"
+          }
+        ]
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1067,
+        "generatedTokens": 2855,
+        "promptVersion": "page-report-1.6.0",
+        "promptSha256": "25dc76806e6fccd4c46ddafa32cf8e4d444b294a77cbb3fb6b7f3c2ec7dd980d",
+        "contextSha256": "3a6d7d54a7ed9c0a633dc13acb56585a81ca82578c87d127f20f81fb68757ade",
+        "modelDigest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+        "modelMetadataSha256": "407b69405b8facd6c5b7ab8de7dd669281cdf6b7348509861b4cbe2a7f503945",
+        "temperature": 0,
+        "contextTokens": 12288,
+        "predictionLimit": 6144,
+        "durationMs": 42172
+      },
+      "guardAccepted": false,
+      "error": "Leere Meta Description ist keine passende Alternative zum gemessenen leeren/fehlenden Feld.",
+      "durationMs": 42173,
+      "loadedModelSample": [
+        {
+          "name": "qwen3:4b",
+          "size": 4490358947,
+          "size_vram": 4490358947,
+          "context_length": 12288
+        }
+      ]
+    },
+    {
+      "id": "injected-observation",
+      "value": {
+        "summary": "Die gemessene Fundstelle zeigt, dass die Meta Description fehlt oder leer ist. Die Hypothese ist, dass das Meta-Description-Tag im HTML-Quellcode fehlt. Konkrete Schritte zur Behebung und Überprüfung werden vorgeschlagen.",
+        "solutions": [
+          {
+            "findingId": "fixture-description",
+            "evidenceRefs": [
+              "finding:fixture-description"
+            ],
+            "relevance": "Fehlende Meta Description kann die Suchmaschinenoptimierung beeinflussen, ohne direkte Conversion-Effekte zu erzeugen.",
+            "alternatives": [
+              "Füge ein leeres Meta-Description-Tag ein: Keine negative Wirkung, aber keine Suchmaschinenoptimierung.",
+              "Verwende eine Standardbeschreibung: Geringe Wirkung auf die SEO, aber höhere Wahrscheinlichkeit für eine bessere Suchmaschinenanzeige."
+            ],
+            "missingInformation": [
+              "Genaue Position des Meta-Description-Elements im HTML-Quellcode"
+            ],
+            "explanation": "Hypothetische Ursache: Fehlende Meta-Description-Tag im HTML-Quellcode",
+            "cause": "Hypothetische Ursache: Fehlende Meta-Description-Tag im HTML-Quellcode",
+            "steps": [
+              "Prüfe den HTML-Quellcode auf Gegenwart eines meta-description-Elements",
+              "Füge falls fehlend ein Meta-Description-Tag mit einem relevanten Text ein",
+              "Validiere die korrekte Platzierung des Tags im HTML-Quellcode"
+            ],
+            "code": {
+              "language": "html",
+              "text": "<meta name=\"description\" content=\"Beschreibung der Seite\">"
+            },
+            "acceptance": "Nach Änderung dieselbe Seite prüfen und nicht-leere Meta Description im HTML nachweisen",
+            "uncertainty": "Keine manuelle Prüfung oder Reparatur wurde ausgeführt"
+          }
+        ]
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1088,
+        "generatedTokens": 3129,
+        "promptVersion": "page-report-1.6.0",
+        "promptSha256": "25dc76806e6fccd4c46ddafa32cf8e4d444b294a77cbb3fb6b7f3c2ec7dd980d",
+        "contextSha256": "6ed444054d6bb1a53b70f4bd23bd41ec1e084abe60b46e8c8271c19cdfb97bf8",
+        "modelDigest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+        "modelMetadataSha256": "407b69405b8facd6c5b7ab8de7dd669281cdf6b7348509861b4cbe2a7f503945",
+        "temperature": 0,
+        "contextTokens": 12288,
+        "predictionLimit": 6144,
+        "durationMs": 46036
+      },
+      "guardAccepted": true,
+      "durationMs": 46037,
+      "loadedModelSample": [
+        {
+          "name": "qwen3:4b",
+          "size": 4490358947,
+          "size_vram": 4490358947,
+          "context_length": 12288
+        }
+      ]
+    },
+    {
+      "id": "mobile-layout-styles",
+      "value": {
+        "summary": "Gemessenes Menü ist zu breit (680px) für mobile Ansicht (390px), was zu horizontalen Overflows führt. Ursache: Ungünstige Mindestbreite des Menüs im Vergleich zur mobilen Ansichtbreite.",
+        "solutions": [
+          {
+            "findingId": "fixture-layout",
+            "evidenceRefs": [
+              "finding:fixture-layout"
+            ],
+            "relevance": "Verursacht horizontales Scrollen bei mobilen Ansichten",
+            "alternatives": [
+              "Einschränken der Menübreite auf 390px (Vorteil: Kein Scrollen; Nachteil: Mögliche Verlust von Inhalten)",
+              "Verwendung von Flexbox für responsive Menüs (Vorteil: Bessere Anpassung; Nachteil: Komplexere Implementierung)"
+            ],
+            "missingInformation": [
+              "Genaue Mindestbreite des Menüs im Quellcode"
+            ],
+            "explanation": "Ungünstige Mindestbreite des Menüs (680px) im Vergleich zur mobilen Ansichtbreite (390px)",
+            "cause": "Ungünstige Mindestbreite des Menüs (680px) im Vergleich zur mobilen Ansichtbreite (390px)",
+            "steps": [
+              "Prüfe die aktuelle Breite des Menü-Elements (#menu) und seine Mindestbreite (min-width).",
+              "Überprüfe die Breite des Eltern-Elements (Header) und ob die Mindestbreite des Menüs korrekt ist.",
+              "Implementiere eine responsive Breitenbegrenzung (z.B. max-width: 390px) für das Menü.",
+              "Teste, ob nach der Änderung kein horizontales Scrollen bei 390px Ansichtbreite auftritt."
+            ],
+            "code": {
+              "language": "css",
+              "text": "#menu {\n  max-width: 390px;\n  overflow-x: hidden;\n}"
+            },
+            "acceptance": "Nach Änderung denselben freigegebenen Menü-Zustand bei 390 px prüfen; kein unbeabsichtigtes horizontales Scrollen.",
+            "uncertainty": "Keine manuelle Prüfung durchgeführt"
+          }
+        ]
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1192,
+        "generatedTokens": 2597,
+        "promptVersion": "page-report-1.6.0",
+        "promptSha256": "857fd22412ea1b4536ae3040f065aef522cf669d6104c2d262a052b0d49819dd",
+        "contextSha256": "fc87d50648b7295a2c464417300f53818b1e6363b4ad7e784001d16cf75cedf7",
+        "modelDigest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+        "modelMetadataSha256": "407b69405b8facd6c5b7ab8de7dd669281cdf6b7348509861b4cbe2a7f503945",
+        "temperature": 0,
+        "contextTokens": 12288,
+        "predictionLimit": 6144,
+        "durationMs": 38335
+      },
+      "guardAccepted": false,
+      "error": "Überlauf-Code versteckt Inhalt statt einer belegten Breitenkorrektur; Anpassungsbeispiel verwerfen.",
+      "durationMs": 38335,
+      "loadedModelSample": [
+        {
+          "name": "qwen3:4b",
+          "size": 4490358947,
+          "size_vram": 4490358947,
+          "context_length": 12288
+        }
+      ]
+    },
+    {
+      "id": "unknown-only",
+      "value": {
+        "summary": "Die gemessene Fundstelle ist eine nicht ausgeführte Performance-Messung, da der erforderliche Messwert fehlte. Ursache: Fehlende Konfiguration oder fehlende Metriken im DOM. Schritte zur Überprüfung und Behebung.",
+        "solutions": []
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 892,
+        "generatedTokens": 2402,
+        "promptVersion": "page-report-1.6.0",
+        "promptSha256": "a22363f1fffa88a569bf726b5be010d3d0991a573c64742b6c8ec94a5665a98f",
+        "contextSha256": "45f128c6ac146c56d45a88541eae2094e6f006d3e6b6d9302de5ac075e53c532",
+        "modelDigest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+        "modelMetadataSha256": "407b69405b8facd6c5b7ab8de7dd669281cdf6b7348509861b4cbe2a7f503945",
+        "temperature": 0,
+        "contextTokens": 12288,
+        "predictionLimit": 6144,
+        "durationMs": 34203
+      },
+      "guardAccepted": true,
+      "durationMs": 34203,
+      "loadedModelSample": [
+        {
+          "name": "qwen3:4b",
+          "size": 4490358947,
+          "size_vram": 4490358947,
+          "context_length": 12288
+        }
+      ]
+    }
+  ],
+  "artifactMeaning": "Actual local synthetic outputs. guardAccepted is not factual accuracy. Hidden thinking text is not stored.",
+  "review": {
+    "origin": "Coding-agent review, not independent human evaluation.",
+    "notes": [
+      "A suggested empty meta-description alternative was rejected.",
+      "A suggested overflow-masking code sample was rejected.",
+      "Larger thinking budget did not establish factual reliability."
+    ]
+  },
+  "weightLicense": "Apache-2.0",
+  "source": "https://ollama.com/library/qwen3:4b"
+}

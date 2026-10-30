@@ -152,6 +152,11 @@ function report(count = 2): AuditReport {
 function solution(id: string) {
   return {
     findingId: id,
+    evidenceRefs: [`finding:${id}`],
+    relevance:
+      "Die beobachtete Fundstelle kann die Nutzung beeinflussen; Geschäftswirkung unbekannt.",
+    alternatives: [],
+    missingInformation: ["Quellcode ist nicht zugeordnet."],
     explanation: "Die Messung weist auf einen begrenzten Befund hin.",
     cause: "Vermutung: Die zugehörige Einstellung fehlt.",
     steps: [
@@ -169,6 +174,8 @@ function solution(id: string) {
 function fake(chats: Record<string, unknown>[] = []): typeof fetch {
   return (async (url, init) => {
     init?.signal?.throwIfAborted();
+    if (String(url).endsWith("/api/version"))
+      return Response.json({ version: "0.40.12" });
     if (String(url).endsWith("/api/show"))
       return Response.json({ model_info: { "general.architecture": "qwen" } });
     if (String(url).endsWith("/api/tags"))
@@ -208,8 +215,8 @@ test("page context includes all page data, passes, unknowns and numeric findings
   assert.ok(!prepared.units.some((unit) => unit.id === "finding:foreign"));
   assert.ok(!JSON.stringify(prepared.units).includes("private.png"));
   assert.deepEqual(
-    prepared.chunks.flat().map((unit) => unit.id),
-    prepared.units.map((unit) => unit.id),
+    [...new Set(prepared.chunks.flat().map((unit) => unit.id))].sort(),
+    prepared.units.map((unit) => unit.id).sort(),
   );
   assert.throws(() => preparePage(r, "https://foreign.test/"), /gehört nicht/);
 });
@@ -320,7 +327,7 @@ test("one correction attempt can recover invalid output and never retries indefi
   );
   assert.equal(job.status, "completed");
   assert.equal(job.parts[0]?.attempts, 2);
-  assert.equal(calls, prepared.chunks.length + 1);
+  assert.equal(calls, prepared.chunks.length + 2);
 });
 test("known semantic contradictions fail validation without changing source facts", () => {
   const counts = { findings: 1, unknownRules: 1 };
@@ -471,11 +478,44 @@ test("real API job persistence, scoped export and adoption reuse the determinist
       ).statusCode,
       400,
     );
+    assert.equal(
+      (
+        await app.inject({
+          url: `/api/scans/${scan.id}/analysis-sources`,
+          headers,
+        })
+      ).json().limit,
+      20,
+    );
+    for (const fields of [
+      { context: { purpose: "x".repeat(501) } },
+      { context: { focusFindingId: "foreign" } },
+      { includeTasks: "yes" },
+    ])
+      assert.equal(
+        (
+          await app.inject({
+            method: "POST",
+            url: `/api/scans/${scan.id}/page-analyses`,
+            headers,
+            payload: { pageUrl: URL_PAGE, model: "local:test", ...fields },
+          })
+        ).statusCode,
+        400,
+      );
     const started = await app.inject({
       method: "POST",
       url: `/api/scans/${scan.id}/page-analyses`,
       headers,
-      payload: { pageUrl: URL_PAGE, model: "local:test" },
+      payload: {
+        pageUrl: URL_PAGE,
+        model: "local:test",
+        context: {
+          purpose: "Klarheit",
+          goal: "Information finden",
+          focusFindingId: "f0",
+        },
+      },
     });
     assert.equal(started.statusCode, 202);
     const id = started.json().analysis.id;
@@ -486,6 +526,23 @@ test("real API job persistence, scoped export and adoption reuse the determinist
       await new Promise((done) => setTimeout(done, 5));
     }
     assert.equal(store.pageAnalysis(id)?.status, "completed");
+    assert.equal(store.pageAnalysis(id)?.context?.purpose, "Klarheit");
+    assert.equal(
+      (
+        await app.inject({
+          method: "POST",
+          url: `/api/scans/${scan.id}/page-analyses`,
+          headers,
+          payload: {
+            pageUrl: URL_PAGE,
+            model: "local:test",
+            parentId: id,
+            context: { purpose: "Geändert" },
+          },
+        })
+      ).statusCode,
+      400,
+    );
     const adopted = await app.inject({
       method: "POST",
       url: `/api/page-analyses/${id}/adopt`,
@@ -523,4 +580,51 @@ test("real API job persistence, scoped export and adoption reuse the determinist
     await app.close();
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+test("page inference refuses unverifiable truncation support, requests native no-truncation and records the provider/budget identity", async () => {
+  const prepared = preparePage(report(1), URL_PAGE);
+  let chats = 0;
+  const underlying = fake();
+  const old = (async (url, init) => {
+    if (String(url).endsWith("/api/version"))
+      return Response.json({ version: "0.39.0" });
+    if (String(url).endsWith("/api/chat")) chats++;
+    return underlying(url, init);
+  }) as typeof fetch;
+  const rejected = await runPageAnalysis(
+    newPageAnalysis("s", URL_PAGE, "local:test", "", prepared),
+    prepared,
+    () => {},
+    new AbortController().signal,
+    { fetch: old },
+  );
+  assert.equal(rejected.status, "failed");
+  assert.equal(chats, 0);
+  assert.ok(rejected.parts.every((p) => p.error?.includes("0.40.0")));
+  const checked = (async (url, init) => {
+    if (String(url).endsWith("/api/show"))
+      return Response.json({
+        model_info: { "general.architecture": "qwen" },
+        thinking: { values: [true] },
+      });
+    if (String(url).endsWith("/api/chat")) {
+      const body = JSON.parse(String(init?.body));
+      assert.equal(body.truncate, false);
+      assert.equal(body.shift, false);
+      assert.equal(body.options.num_ctx, 12288);
+      assert.equal(body.options.num_predict, 6144);
+    }
+    return underlying(url, init);
+  }) as typeof fetch;
+  const accepted = await runPageAnalysis(
+    newPageAnalysis("s", URL_PAGE, "local:test", "", prepared),
+    prepared,
+    () => {},
+    new AbortController().signal,
+    { fetch: checked },
+  );
+  assert.equal(accepted.status, "completed");
+  assert.equal(accepted.parts[0]?.provenance?.truncation, "disabled");
+  assert.equal(accepted.parts[0]?.provenance?.providerVersion, "0.40.12");
 });

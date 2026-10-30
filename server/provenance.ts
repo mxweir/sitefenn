@@ -23,6 +23,7 @@ export function auditProvenance(): Promise<AuditProvenance> {
       "services/sitemap",
       "services/journeys",
       "services/journey-options",
+      "services/element-context",
       "../shared/journeys",
     ];
     const sources = await Promise.all(

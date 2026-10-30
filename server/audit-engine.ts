@@ -1,3 +1,4 @@
+import { addElementContexts } from "./services/element-context.js";
 import {
   chromium,
   type Browser,
@@ -98,7 +99,7 @@ export async function closeAuditResources() {
   activeChrome.clear();
   activeProxies.clear();
 }
-export const RULE_VERSION = "rules-1.5.0";
+export const RULE_VERSION = "rules-1.6.0";
 export const PROFILE_VERSION = "responsive-1.0.0";
 const digest = (text: string) =>
   createHash("sha256").update(text).digest("hex").slice(0, 24);
@@ -1595,6 +1596,14 @@ export async function runAudit(
                 }
               }
             }
+            if (measure)
+              await addElementContexts(
+                page,
+                report.findings.filter((f) => f.evidenceId === evidenceId),
+                report.findings.filter(
+                  (f) => f.elementContext?.status === "captured",
+                ).length,
+              );
             const matching = report.findings.filter(
               (item) => item.evidenceId === evidenceId && item.rect,
             );

@@ -140,6 +140,13 @@ const analysis: PageAnalysis = {
       solutions: [
         {
           findingId: finding.id,
+          evidenceRefs: [`finding:${finding.id}`],
+          relevance:
+            "Ein passender Titel kann Orientierung geben; Geschäftswirkung unbekannt.",
+          alternatives: [
+            "Titel im CMS pflegen: redaktionell einfach, Einbauort unbekannt.",
+          ],
+          missingInformation: ["Das verwendete CMS ist nicht zugeordnet."],
           explanation: finding.detail,
           cause: "Vermutlich fehlt die Titelkonfiguration.",
           steps: [
@@ -151,6 +158,12 @@ const analysis: PageAnalysis = {
           uncertainty: "Kein Quellcode angebunden.",
         },
       ],
+    },
+  ],
+  sources: [
+    {
+      id: `finding:${finding.id}`,
+      excerpt: JSON.stringify({ observation: finding.detail }),
     },
   ],
   totalUnits: 1,
@@ -273,6 +286,11 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
         scan: state.scans.find((s) => s.id === pathname.split("/").pop()),
         score,
         tasks: state.tasks,
+      });
+    if (pathname === `/api/scans/${scan.id}/analysis-sources`)
+      return json({
+        comparisons: [{ id: "previous-compatible", createdAt: scan.createdAt }],
+        limit: 20,
       });
     if (pathname === `/api/scans/${scan.id}/page-analyses`) {
       if (request.method() === "GET") return json({ analyses: state.analyses });
@@ -1066,6 +1084,72 @@ test("page-state evidence separates reached expectations from unknown/skipped st
   ).toBeVisible();
   await expect(
     page.getByText("Erwartung nicht bestätigt.", { exact: true }),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    390,
+  );
+});
+
+test("analysis intent is explicit and grounded proposals show known evidence, alternatives and missing information", async ({
+  page,
+}) => {
+  const state = await mockWorkspace(page);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "System & Setup", exact: true })
+    .click();
+  await page.getByLabel("Installiertes Modell").selectOption("local-test:8b");
+  await page
+    .getByRole("button", { name: "Einstellungen speichern", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Websites 1", exact: true }).click();
+
+  await page
+    .getByRole("button", { name: "Seite erklären", exact: true })
+    .click();
+  await page.getByText("Analyse ausrichten", { exact: true }).click();
+  await page
+    .getByLabel("Seitenzweck (optional)", { exact: true })
+    .fill("Leistungen darstellen");
+  await page
+    .getByLabel("Nutzerziel (optional)", { exact: true })
+    .fill("Kontakt aufnehmen");
+  await page
+    .getByLabel("Zielgruppe (optional)", { exact: true })
+    .fill("Kleine Unternehmen");
+  await page
+    .getByLabel("Kompatibler früherer Check", { exact: true })
+    .selectOption("previous-compatible");
+  await page
+    .getByRole("button", { name: "Seite lokal analysieren", exact: true })
+    .click();
+  await expect
+    .poll(() => state.analysisRequest)
+    .toMatchObject({
+      context: {
+        purpose: "Leistungen darstellen",
+        goal: "Kontakt aufnehmen",
+        audience: "Kleine Unternehmen",
+      },
+      comparisonScanId: "previous-compatible",
+      includeTasks: true,
+    });
+  await expect(
+    page.getByRole("heading", { name: "Noch zu klären", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Alternativen abwägen", exact: true }),
+  ).toBeVisible();
+  await page.getByText("Belegverweise ansehen (1)", { exact: true }).click();
+  await expect(
+    page.getByText(`finding:${finding.id}`, { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "IDs stammen aus dem übergebenen Kontext. Das bestätigt keine semantische Richtigkeit der Erklärung.",
+      { exact: true },
+    ),
   ).toBeVisible();
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(

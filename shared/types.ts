@@ -154,7 +154,23 @@ export interface Evidence {
   state: string;
   capturedAt: string;
 }
+export interface ElementContext {
+  version: "element-context-1.6";
+  status: "captured" | "unavailable";
+  reason?: string;
+  tag?: string;
+  styles?: Record<string, string>;
+  rect?: Rect;
+  dimensions?: {
+    clientWidth: number;
+    scrollWidth: number;
+    clientHeight: number;
+    scrollHeight: number;
+  };
+  parent?: { tag: string; styles: Record<string, string> };
+}
 export interface Finding {
+  elementContext?: ElementContext;
   id: string;
   fingerprint: string;
   ruleId: string;
@@ -346,6 +362,10 @@ export interface AiRecommendation {
 }
 export interface AiPlan {
   provenance?: {
+    providerVersion?: string;
+    truncation?: "disabled";
+    promptEvalCount?: number;
+    generatedTokens?: number;
     promptVersion: string;
     promptSha256: string;
     contextSha256: string;
@@ -367,7 +387,24 @@ export interface HubSettings {
   model: string;
   speechEnabled: boolean;
 }
+export interface AnalysisContext {
+  omissions?: string[];
+  purpose?: string;
+  goal?: string;
+  audience?: string;
+  focusFindingId?: string;
+  tasks?: { id: string; title: string; status: string; findingIds: string[] }[];
+  comparison?: {
+    scanId: string;
+    finishedAt: string;
+    entries: ComparisonEntry[];
+  };
+}
 export interface PageSolution {
+  evidenceRefs?: string[];
+  relevance?: string;
+  alternatives?: string[];
+  missingInformation?: string[];
   findingId: string;
   explanation: string;
   cause: string;
@@ -388,6 +425,9 @@ export interface AnalysisPart {
   provenance?: AiPlan["provenance"];
 }
 export interface PageAnalysis {
+  contractVersion?: string;
+  context?: AnalysisContext;
+  sources?: { id: string; excerpt: string; truncated?: boolean }[];
   kind: "page-analysis";
   id: string;
   scanId: string;

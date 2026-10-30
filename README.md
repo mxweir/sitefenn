@@ -8,21 +8,30 @@ Manage websites you own, inspect desktop/tablet/mobile layouts, collect evidence
 
 The repository and package are now **`sitefenn`**. Existing data stays in the legacy `website-audit-hub` directory so the rename does not reset your projects. Name/domain clearance is still pending.
 
-![SiteFenn 1.5 checks the explicitly opened mobile menu](docs/screenshots/1.5-menu-check.jpg)
+![SiteFenn 1.6 measured element context beside original evidence](docs/screenshots/1.6-element-context.jpg)
 
 _Actual application, owned synthetic demo. Missing measurements remain unknown._
 
-[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.5.md) · [Changelog](CHANGELOG.md)
+[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.6.md) · [Changelog](CHANGELOG.md)
 
-## What's new in 1.5
+## What's new in 1.6
 
-**Check the opened state, too.** Define and explicitly approve a short page recipe: open a menu, expand an accordion, reveal a dialog or scroll to a chosen position. Every step names its expected result and gets before/after evidence when capture is possible. Layout and automated accessibility checks run on confirmed resulting states.
+**Give Fenn better evidence, and keep its limits visible.** New scans capture bounded computed styles and geometry for uniquely observed elements. Page explanations keep each finding with its related rules/evidence/state, accept optional page purpose/user goal/audience, and can include existing task snapshots and a compatible earlier check.
 
-The new **Seitenzustände** area keeps reached expectations separate from audit-rule outcomes. Missing targets, blocked requests, unexpected navigation and timeouts stay unknown. Retesting a state finding repeats its approved recipe; changed or unconfirmed states cannot establish a verified fix or numeric image comparison.
+New proposals show known evidence references, possible relevance, hypotheses, concrete steps, optional alternatives, missing information and an illustrative code example. A known reference is **not proof that the explanation is true**. Targeted guards reject several observed contradictions; unknown, rejected and omitted records remain explicit.
 
-1.5 also corrects mobile overflow measurement when an overwide element expands `innerWidth`. Existing [technical SEO context](docs/RELEASE-1.4.md), [visual references/retests](docs/RELEASE-1.3.md) and the optional [page assistant](docs/RELEASE-1.2.md) remain available. Local model advice is still unverified.
+The page-analysis path requires **Ollama 0.40.0+** and disables native prompt truncation/context shifting. Oversized provider context fails visibly. The published [1.6 evaluation](docs/EVALUATION-1.6.md) separates contract fixtures, real local-model output and remaining factual errors. Models stay optional; canonical reports/tasks work without them.
 
-[Verification, supported controls and budgets](docs/RELEASE-1.5.md) · [Actual state report](docs/screenshots/1.5-state-evidence.jpg)
+[Release checks and budgets](docs/RELEASE-1.6.md) · [Versioned test corpus](tests/fixtures/page-eval-1.6.json)
+
+<details>
+<summary>Actual 1.6 page interpretation and mobile evidence</summary>
+
+![Actual completed processing, still unverified](docs/screenshots/1.6-page-analysis.jpg)
+![Actual partial-result handling](docs/screenshots/1.6-partial-analysis.jpg)
+![Actual 390 px evidence view](docs/screenshots/1.6-mobile.jpg)
+
+</details>
 
 ## The workflow
 
@@ -53,6 +62,16 @@ The built-in demo is an authorized fixture for trying the workflow without an ex
 ![Actual SiteFenn page-analysis workspace](docs/screenshots/1.2-page-analysis.jpg)
 
 </details>
+
+## Explain a page with evidence
+
+In **Seite erklären → Analyse ausrichten**, optionally add the page's purpose, the user's goal and audience. Include the existing task snapshot and choose a compatible earlier full check when useful. **Diesen Befund erklären** sets that finding as the first analysis focus while retaining the rest of the page report.
+
+Each explanation is displayed beside the canonical observation and its future acceptance criterion. Open **Belegverweise ansehen** for the referenced record excerpt, and inspect the original evidence/DOM measurements. References are checked against the transmitted records; causes, code and business impact remain unverified proposals. **Noch zu klären** makes missing source/context explicit.
+
+New element context includes allowlisted computed styles, dimensions and immediate-parent styles. No raw HTML, page text, input values, arbitrary DOM attributes or screenshot images are added to this context. Selectors and other original report strings can still contain private content; review exports before sharing. Ambiguous or capped element context is marked unavailable rather than guessed.
+
+A large report is split into bounded parts, with omissions listed. Page analyses never replace measurements or the score. Follow-ups retain the saved measurement/intent/task/comparison snapshot. Adopting a reviewed proposal annotates the existing task, keeps it open and avoids duplicates. A new compatible rule-based retest is still needed to verify a fix.
 
 ## Approved page states
 
@@ -170,7 +189,7 @@ ollama pull qwen2.5:3b
 
 The 3B model uses the **Qwen Research License, not this app's MIT license or Apache 2.0**; read the [official model information and license](https://ollama.com/library/qwen2.5:3b). Model weights are not bundled with SiteFenn.
 
-On 2026-10-29, the multi-part page-report test on an M5 Pro/24 GiB exposed contradictory summaries and unsuitable retest criteria from this 3B model. Targeted guards rejected such parts. Correctly shaped JSON and known finding IDs **do not prove factual correctness**. The tested `qwen3:4b` thinking-only variant previously failed its structured-output budget; it is not an established replacement. Model quality needs further evaluation.
+The 1.2 tests exposed factual contradictions from the 3B model; 1.6 adds explicit style context, known references, narrower inference packets and targeted regression guards. Real small-model failures remain published in the [1.6 evaluation](docs/EVALUATION-1.6.md). Guard acceptance, valid JSON and model availability do not establish factual reliability. Weights are not bundled with SiteFenn. The Qwen3 4B variant used here is thinking-only; its larger bounded page-inference profile is recorded in provenance.
 
 - Fixed endpoint: `http://127.0.0.1:11434`.
 - Local-backing metadata is checked before sharing observations; remote-backed aliases, cloud tags and unverifiable locality are rejected.
@@ -179,9 +198,10 @@ On 2026-10-29, the multi-part page-report test on an M5 Pro/24 GiB exposed contr
 - Each part has a bounded provider request, schema/reference checks and one correction attempt for invalid output. The overall job has a ten-minute limit. Failed parts remain visible; there is no cloud fallback or canned replacement answer.
 - Progress and accepted partial answers persist. A restart marks unfinished analyses interrupted; run a new analysis to complete them. Follow-ups stay bound to the same scan/page/context hash.
 - Proposals stay unverified. Adopting one annotates an existing task, does not execute code or mark it fixed, and does not change scores. Historical verified tasks are preserved.
+- Contract regressions: `npm run test:ai-contract` (no model required). Optional real-model comparison: `npm run test:ai-contract -- --model <installed-tag>`; raw synthetic outputs stay in ignored `.local-data/`.
 - Optional real-model smoke: `npm run test:page-ai-local`. It exits unsuccessfully for partial/failed output and leaves private diagnostics in ignored `.local-data/`. This is separate from deterministic CI tests using a mocked provider.
 
-The integration is text-based; screenshot vision analysis is not implemented. Thinking-only models can require much larger inference budgets and may fail validation within the bounded request. Do not interpret model availability as a quality benchmark.
+The page-analysis path needs Ollama 0.40.0+ for explicit no-truncation/no-shift requests; old or unverifiable versions fail before report transmission. The integration is text-based; screenshot vision analysis is not implemented. Thinking-only models can require much larger inference budgets and may fail validation within the bounded request. Do not interpret model availability as a quality benchmark.
 
 On macOS, selected text can be read through system `say` using Anna after explicit activation. The voice must be available on your system. Speech is off by default and can be stopped; this is not a cloud voice service. Other platforms currently lack this integration.
 

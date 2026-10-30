@@ -12,6 +12,8 @@ Fortschritt 1.4: Begrenzter Sitemap-Import, gerichteter Linkkontext mit HTTP-/Re
 
 Fortschritt 1.5: Freigegebene Startseiten-/UI-/Scroll-Abläufe, erwartete Zustände, Vorher-/Nachher-Nachweise und Zustands-Nachtests sind implementiert. Fehlende Ziele, Blockierungen, unerwartete URL-Wechsel und Zeitlimits bleiben unbekannt. Kontrollierte Menü-/Dialog-/Akkordeonfälle und die echte korrigierte Menüprüfung stehen in [RELEASE-1.5.md](docs/RELEASE-1.5.md). Unterstützung ist bewusst auf deklarierte native UI-Schalter begrenzt; keine authentisierten oder autonomen Mehrseitenabläufe.
 
+Fortschritt 1.6: Begrenzter gemessener DOM-/Style-Kontext, befundnahe Kontextteile, Analyseausrichtung, Aufgaben-/Vergleichs-Snapshots, bekannte Belegreferenzen, Alternativen und fehlende Informationen sind implementiert. Native Kontextkürzung/-verschiebung ist im neuen Seitenpfad deaktiviert; Teilfehler bleiben sichtbar. [EVALUATION-1.6.md](docs/EVALUATION-1.6.md) trennt synthetische Vertragsprüfungen von realen Modellantworten und deren sachlichen Fehlern. Kein eigener Trainingslauf, Screenshot-Vision oder allgemeiner Nachweis verlässlicher Modellqualität wird behauptet. Unabhängige Beschriftung und ein separates zurückgehaltenes Modell-Testset bleiben offen.
+
 ## Produktziel
 
 **SiteFenn hilft dir, Website-Probleme nachweisbar zu beheben und neue Fehler vor der Veröffentlichung zu erkennen.**

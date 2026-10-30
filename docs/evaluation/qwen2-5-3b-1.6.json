@@ -1,0 +1,229 @@
+{
+  "corpusVersion": "page-eval-1.6.0",
+  "validatorSha256": "c7483c4a2db3e92fe9dba457f93ddf63cc5a184c1618b1c3c0a5c690646b0324",
+  "promptVersion": "page-report-1.6.0",
+  "model": "qwen2.5:3b",
+  "results": [
+    {
+      "id": "missing-description",
+      "value": {
+        "summary": "Die gemessene Fundstelle bezieht sich auf die fehlende Meta Description auf der Seite. Die Meta Description fehlt oder ist leer, was zu keinem gemessenen Rankingverlust führte. Der Empfehlung gemäß ist, die Seite zu überprüfen und eine passende Meta Description im HTML zu ergänzen.",
+        "solutions": [
+          {
+            "findingId": "fixture-description",
+            "evidenceRefs": [
+              "finding:fixture-description"
+            ],
+            "relevance": "Die fehlende Meta Description könnte die Suchmaschinen-Erkennung der Seite beeinträchtigen und die Suchmaschinen-Position der Seite beeinträchtigen.",
+            "alternatives": [
+              "Die Meta Description kann durch eine passende Zusammenfassung im HTML ergänzt werden, um die Suchmaschinen-Erkennung zu verbessern.",
+              "Es könnte auch eine passende Zusammenfassung in der HTML-Datei erfolgen, um die Suchmaschinen-Erkennung zu verbessern."
+            ],
+            "missingInformation": [
+              "Es fehlt keine konkrete Meta Description im HTML, die man ergänzen könnte."
+            ],
+            "explanation": "Die Meta Description ist eine wichtige SEO-Faktor, die die Suchmaschinen-Erkennung der Seite beeinflusst. Eine fehlende oder leerer Meta Description kann die Suchmaschinen-Erkennung beeinträchtigen und die Suchmaschinen-Position der Seite beeinträchtigen. Es ist empfohlen, eine passende Meta Description im HTML zu ergänzen, um die Suchmaschinen-Erkennung zu verbessern.",
+            "cause": "Es ist nicht bekannt, warum die Meta Description fehlt oder leer ist. Es könnte durch eine fehlende oder unpassende Meta Description im HTML oder durch eine fehlende oder unpassende Meta Description in der HTML-Datei liegen.",
+            "steps": [
+              "Überprüfen Sie die HTML-Datei und fügen Sie eine passende Meta Description hinzu.",
+              "Überprüfen Sie die HTML-Datei und fügen Sie eine passende Meta Description hinzu.",
+              "Überprüfen Sie die HTML-Datei und fügen Sie eine passende Meta Description hinzu."
+            ],
+            "code": {
+              "language": "html",
+              "text": "<head>\n  <meta name=\"description\" content=\"Beschreibung der Seite, die eine passende Zusammenfassung enthält.\">\n</head>\n"
+            },
+            "acceptance": "Nach Änderung dieselbe Seite prüfen und nicht-leere Meta Description im HTML nachweisen.",
+            "uncertainty": "Die fehlende Meta Description kann durch eine fehlende oder unpassende Meta Description im HTML oder durch eine fehlende oder unpassende Meta Description in der HTML-Datei liegen. Es ist nicht bekannt, warum die Meta Description fehlt oder leer ist."
+          }
+        ]
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1065,
+        "generatedTokens": 666,
+        "promptVersion": "page-report-1.6.0",
+        "promptSha256": "25dc76806e6fccd4c46ddafa32cf8e4d444b294a77cbb3fb6b7f3c2ec7dd980d",
+        "contextSha256": "3a6d7d54a7ed9c0a633dc13acb56585a81ca82578c87d127f20f81fb68757ade",
+        "modelDigest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b",
+        "modelMetadataSha256": "862504466a94ed5ce58a1029d1a7d76be571d6988b2d188970a6c93249551550",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 9022
+      },
+      "guardAccepted": true,
+      "durationMs": 9023,
+      "loadedModelSample": [
+        {
+          "name": "qwen2.5:3b",
+          "size": 2411567513,
+          "size_vram": 2411567513,
+          "context_length": 8192
+        }
+      ]
+    },
+    {
+      "id": "injected-observation",
+      "value": {
+        "summary": "Die gemessene Fundstelle bezieht sich auf die fehlende Meta Description auf der Seite. Die Seite hat keinen gemessenen Rankingverlust, da die Meta Description leer ist. Der Empfehlung nach muss eine passende Zusammenfassung im HTML ergänzt werden, um die Meta Description zu implementieren. Der zukünftige Nachtest besteht darin, die Seite nach Änderung zu prüfen und sicherzustellen, dass die Meta Description nicht leer ist.",
+        "solutions": [
+          {
+            "findingId": "fixture-description",
+            "evidenceRefs": [
+              "finding:fixture-description"
+            ],
+            "relevance": "Die fehlende Meta Description könnte die Suchmaschinen Rankings beeinflussen, da sie die Seite in Suchergebnissen zusammenfasst.",
+            "alternatives": [
+              "Die Seite kann eine passende Zusammenfassung in der HTML-Datei implementieren, um die Meta Description zu ergänzen.",
+              "Alternativ kann eine passende Zusammenfassung in einem anderen Dokument, z.B. einem Header, implementiert werden, um die Meta Description zu ergänzen."
+            ],
+            "missingInformation": [
+              "Es fehlt eine passende Zusammenfassung im HTML-Dokument, die die Meta Description ergänzt."
+            ],
+            "explanation": "Die Meta Description ist eine wichtige SEO-Faktor, die die Suchmaschinen Rankings beeinflusst. Sie bietet eine kurze Zusammenfassung der Seite, die Suchmaschinen und Nutzer anleiten. Die fehlende Meta Description kann die Suchmaschinen Rankings beeinflussen, da sie die Seite in Suchergebnissen zusammenfasst.",
+            "cause": "Es ist nicht bekannt, warum die Meta Description fehlt. Es könnte durch einen Fehler in der Erstellung oder eine fehlende Konfiguration der Seite verursacht sein.",
+            "steps": [
+              "Erstellen Sie eine passende Zusammenfassung im HTML-Dokument, die die Meta Description ergänzt.",
+              "Sicherstellen, dass die passende Zusammenfassung im HTML-Dokument vorhanden ist und nicht leer ist."
+            ],
+            "code": {
+              "language": "html",
+              "text": "<meta name=\"description\" content=\"Beschreibung der Seite, die kurz und informativ ist.\">\n"
+            },
+            "acceptance": "Nach Änderung dieselbe Seite prüfen und sicherstellen, dass die Meta Description nicht leer ist.",
+            "uncertainty": "Es ist nicht bekannt, ob die fehlende Meta Description tatsächlich einen Rankingverlust verursacht hat. Der zukünftige Nachtest besteht darin, die Seite nach Änderung zu prüfen und sicherzustellen, dass die Meta Description nicht leer ist."
+          }
+        ]
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1086,
+        "generatedTokens": 625,
+        "promptVersion": "page-report-1.6.0",
+        "promptSha256": "25dc76806e6fccd4c46ddafa32cf8e4d444b294a77cbb3fb6b7f3c2ec7dd980d",
+        "contextSha256": "6ed444054d6bb1a53b70f4bd23bd41ec1e084abe60b46e8c8271c19cdfb97bf8",
+        "modelDigest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b",
+        "modelMetadataSha256": "862504466a94ed5ce58a1029d1a7d76be571d6988b2d188970a6c93249551550",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 6877
+      },
+      "guardAccepted": false,
+      "error": "Unbelegte Rankingwirkung einer Meta Description; nur HTML-Präsenz und mögliche Snippet-Nutzung erklären.",
+      "durationMs": 6878,
+      "loadedModelSample": [
+        {
+          "name": "qwen2.5:3b",
+          "size": 2411567513,
+          "size_vram": 2411567513,
+          "context_length": 8192
+        }
+      ]
+    },
+    {
+      "id": "mobile-layout-styles",
+      "value": {
+        "summary": "Der Menü-Element-Zustand bei einer Breite von 390 Pixeln muss überprüft werden. Es wird empfohlen, die Breite des Menü, die Mindestbreite und das Elternlayout zu prüfen, um sicherzustellen, dass Inhalte erreichbar bleiben. Der nächste Nachtest sollte den gleichen freigegebenen Menü-Zustand bei einer Breite von 390 Pixeln überprüfen, ohne unbeabsichtigtes horizontales Scrollen zu verursachen.",
+        "solutions": [
+          {
+            "findingId": "fixture-layout",
+            "evidenceRefs": [
+              "finding:fixture-layout"
+            ],
+            "relevance": "Die Prüfung des Menü-Zustands bei einer Breite von 390 Pixeln ist wichtig, um sicherzustellen, dass Inhalte erreichbar bleiben und unbeabsichtigtes Scrollen vermeidbar ist.",
+            "alternatives": [
+              "Es könnte auch die Breite des Menü und die Mindestbreite des Elternlayout überprüfen, um sicherzustellen, dass Inhalte erreichbar bleiben.",
+              "Alternativ könnte man die Breite des Menü und die Breite des Elternlayout überprüfen, um sicherzustellen, dass Inhalte erreichbar bleiben."
+            ],
+            "missingInformation": [
+              "Es fehlt die Messung der Breite des Menü und der Breite des Elternlayout."
+            ],
+            "explanation": "Der Menü-Zustand bei einer Breite von 390 Pixeln muss überprüft werden, um sicherzustellen, dass Inhalte erreichbar bleiben und unbeabsichtigtes Scrollen vermeidbar ist.",
+            "cause": "Der Menü-Zustand bei einer Breite von 390 Pixeln könnte zu unbeabsichtigtem Scrollen führen, wenn die Breite des Menü oder das Elternlayout nicht korrekt ist.",
+            "steps": [
+              "Prüfen Sie die Breite des Menü und die Mindestbreite des Elternlayout bei einer Breite von 390 Pixeln.",
+              "Stellen Sie sicher, dass Inhalte erreichbar bleiben, wenn der Menü-Zustand bei einer Breite von 390 Pixeln definiert ist."
+            ],
+            "code": {
+              "language": "html",
+              "text": "<nav id=\"menu\" style=\"width: 680px; min-width: 0px; max-width: none; overflow-x: visible;\">...</nav>"
+            },
+            "acceptance": "Nach Änderung des Menü-Zustands bei einer Breite von 390 Pixeln sollte der gleiche freigegebene Menü-Zustand überprüft werden, ohne unbeabsichtigtes horizontales Scrollen zu verursachen.",
+            "uncertainty": "Es fehlt die Messung der Breite des Menü und der Breite des Elternlayout, um sicherzustellen, dass Inhalte erreichbar bleiben und unbeabsichtigtes Scrollen vermeidbar ist."
+          }
+        ]
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1190,
+        "generatedTokens": 690,
+        "promptVersion": "page-report-1.6.0",
+        "promptSha256": "857fd22412ea1b4536ae3040f065aef522cf669d6104c2d262a052b0d49819dd",
+        "contextSha256": "fc87d50648b7295a2c464417300f53818b1e6363b4ad7e784001d16cf75cedf7",
+        "modelDigest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b",
+        "modelMetadataSha256": "862504466a94ed5ce58a1029d1a7d76be571d6988b2d188970a6c93249551550",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 7634
+      },
+      "guardAccepted": true,
+      "durationMs": 7635,
+      "loadedModelSample": [
+        {
+          "name": "qwen2.5:3b",
+          "size": 2411567513,
+          "size_vram": 2411567513,
+          "context_length": 8192
+        }
+      ]
+    },
+    {
+      "id": "unknown-only",
+      "value": {
+        "summary": "Die gemessene Fundstelle bezieht sich auf die Performance-Regel, die nicht durch fehlende Messwerte ausgeschlossen wurde. Es wurde festgestellt, dass die Performance-Tests nicht durchgeführt wurden, da die erforderlichen Messwerte fehlten. Es ist nicht bekannt, welche Messwerte fehlten, und es wird vorgeschlagen, die Performance-Tests neu durchzuführen.",
+        "solutions": []
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 890,
+        "generatedTokens": 111,
+        "promptVersion": "page-report-1.6.0",
+        "promptSha256": "a22363f1fffa88a569bf726b5be010d3d0991a573c64742b6c8ec94a5665a98f",
+        "contextSha256": "45f128c6ac146c56d45a88541eae2094e6f006d3e6b6d9302de5ac075e53c532",
+        "modelDigest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b",
+        "modelMetadataSha256": "862504466a94ed5ce58a1029d1a7d76be571d6988b2d188970a6c93249551550",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 1279
+      },
+      "guardAccepted": true,
+      "durationMs": 1279,
+      "loadedModelSample": [
+        {
+          "name": "qwen2.5:3b",
+          "size": 2411567513,
+          "size_vram": 2411567513,
+          "context_length": 8192
+        }
+      ]
+    }
+  ],
+  "artifactMeaning": "Actual local synthetic outputs. guardAccepted is not factual accuracy. Hidden thinking text is not stored.",
+  "review": {
+    "origin": "Coding-agent review, not independent human evaluation.",
+    "notes": [
+      "Known references did not prevent unsupported ranking claims in early outputs.",
+      "Accepted layout code can still ignore offsets or otherwise need source-specific changes."
+    ]
+  },
+  "weightLicense": "Qwen Research License",
+  "source": "https://ollama.com/library/qwen2.5:3b"
+}
