@@ -1,4 +1,13 @@
 import {
+  storageSummary,
+  retentionPreview,
+  protectedScans,
+  purgeTrash,
+  beforeUpdateBackup,
+  checkUpdate,
+} from "./services/maintenance.js";
+import { Scheduler } from "./services/scheduler.js";
+import {
   sourcePreview,
   selectedFindings,
   handoffMarkdown,
@@ -1259,6 +1268,122 @@ export async function createApp(options: {
       }
     },
   );
+  const scheduler = new Scheduler(
+    store,
+    () => !!operation || runner.isBusy(),
+    (id, profile) => startScan(id, profile),
+  );
+  if (options.runJobs !== false) scheduler.startTimer();
+  const storagePreviews = new Map<string, { ids: string[]; expires: number }>();
+  app.get("/api/maintenance", async () => ({
+    storage: await storageSummary(store),
+    schedules: scheduler.list(),
+    profiles: store
+      .scans()
+      .filter((s) => s.status === "completed" && s.options && !s.options.retest)
+      .map((s) => ({
+        id: s.id,
+        projectId: s.projectId,
+        createdAt: s.createdAt,
+      })),
+    projects: store.projects().map((p) => ({ id: p.id, name: p.name })),
+  }));
+  app.post("/api/updates/check", () => googleAction(() => checkUpdate()));
+  app.post("/api/updates/backup", async () => {
+    idle();
+    operation = "backup";
+    try {
+      return await beforeUpdateBackup(store);
+    } finally {
+      operation = null;
+    }
+  });
+  app.post("/api/storage/preview", async (request) => {
+    idle();
+    const body = object(request.body);
+    let preview;
+    try {
+      preview = retentionPreview(store, Number(body.keepPerProject));
+    } catch (error) {
+      throw bad((error as Error).message);
+    }
+    for (const [key, value] of storagePreviews)
+      if (value.expires < Date.now()) storagePreviews.delete(key);
+    if (storagePreviews.size >= 20) throw bad("Zu viele offene Vorschauen.");
+    const token = randomBytes(24).toString("hex"),
+      expires = Date.now() + 5 * 60000;
+    storagePreviews.set(token, {
+      ids: preview.candidates.map((c) => c.id),
+      expires,
+    });
+    store.savePreference("retention", {
+      keepPerProject: preview.keepPerProject,
+    });
+    return { preview, token, expiresAt: new Date(expires).toISOString() };
+  });
+  app.post("/api/storage/trash", async (request) => {
+    idle();
+    const body = object(request.body),
+      preview = storagePreviews.get(String(body.token));
+    if (body.confirmed !== true || !preview || preview.expires < Date.now())
+      throw bad("Aktuelle Speicher-Vorschau ausdrücklich bestätigen.");
+    const protectedIds = protectedScans(store);
+    if (preview.ids.some((id) => protectedIds.has(id) || !store.scan(id)))
+      throw bad("Datenstand geändert; Vorschau erneuern.");
+    storagePreviews.delete(String(body.token));
+    for (const id of preview.ids) store.trashScan(id);
+    return { trashed: preview.ids.length, recoverable: true };
+  });
+  app.post("/api/storage/restore", async (request) => {
+    idle();
+    try {
+      store.restoreTrash(String(object(request.body).id));
+      return { restored: true };
+    } catch (error) {
+      throw bad((error as Error).message);
+    }
+  });
+  app.post("/api/storage/purge", async (request) => {
+    idle();
+    const body = object(request.body);
+    if (
+      body.confirmation !== "ENDGÜLTIG LÖSCHEN" ||
+      !Array.isArray(body.ids) ||
+      !body.ids.length ||
+      body.ids.length > 20 ||
+      body.ids.some((id) => typeof id !== "string") ||
+      new Set(body.ids).size !== body.ids.length
+    )
+      throw bad(
+        "1–20 Papierkorbeinträge wählen und ENDGÜLTIG LÖSCHEN bestätigen.",
+      );
+    operation = "backup";
+    try {
+      return await purgeTrash(store, body.ids as string[]);
+    } finally {
+      operation = null;
+    }
+  });
+  app.post("/api/schedules", async (request) => {
+    const body = object(request.body);
+    requireProject(String(body.projectId));
+    if (body.acknowledged !== true)
+      throw bad(
+        "Regelmäßige Prüfung des freigegebenen Ziels ausdrücklich wählen.",
+      );
+    try {
+      return {
+        schedule: scheduler.configure(
+          String(body.projectId),
+          String(body.sourceScanId),
+          body.intervalHours,
+          body.enabled,
+        ),
+      };
+    } catch (error) {
+      throw bad((error as Error).message);
+    }
+  });
   app.get("/api/google/status", () => google.status());
   const googleAction = async <T>(action: () => Promise<T>) => {
     try {
@@ -1408,6 +1533,7 @@ export async function createApp(options: {
     }
   }
   app.addHook("onClose", async () => {
+    scheduler.close();
     google.close();
     for (const controller of aiControllers) controller.abort();
     await pageWork;

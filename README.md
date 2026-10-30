@@ -12,7 +12,15 @@ The repository and package are now **`sitefenn`**. Existing data stays in the le
 
 _Actual application, owned synthetic demo. Missing measurements remain unknown._
 
-[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.8.md) · [Changelog](CHANGELOG.md)
+[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.9.md) · [Changelog](CHANGELOG.md)
+
+## What's new in 1.9
+
+**A workspace you can keep using.** Start the local web app with an explicit setup launcher, check GitHub releases on demand, save a pre-update backup, inspect storage and move old unreferenced checks through a reversible trash. Optional daily/weekly checks run only while the app is open and resources are free; missed runs stay visible.
+
+The portable release ZIP is a **Web/CLI package, not a signed native installer**. Node 24 and explicitly installed Chromium are required. [Setup, update/recovery and actual checks](docs/RELEASE-1.9.md).
+
+![Actual 1.9 maintenance](docs/screenshots/1.9-maintenance.jpg)
 
 ## What's new in 1.8
 

@@ -1,3 +1,4 @@
+import Maintenance from "./Maintenance.js";
 import { useEffect, useState } from "react";
 import {
   CheckCircle2,
@@ -70,6 +71,7 @@ export default function Settings({
           Status aktualisieren
         </button>
       </section>
+      <Maintenance onChanged={onSaved} />
       <div className="settings-grid">
         <section
           className="panel workspace-form"

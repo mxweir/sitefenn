@@ -91,7 +91,8 @@ export class Store {
       if (!columns.has("progress"))
         this.db.exec("ALTER TABLE scans ADD COLUMN progress TEXT");
       this.db
-        .exec(`CREATE TABLE IF NOT EXISTS workspace_preferences (key TEXT PRIMARY KEY,payload TEXT NOT NULL);
+        .exec(`CREATE TABLE IF NOT EXISTS scan_trash (id TEXT PRIMARY KEY, trashedAt TEXT NOT NULL, payload TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS workspace_preferences (key TEXT PRIMARY KEY,payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK(id=1), payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, scanId TEXT NOT NULL REFERENCES scans(id), projectId TEXT NOT NULL REFERENCES projects(id), payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS search_datasets (id TEXT PRIMARY KEY, projectId TEXT NOT NULL REFERENCES projects(id), payload TEXT NOT NULL);
@@ -140,6 +141,103 @@ export class Store {
       this.close();
       throw error;
     }
+  }
+  trashSummaries(): {
+    id: string;
+    projectId: string;
+    createdAt: string;
+    trashedAt: string;
+  }[] {
+    return this.db
+      .prepare(
+        "SELECT id,trashedAt,json_extract(payload,'$.scan.projectId') AS projectId,json_extract(payload,'$.scan.createdAt') AS createdAt FROM scan_trash ORDER BY trashedAt DESC",
+      )
+      .all() as never;
+  }
+  trashedScan(
+    id: string,
+  ):
+    | {
+        scan: Scan;
+        tasks: {
+          id: string;
+          scanId: string;
+          projectId: string;
+          payload: string;
+        }[];
+        plans: { id: string; scanId: string; payload: string }[];
+      }
+    | undefined {
+    const row = this.db
+      .prepare("SELECT payload FROM scan_trash WHERE id=?")
+      .get(id);
+    return row ? JSON.parse(String(row.payload)) : undefined;
+  }
+  trashScan(id: string) {
+    const scan = this.scan(id);
+    if (!scan) throw Error("Check fehlt.");
+    const tasks = this.db.prepare("SELECT * FROM tasks WHERE scanId=?").all(id),
+      plans = this.db.prepare("SELECT * FROM ai_plans WHERE scanId=?").all(id);
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      this.db
+        .prepare("INSERT INTO scan_trash(id,trashedAt,payload) VALUES (?,?,?)")
+        .run(
+          id,
+          new Date().toISOString(),
+          JSON.stringify({ scan, tasks, plans }),
+        );
+      this.db.prepare("DELETE FROM tasks WHERE scanId=?").run(id);
+      this.db.prepare("DELETE FROM ai_plans WHERE scanId=?").run(id);
+      this.db.prepare("DELETE FROM scans WHERE id=?").run(id);
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+  }
+  restoreTrash(id: string) {
+    const value = this.trashedScan(id);
+    if (!value) throw Error("Papierkorbeintrag fehlt.");
+    const s = value.scan;
+    if (this.scan(id) || !this.project(s.projectId))
+      throw Error("Check existiert bereits oder Projekt fehlt.");
+    this.db.exec("BEGIN IMMEDIATE");
+    try {
+      this.db
+        .prepare(
+          "INSERT INTO scans(id,projectId,status,createdAt,finishedAt,error,result,options,progress) VALUES (?,?,?,?,?,?,?,?,?)",
+        )
+        .run(
+          s.id,
+          s.projectId,
+          s.status,
+          s.createdAt,
+          s.finishedAt,
+          s.error,
+          s.result ? JSON.stringify(s.result) : null,
+          s.options ? JSON.stringify(s.options) : null,
+          s.progress ? JSON.stringify(s.progress) : null,
+        );
+      for (const t of value.tasks)
+        this.db
+          .prepare(
+            "INSERT INTO tasks(id,scanId,projectId,payload) VALUES (?,?,?,?)",
+          )
+          .run(t.id, t.scanId, t.projectId, t.payload);
+      for (const p of value.plans)
+        this.db
+          .prepare("INSERT INTO ai_plans(id,scanId,payload) VALUES (?,?,?)")
+          .run(p.id, p.scanId, p.payload);
+      this.db.prepare("DELETE FROM scan_trash WHERE id=?").run(id);
+      this.db.exec("COMMIT");
+    } catch (error) {
+      this.db.exec("ROLLBACK");
+      throw error;
+    }
+  }
+  removeTrash(id: string) {
+    this.db.prepare("DELETE FROM scan_trash WHERE id=?").run(id);
   }
   preference(key: string): unknown {
     const row = this.db
@@ -202,12 +300,10 @@ export class Store {
       progress: row.progress ? JSON.parse(String(row.progress)) : undefined,
     } as Scan;
   }
-  scans(): Scan[] {
+  scans(limit = 300): Scan[] {
     return this.db
-      .prepare(
-        "SELECT * FROM scans ORDER BY createdAt DESC,rowid DESC LIMIT 300",
-      )
-      .all()
+      .prepare("SELECT * FROM scans ORDER BY createdAt DESC,rowid DESC LIMIT ?")
+      .all(limit)
       .map((row) => this.decodeScan(row));
   }
   scan(id: string) {

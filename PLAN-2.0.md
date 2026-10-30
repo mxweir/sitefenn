@@ -20,6 +20,8 @@ Fortschritt 1.7: Erklärbare Arbeitspriorität mit Projektgewichten und explizit
 
 Fortschritt 1.8: Gezielte Arbeitspakete, begrenzte lesende Git-Quellvorschau als ausdrücklich unbestätigte literale Kandidaten sowie CLI-Profile und Regression-Gate sind umgesetzt. Ein echter CLI-Ablauf erkennt neue Überläufe, bestätigt die korrigierte Variante und lässt einen nicht erreichbaren HTTP-502-Proxylauf unbekannt. [RELEASE-1.8.md](docs/RELEASE-1.8.md). Keine automatische Reparatur oder nachgewiesene Quellcodeursache.
 
+Fortschritt 1.9: Expliziter Web-/CLI-Start mit portablem Quell-/Buildpaket, manuelle Updateprüfung/Vorsicherung, geschützte Speichervorschau mit Papierkorb/Wiederherstellung sowie freiwillige App-interne Intervalle sind umgesetzt und lokal geprüft. Native signierte Installer, gebündelte Laufzeit und echter Windows-Lauf bleiben nach bestätigter Umfangsänderung offen. [RELEASE-1.9.md](docs/RELEASE-1.9.md).
+
 ## Produktziel
 
 **SiteFenn hilft dir, Website-Probleme nachweisbar zu beheben und neue Fehler vor der Veröffentlichung zu erkennen.**

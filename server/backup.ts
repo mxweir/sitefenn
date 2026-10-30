@@ -134,6 +134,26 @@ export async function restoreBackup(
       if (
         db
           .prepare(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_preferences'",
+          )
+          .get()
+      ) {
+        for (const row of db
+          .prepare(
+            "SELECT key,payload FROM workspace_preferences WHERE key LIKE 'schedule:%'",
+          )
+          .all()) {
+          const schedule = JSON.parse(String(row.payload));
+          schedule.enabled = false;
+          schedule.lastState = "Nach Wiederherstellung erneut freigeben";
+          db.prepare(
+            "UPDATE workspace_preferences SET payload=? WHERE key=?",
+          ).run(JSON.stringify(schedule), String(row.key));
+        }
+      }
+      if (
+        db
+          .prepare(
             "SELECT name FROM sqlite_master WHERE type='table' AND name='runtime_lock'",
           )
           .get()

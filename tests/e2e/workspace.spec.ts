@@ -1214,3 +1214,75 @@ test("developer handoff starts without source access and exports only the select
     }),
   ).toHaveCount(0);
 });
+
+test("maintenance keeps irreversible purge behind explicit selection and typed confirmation on mobile", async ({
+  page,
+}) => {
+  await mockWorkspace(page);
+  let purges = 0;
+  const overview = {
+    storage: {
+      evidenceBytes: 1024,
+      evidenceFiles: 1,
+      databaseBytes: 4096,
+      scans: 2,
+      trash: [
+        {
+          id: "owned-trash",
+          projectId: project.id,
+          createdAt: scan.createdAt,
+          trashedAt: scan.createdAt,
+        },
+      ],
+      retention: { keepPerProject: 10 },
+      notice: "Owned fixture",
+    },
+    schedules: [],
+    profiles: [],
+    projects: [{ id: project.id, name: project.name }],
+  };
+  await page.route("**/api/maintenance", async (route) =>
+    route.fulfill({ json: overview }),
+  );
+  await page.route("**/api/storage/purge", async (route) => {
+    expect(route.request().postDataJSON()).toEqual({
+      ids: ["owned-trash"],
+      confirmation: "ENDGÜLTIG LÖSCHEN",
+    });
+    purges++;
+    overview.storage.trash = [];
+    await route.fulfill({ json: { deletedRecords: 1, deletedFiles: 1 } });
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "System & Setup", exact: true })
+    .click();
+  await page
+    .getByText("Speicher verwalten · 0.0 MiB Nachweise", { exact: true })
+    .click();
+  await page.getByRole("checkbox", { name: new RegExp(project.name) }).check();
+  const purge = page.getByRole("button", {
+    name: "Auswahl endgültig löschen",
+    exact: true,
+  });
+  await expect(purge).toBeDisabled();
+  await page
+    .getByLabel("Zur Bestätigung ENDGÜLTIG LÖSCHEN eingeben")
+    .fill("wrong");
+  await expect(purge).toBeDisabled();
+  expect(purges).toBe(0);
+  await page
+    .getByLabel("Zur Bestätigung ENDGÜLTIG LÖSCHEN eingeben")
+    .fill("ENDGÜLTIG LÖSCHEN");
+  await purge.click();
+  await expect.poll(() => purges).toBe(1);
+  await expect(
+    page.getByText("Ausgewählte Papierkorbeinträge endgültig entfernt.", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    390,
+  );
+});

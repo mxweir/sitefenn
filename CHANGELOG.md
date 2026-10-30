@@ -2,6 +2,18 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 1.9.0 — 2026-10-30
+
+### Start, protect and maintain the workspace
+
+- Added a user-invoked Web/CLI launcher with explicit first setup and actionable missing-runtime/setup guidance. Portable source/build ZIP plus checksum excludes user data, credentials, models and runtime dependencies. This is not a signed native installer; Windows remains unvalidated.
+- Added explicit GitHub release checks and a pre-update backup action; program updates remain manual in a new application folder, preserving the existing data path.
+- Added storage totals, persisted retention preference, expiring preview, protected history sources, reversible trash/restore and separately confirmed permanent removal. No automatic history deletion.
+- Added voluntary daily/weekly profiles while the app runs, idle-resource limits and visible missed occurrences. Backup restore disables schedules until renewed acknowledgment.
+- 120 Node tests and 19 browser tests passed locally, plus types/build. Fresh portable extraction/setup/start/restart and data preservation were tested on macOS arm64. [Verification and distribution limits](docs/RELEASE-1.9.md).
+
+![Actual maintenance view](docs/screenshots/1.9-maintenance.jpg)
+
 ## 1.8.0 — 2026-10-30
 
 ### Developer handoff and release gate

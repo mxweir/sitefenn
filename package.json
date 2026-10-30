@@ -1,6 +1,6 @@
 {
   "name": "sitefenn",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -20,7 +20,10 @@
     "test:ai-local": "tsx scripts/ai-identity-smoke.ts",
     "test:page-ai-local": "tsx scripts/page-ai-smoke.ts",
     "test:ai-contract": "tsx scripts/evaluate-page-ai.ts",
-    "audit:check": "tsx scripts/check-site.ts"
+    "audit:check": "tsx scripts/check-site.ts",
+    "launch": "node scripts/launch.mjs",
+    "package:portable": "node scripts/package-portable.mjs",
+    "test:portable": "node scripts/test-portable.mjs"
   },
   "dependencies": {
     "@fastify/static": "10.1.8",
