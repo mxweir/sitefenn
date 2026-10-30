@@ -936,3 +936,139 @@ test("SEO context separates observed HTTP failures, metadata candidates, robots 
     ),
   ).toBe(true);
 });
+
+test("page-state editor previews deliberate actions and editing revokes approval", async ({
+  page,
+}) => {
+  const state = await mockWorkspace(page, []);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Seitenablauf hinzufügen", exact: true })
+    .click();
+  await page
+    .getByLabel("Ablauf 1 Schritt 1 Schalter", { exact: true })
+    .fill("#menu-toggle");
+  await page
+    .getByLabel("Ablauf 1 Schritt 1 Erwartungsziel", { exact: true })
+    .fill("#mobile-menu");
+  await expect(
+    page.getByText("UI-Schalter #menu-toggle → #mobile-menu: visible", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  const approval = page.getByLabel("Ablauf 1 ausdrücklich freigeben", {
+    exact: true,
+  });
+  await approval.check();
+  await page
+    .getByLabel("Ablauf 1 Name", { exact: true })
+    .fill("Navigation aufklappen");
+  await expect(approval).not.toBeChecked();
+  await approval.check();
+  await page
+    .getByRole("button", { name: "On-Screen-Check starten", exact: true })
+    .click();
+  await expect
+    .poll(() => state.options)
+    .toMatchObject({
+      journeys: [
+        {
+          name: "Navigation aufklappen",
+          confirmed: true,
+          steps: [
+            {
+              action: "click",
+              selector: "#menu-toggle",
+              expect: { selector: "#mobile-menu", condition: "visible" },
+            },
+          ],
+        },
+      ],
+    });
+});
+test("page-state evidence separates reached expectations from unknown/skipped steps and stays usable on mobile", async ({
+  page,
+}) => {
+  const current = structuredClone(scan),
+    report = current.result!.audit!;
+  const state = "journey:menu:0123456789abcdef:1";
+  report.options.journeys = [
+    {
+      id: "menu",
+      name: "Mobilmenü öffnen",
+      pageUrl: project.url,
+      viewportIds: ["mobile"],
+      confirmed: true,
+      steps: [
+        {
+          action: "click",
+          selector: "#menu-toggle",
+          expect: { selector: "#menu", condition: "visible" },
+        },
+      ],
+    },
+  ];
+  report.journeyRuns = [
+    {
+      journeyId: "menu",
+      name: "Mobilmenü öffnen",
+      signature: "0123456789abcdef",
+      pageUrl: project.url,
+      viewportId: "mobile",
+      status: "unknown",
+      detail: "Anfrage blockiert; Zustand unbekannt.",
+      steps: [
+        {
+          index: 0,
+          state,
+          status: "unknown",
+          detail: "Erwartung nicht bestätigt.",
+          durationMs: 312,
+          beforeId: "state-before",
+          afterId: "state-after",
+        },
+      ],
+    },
+  ];
+  report.evidence = ["state-before", "state-after"].map((id, i) => ({
+    id,
+    path: `evidence/${id}.png`,
+    pageUrl: project.url,
+    viewportId: "mobile",
+    width: 390,
+    height: 844,
+    scrollX: 0,
+    scrollY: 0,
+    state: state + (i ? "" : ":before"),
+    capturedAt: scan.createdAt,
+  }));
+  await mockWorkspace(page, [current]);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Seitenzustände", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Seitenzustände", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("0/1 Schritt-/Geräte-Zustände bestätigt · 1 Abläufe", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page
+    .getByText("Schritt 1 · Unbekannt · 312 ms", { exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Vorher", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Nachher", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Erwartung nicht bestätigt.", { exact: true }),
+  ).toBeVisible();
+  await page.setViewportSize({ width: 390, height: 844 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    390,
+  );
+});

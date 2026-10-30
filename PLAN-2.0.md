@@ -10,6 +10,8 @@ Fortschritt 1.3: Visuelle Referenzen, Masken, Wisch-/Pixelvergleich und gezielte
 
 Fortschritt 1.4: Begrenzter Sitemap-Import, gerichteter Linkkontext mit HTTP-/Redirect-Stichproben, Metadaten-Kandidaten, Canonical-/Robots-Kontext und ein getrenntes Breadcrumb-Teilprofil sind implementiert. Kontrollierte positive/negative Fälle und ein echter korrigierter Link-Nachtest sind in [RELEASE-1.4.md](docs/RELEASE-1.4.md) dokumentiert. Kein vollständiger Crawl, Indexierungsnachweis oder Rankingverlust wird daraus abgeleitet.
 
+Fortschritt 1.5: Freigegebene Startseiten-/UI-/Scroll-Abläufe, erwartete Zustände, Vorher-/Nachher-Nachweise und Zustands-Nachtests sind implementiert. Fehlende Ziele, Blockierungen, unerwartete URL-Wechsel und Zeitlimits bleiben unbekannt. Kontrollierte Menü-/Dialog-/Akkordeonfälle und die echte korrigierte Menüprüfung stehen in [RELEASE-1.5.md](docs/RELEASE-1.5.md). Unterstützung ist bewusst auf deklarierte native UI-Schalter begrenzt; keine authentisierten oder autonomen Mehrseitenabläufe.
+
 ## Produktziel
 
 **SiteFenn hilft dir, Website-Probleme nachweisbar zu beheben und neue Fehler vor der Veröffentlichung zu erkennen.**

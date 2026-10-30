@@ -2,6 +2,35 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 1.5.0 — 2026-10-30
+
+### Explicit page states
+
+- Added a recipe editor with selected start page/devices, declared UI/scroll steps, expected results, a complete preview and explicit approval. Edits revoke approval; unapproved recipes prevent starting a check.
+- Added bounded menu, accordion and dialog interactions on supported native controls. Every recipe/device uses a fresh context. No link clicks, forms, arbitrary scripts, authentication or autonomous navigation are provided.
+- Added before/after captures, per-step outcome/duration and a dedicated **Seitenzustände** area linking to canonical findings/actions. Reaching an expectation is separate from passing layout/axe rules.
+- Missing/ambiguous targets, blocked requests, unexpected document or SPA URL changes and deadlines stop the recipe. Remaining steps and rule instances stay unknown; unconfirmed states cannot support numeric visual comparisons or verified fixes.
+- Added state definitions/signatures to comparison scope. Targeted state-task retests inherit only their relevant recipes and preserve state identity across a reduced device scope. Interrupted unfinished recipes are rerun rather than silently skipped.
+- Added trace context for page explanations and portable Markdown/JSON. With opt-in evidence export, a state finding includes its related before/after images. Default exports omit screenshots/paths.
+
+### Reliability and data
+
+- Corrected mobile overflow detection to use the layout viewport width when overflowing content expands `innerWidth`.
+- Added a recipe-context deadline, bounded readiness/click waits and scan deadlines that account for configured recipe instances. Paused checkpoints do not consume the recipe execution budget.
+- New optional report/config fields require no database schema migration. Existing paths and historical data remain intact. New rule identity is `rules-1.5.0`; unknown historical interaction conditions are not fabricated.
+
+91 Node tests and 16 browser tests passed locally, plus type checks, build, lifecycle smoke and dependency audit. Real Chromium/API fixtures cover open-state-only defects, corrected-state verification, changed definitions, interrupted reuse, forbidden actions, blocked requests/navigation and deadline closure. [Verification and limits](docs/RELEASE-1.5.md).
+
+![Actual 1.5 open-menu check](docs/screenshots/1.5-menu-check.jpg)
+
+<details>
+<summary>Recipe editor and actual corrected-state retest</summary>
+
+![Actual editor](docs/screenshots/1.5-journey-editor.jpg)
+![Actual retest](docs/screenshots/1.5-state-retest.jpg)
+
+</details>
+
 ## 1.4.0 — 2026-10-29
 
 ### Technical SEO with context

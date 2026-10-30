@@ -42,11 +42,7 @@ export interface Scan {
 }
 
 export type Category =
-  | "layout"
-  | "accessibility"
-  | "seo"
-  | "runtime"
-  | "performance";
+  "layout" | "accessibility" | "seo" | "runtime" | "performance";
 export type Priority = "critical" | "important" | "nice-to-have";
 export type RuleStatus = "pass" | "fail" | "not_run" | "not_applicable";
 export type EvidenceStatus = "measured" | "heuristic" | "ai";
@@ -81,7 +77,43 @@ export interface RetestScope {
   taskId: string;
   findingIds: string[];
 }
+export interface JourneyStep {
+  action: "click" | "scroll";
+  selector?: string;
+  y?: number;
+  expect: {
+    selector: string;
+    condition: "visible" | "hidden" | "open" | "closed";
+  };
+}
+export interface Journey {
+  id: string;
+  name: string;
+  pageUrl: string;
+  viewportIds: string[];
+  steps: JourneyStep[];
+  confirmed: boolean;
+}
+export interface JourneyRun {
+  journeyId: string;
+  name: string;
+  signature: string;
+  pageUrl: string;
+  viewportId: string;
+  status: "not_run" | "completed" | "unknown";
+  detail: string;
+  steps: {
+    index: number;
+    state: string;
+    status: "not_run" | "completed" | "unknown";
+    detail: string;
+    durationMs: number;
+    beforeId?: string;
+    afterId?: string;
+  }[];
+}
 export interface ScanOptions {
+  journeys?: Journey[];
   technicalSeo?: boolean;
   retest?: RetestScope;
   pages: string[];
@@ -99,6 +131,7 @@ export interface Rect {
   height: number;
 }
 export interface CaptureConditions {
+  stateReady?: boolean;
   version: "capture-1.3";
   animations: "disabled";
   reducedMotion: "reduce";
@@ -193,6 +226,7 @@ export interface AuditProvenance {
   arch: string;
 }
 export interface AuditReport {
+  journeyRuns?: JourneyRun[];
   seo?: SeoContext;
   provenance?: AuditProvenance;
   schemaVersion: 1;
@@ -267,11 +301,7 @@ export interface ScoreSummary {
   warnings: string[];
 }
 export type TaskStatus =
-  | "open"
-  | "in-progress"
-  | "review"
-  | "verified"
-  | "accepted";
+  "open" | "in-progress" | "review" | "verified" | "accepted";
 export interface AuditTask {
   aiProposal?: PageSolution & { analysisId: string };
   id: string;

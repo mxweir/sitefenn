@@ -1,3 +1,5 @@
+import JourneyBuilder from "./JourneyBuilder.js";
+import type { Journey } from "../shared/types.js";
 import { useEffect, useState } from "react";
 import { Compass, LoaderCircle, ScanLine } from "lucide-react";
 import { VIEWPORTS } from "../shared/types.js";
@@ -30,6 +32,7 @@ export default function ScanConfig({
     "tablet",
     "mobile",
   ]);
+  const [journeys, setJourneys] = useState<Journey[]>([]);
   const [technicalSeo, setTechnicalSeo] = useState(true);
   const [sitemapUrl, setSitemapUrl] = useState(
     new URL("/sitemap.xml", project.url).href,
@@ -45,6 +48,7 @@ export default function ScanConfig({
   useEffect(() => {
     setSitemapUrl(new URL("/sitemap.xml", project.url).href);
     setSitemapResult(null);
+    setJourneys([]);
     setPages([project.url]);
     setDiscovered([project.url]);
     setError("");
@@ -63,6 +67,7 @@ export default function ScanConfig({
     performance,
     performanceRuns: repetitions,
     technicalSeo,
+    ...(journeys.length ? { journeys } : {}),
   };
   return (
     <div className="panel workspace-form">
@@ -242,6 +247,13 @@ export default function ScanConfig({
         SEO-Kontextprüfung werden zusätzlich begrenzte interne HTTP-Ziele
         geprüft. Die Auswahl ist kein vollständiger Index deiner Domain.
       </p>
+      <JourneyBuilder
+        journeys={journeys}
+        onChange={setJourneys}
+        pages={pages}
+        devices={viewportIds}
+        disabled={!!busy || disabled}
+      />
       <label className="check-option">
         <input
           type="checkbox"
@@ -325,6 +337,12 @@ export default function ScanConfig({
           ))}
         </details>
       )}
+      {journeys.some((j) => !j.confirmed) && (
+        <Notice>
+          Bitte jeden Seitenablauf prüfen und ausdrücklich freigeben oder
+          entfernen, bevor du den Check startest.
+        </Notice>
+      )}
       {error && <Notice error>{error}</Notice>}
       <div className="scan-config-actions">
         <button
@@ -334,7 +352,8 @@ export default function ScanConfig({
             !!busy ||
             !pages.length ||
             !viewportIds.length ||
-            pages.length > maxPages
+            pages.length > maxPages ||
+            journeys.some((j) => !j.confirmed)
           }
           onClick={async () => {
             setBusy("scan");

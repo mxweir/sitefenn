@@ -29,6 +29,13 @@ import {
   emptySeo,
   technicalSeo,
 } from "./services/technical-seo.js";
+import { normalizeJourneys } from "./services/journey-options.js";
+import {
+  executeJourney,
+  plannedJourney,
+  journeyState,
+} from "./services/journeys.js";
+import { dangerousAction } from "../shared/journeys.js";
 import { breadcrumbProfile, hasNoindex } from "./services/seo-meta.js";
 import { importSitemap } from "./services/sitemap.js";
 import { auditProvenance } from "./provenance.js";
@@ -62,6 +69,7 @@ const activeBrowsers = new Set<Browser>();
 const activeProxies = new Set<AuditProxy>();
 const activeChrome = new Set<ChildProcess>();
 const blockedByContext = new WeakMap<BrowserContext, Set<string>>();
+const interactionContexts = new WeakSet<BrowserContext>();
 const documentGuards = new WeakMap<Page, Promise<void>>();
 async function terminateChrome(child: ChildProcess) {
   if (child.exitCode !== null || child.signalCode !== null) return;
@@ -90,7 +98,7 @@ export async function closeAuditResources() {
   activeChrome.clear();
   activeProxies.clear();
 }
-export const RULE_VERSION = "rules-1.4.0";
+export const RULE_VERSION = "rules-1.5.0";
 export const PROFILE_VERSION = "responsive-1.0.0";
 const digest = (text: string) =>
   createHash("sha256").update(text).digest("hex").slice(0, 24);
@@ -189,6 +197,7 @@ async function createContext(
         void (async () => {
           const url = new URL(event.request.url);
           if (
+            interactionContexts.has(context) ||
             !inScope(url.href, target, excluded) ||
             (policy.demoOrigin && !/^\/demo-site(?:\/|$)/.test(url.pathname))
           ) {
@@ -229,6 +238,18 @@ async function createContext(
       if (++requests > 350 || !["GET", "HEAD"].includes(request.method()))
         return abort();
       const url = new URL(request.url());
+      if (
+        interactionContexts.has(context) &&
+        (request.isNavigationRequest() ||
+          url.origin !== new URL(target).origin ||
+          dangerousAction.test(decodeURIComponent(url.pathname)) ||
+          [...url.searchParams.keys()].some((k) =>
+            /^(token|password|secret|access_token|api_key|authorization)$/i.test(
+              k,
+            ),
+          ))
+      )
+        return abort();
       const local =
         url.origin === policy.allowedLocalOrigin ||
         url.origin === policy.demoOrigin;
@@ -400,6 +421,10 @@ interface GeometryIssue {
 }
 async function inspectGeometry(page: Page) {
   return page.evaluate(() => {
+    const viewWidth = Math.min(
+      innerWidth,
+      document.documentElement.clientWidth,
+    );
     const selector = (element: Element) =>
       element.id
         ? `#${CSS.escape(element.id)}`
@@ -437,21 +462,21 @@ async function inspectGeometry(page: Page) {
       );
     };
     const overflow: GeometryIssue[] = [];
-    if (document.documentElement.scrollWidth > innerWidth + 2) {
+    if (document.documentElement.scrollWidth > viewWidth + 2) {
       for (const element of [...document.querySelectorAll("body *")].slice(
         0,
         3500,
       )) {
         if (!visible(element)) continue;
         const box = element.getBoundingClientRect();
-        if (box.right > innerWidth + 2 && box.left >= 0 && box.width > 10) {
+        if (box.right > viewWidth + 2 && box.left >= 0 && box.width > 10) {
           const parent = element.parentElement;
           if (parent && getComputedStyle(parent).overflowX !== "visible")
             continue;
           overflow.push({
             selector: selector(element),
             rect: rect(element),
-            detail: `Rechter Rand ${Math.round(box.right)} px überschreitet die ${innerWidth} px breite Ansicht.`,
+            detail: `Rechter Rand ${Math.round(box.right)} px überschreitet die ${viewWidth} px breite Ansicht.`,
           });
           if (overflow.length >= 3) break;
         }
@@ -481,7 +506,7 @@ async function inspectGeometry(page: Page) {
       const box = element.getBoundingClientRect();
       if (
         box.left < 0 ||
-        box.right > innerWidth ||
+        box.right > viewWidth ||
         box.top < 0 ||
         box.bottom > innerHeight
       )
@@ -555,7 +580,7 @@ async function inspectGeometry(page: Page) {
     }
     return {
       overflow,
-      pageOverflow: document.documentElement.scrollWidth > innerWidth + 2,
+      pageOverflow: document.documentElement.scrollWidth > viewWidth + 2,
       covered,
       clipped,
       scrollX,
@@ -607,8 +632,21 @@ export async function runAudit(
     throw new Error(
       "Keine Seite innerhalb des freigegebenen Zielbereichs ausgewählt.",
     );
+  const journeys = normalizeJourneys(
+    options.journeys,
+    selected,
+    options.viewports.map((v) => v.id),
+  );
+  if (journeys.length) options.journeys = journeys;
   const report: AuditReport = {
     ...(options.technicalSeo ? { seo: emptySeo() } : {}),
+    ...(options.journeys?.length
+      ? {
+          journeyRuns: options.journeys.flatMap((j) =>
+            j.viewportIds.map((v) => plannedJourney(j, v)),
+          ),
+        }
+      : {}),
     provenance: await auditProvenance(),
     schemaVersion: 1,
     ruleVersion: RULE_VERSION,
@@ -648,7 +686,18 @@ export async function runAudit(
     const previous = job.resumeReport;
     const completedKeys = new Set(
       previous.pages
-        .filter((item) => item.status === "completed")
+        .filter(
+          (item) =>
+            item.state === "initial" &&
+            item.status === "completed" &&
+            (previous.journeyRuns ?? [])
+              .filter(
+                (r) =>
+                  r.pageUrl === item.pageUrl &&
+                  r.viewportId === item.viewportId,
+              )
+              .every((r) => r.status !== "not_run"),
+        )
         .map((item) => `${item.pageUrl}|${item.viewportId}`),
     );
     report.pages = previous.pages.filter((item) =>
@@ -671,7 +720,19 @@ export async function runAudit(
       report.seo.pages = (previous.seo?.pages ?? []).filter((item) =>
         completedKeys.has(`${item.pageUrl}|${item.viewportId}`),
       );
-    report.coverage.completed = report.pages.length;
+    if (report.journeyRuns)
+      report.journeyRuns = report.journeyRuns.map(
+        (r) =>
+          previous.journeyRuns?.find(
+            (old) =>
+              completedKeys.has(`${r.pageUrl}|${r.viewportId}`) &&
+              old.journeyId === r.journeyId &&
+              old.viewportId === r.viewportId,
+          ) ?? r,
+      );
+    report.coverage.completed = report.pages.filter(
+      (p) => p.state === "initial",
+    ).length;
     report.warnings.push(
       "Abgeschlossene Seiten-/Viewport-Schritte aus einem kompatiblen unterbrochenen Lauf übernommen.",
     );
@@ -689,6 +750,10 @@ export async function runAudit(
     report.findings = [];
     report.evidence = [];
     if (report.seo) report.seo.pages = [];
+    if (report.journeyRuns)
+      report.journeyRuns = options.journeys!.flatMap((j) =>
+        j.viewportIds.map((v) => plannedJourney(j, v)),
+      );
     report.coverage.completed = 0;
     report.warnings.push(
       "Browser-Version geändert: frühere Seitenschritte werden nicht als vergleichbare Messungen übernommen.",
@@ -803,6 +868,32 @@ export async function runAudit(
         );
       }
     }
+  for (const j of options.journeys ?? [])
+    for (const v of j.viewportIds)
+      for (const [i] of j.steps.entries()) {
+        if (
+          report.journeyRuns?.find(
+            (r) => r.journeyId === j.id && r.viewportId === v,
+          )?.status !== "not_run"
+        )
+          continue;
+        for (const [id, category, weight] of [
+          ["horizontal-overflow", "layout", 2],
+          ["covered-control", "layout", 2],
+          ["axe-automated", "accessibility", 3],
+        ] as const)
+          addRule(
+            id,
+            category,
+            "not_run",
+            "Geplanter, noch nicht bestätigter Interaktionszustand.",
+            j.pageUrl,
+            v,
+            journeyState(j, i),
+            [],
+            weight,
+          );
+      }
   for (const device of ["desktop", "mobile"].filter(
     (device) =>
       !options.retest || options.viewports.some((p) => p.id === device),
@@ -845,14 +936,14 @@ export async function runAudit(
             updatedAt: new Date().toISOString(),
           },
         });
-        const context = await createContext(
+        let context = await createContext(
           browser,
           target,
           policy,
           viewport,
           options.excludedPaths,
         );
-        const page = await context.newPage();
+        let page = await context.newPage();
         await documentGuards.get(page);
         page.setDefaultTimeout(8_000);
         let takingLiveFrame = false;
@@ -1023,10 +1114,12 @@ export async function runAudit(
               Math.max(0, height - viewport.height),
             ]),
           ];
-          for (const [stateIndex, y] of positions.entries()) {
-            await page.evaluate((y) => scrollTo(0, y), y);
-            await page.waitForTimeout(80);
-            const state = stateIndex === 0 ? "initial" : `scroll-${stateIndex}`;
+          const captureState = async (
+            state: string,
+            initial = false,
+            measure = true,
+            ready = true,
+          ): Promise<Evidence> => {
             const geometry = await inspectGeometry(page);
             const evidenceId = randomUUID();
             const path = `evidence/${job.id}-${evidenceId}.png`;
@@ -1047,6 +1140,7 @@ export async function runAudit(
               state,
               capturedAt: new Date().toISOString(),
               capture: {
+                ...(state.startsWith("journey:") ? { stateReady: ready } : {}),
                 version: "capture-1.3",
                 animations: "disabled",
                 reducedMotion: "reduce",
@@ -1067,424 +1161,438 @@ export async function runAudit(
                 statusCode: response.status(),
                 screenshotPath: path,
               };
-            const make = (
-              ruleId: string,
-              category: Finding["category"],
-              title: string,
-              detail: string,
-              recommendation: string,
-              acceptance: string,
-              extra: Partial<Finding> = {},
-            ) =>
-              addFinding({
-                ruleId,
-                category,
-                priority: "important",
-                title,
-                detail,
-                recommendation,
-                acceptance,
-                pageUrl,
-                viewportId: viewport.id,
-                state,
-                evidenceStatus: "measured",
-                evidenceId,
-                ...extra,
-                rect: extra.rect
-                  ? {
-                      ...extra.rect,
-                      x: extra.rect.x + geometry.scrollX,
-                      y: extra.rect.y + geometry.scrollY,
-                    }
-                  : undefined,
-              });
-            const overflows = geometry.overflow.map((issue) =>
-              make(
-                "horizontal-overflow",
-                "layout",
-                "Inhalt läuft horizontal über die Ansicht",
-                issue.detail,
-                "Breiten, Mindestbreiten und Layout des markierten Elements prüfen. Nicht pauschal mit overflow:hidden kaschieren.",
-                "Die Seite benötigt bei dieser Breite kein unbeabsichtigtes horizontales Scrollen; Inhalte bleiben erreichbar.",
-                { selector: issue.selector, rect: issue.rect },
-              ),
-            );
-            if (geometry.pageOverflow && !overflows.length)
-              overflows.push(
-                make(
-                  "horizontal-overflow",
-                  "layout",
-                  "Seite ist breiter als die Ansicht",
-                  "Die Dokumentbreite überschreitet den Viewport; der konkrete Auslöser wurde nicht eindeutig lokalisiert.",
-                  "Überbreite Container und transformierte Elemente im Quellprojekt untersuchen.",
-                  "Die Dokumentbreite überschreitet den Viewport nicht unbeabsichtigt.",
-                ),
-              );
-            addRule(
-              "horizontal-overflow",
-              "layout",
-              geometry.pageOverflow ? "fail" : "pass",
-              geometry.pageOverflow
-                ? "Horizontales Dokument-Overflow gemessen."
-                : "Kein horizontales Dokument-Overflow in diesem Zustand.",
-              pageUrl,
-              viewport.id,
-              state,
-              overflows,
-              2,
-            );
-            const covers = geometry.covered.map((issue) =>
-              make(
-                "covered-control",
-                "layout",
-                issue.uncertain
-                  ? "Bedienfläche hinter fester Ebene — Absicht prüfen"
-                  : "Bedienfläche wird von anderem Element verdeckt",
-                issue.detail +
-                  (issue.uncertain
-                    ? " Die feste/haftende Ebene kann ein beabsichtigter Hinweis, eine Navigation oder eine Kopfzeile sein. Kein automatisch bestätigter Websitefehler."
-                    : ""),
-                "Zuerst beabsichtigten Zustand und Schließmöglichkeit prüfen; danach bei Bedarf Stacking und Pointer-Events im Quellprojekt untersuchen.",
-                "An den untersuchten Punkten trifft der Hit-Test das Bedienelement oder dessen Inhalt.",
-                {
-                  selector: issue.selector,
-                  rect: issue.rect,
-                  evidenceStatus: issue.uncertain ? "heuristic" : "measured",
-                  priority: issue.uncertain ? "nice-to-have" : "important",
-                },
-              ),
-            );
-            addRule(
-              "covered-control",
-              "layout",
-              covers.some((item) => item.evidenceStatus === "measured")
-                ? "fail"
-                : covers.length
-                  ? "not_run"
-                  : "pass",
-              `${covers.length} an fünf Punkten verdeckte Bedienflächen. Feste/haftende Ebenen sind Prüfkandidaten mit unbekannter Fehlerbewertung. Kein vollständiger Funktionstest.`,
-              pageUrl,
-              viewport.id,
-              state,
-              covers,
-              2,
-            );
-            for (const issue of geometry.clipped)
-              make(
-                "clipped-text-candidate",
-                "layout",
-                "Möglicherweise abgeschnittener Text",
-                issue.detail,
-                "Feste Höhe und Overflow-Einstellungen prüfen; beabsichtigte Vorschauen gegebenenfalls bestätigen.",
-                "Der vollständige relevante Text bleibt lesbar oder ist über eine eindeutige Aktion erreichbar.",
-                {
-                  selector: issue.selector,
-                  rect: issue.rect,
-                  evidenceStatus: "heuristic",
-                  priority: "nice-to-have",
-                },
-              );
-            if (stateIndex === 0) {
-              const seo = (
-                id: string,
-                pass: boolean,
+            if (measure) {
+              const make = (
+                ruleId: string,
+                category: Finding["category"],
                 title: string,
                 detail: string,
                 recommendation: string,
                 acceptance: string,
-                priority: Finding["priority"] = "important",
-              ) => {
-                const findings = pass
-                  ? []
-                  : [
-                      make(
-                        id,
-                        "seo",
-                        title,
-                        detail,
-                        recommendation,
-                        acceptance,
-                        { priority },
-                      ),
-                    ];
-                addRule(
-                  id,
-                  "seo",
-                  pass ? "pass" : "fail",
+                extra: Partial<Finding> = {},
+              ) =>
+                addFinding({
+                  ruleId,
+                  category,
+                  priority: "important",
+                  title,
                   detail,
+                  recommendation,
+                  acceptance,
                   pageUrl,
-                  viewport.id,
+                  viewportId: viewport.id,
                   state,
-                  findings,
-                );
-              };
-              seo(
-                "document-title",
-                !!metadata.title,
-                "Seitentitel fehlt",
-                metadata.title
-                  ? `Titel vorhanden: ${metadata.title.slice(0, 200)}`
-                  : "Kein nicht-leerer title im gerenderten Dokument.",
-                "Einen eindeutigen passenden Seitentitel ergänzen.",
-                "Der Seitentitel ist nicht leer und beschreibt diese Seite.",
+                  evidenceStatus: "measured",
+                  evidenceId,
+                  ...extra,
+                  rect: extra.rect
+                    ? {
+                        ...extra.rect,
+                        x: extra.rect.x + geometry.scrollX,
+                        y: extra.rect.y + geometry.scrollY,
+                      }
+                    : undefined,
+                });
+              const overflows = geometry.overflow.map((issue) =>
+                make(
+                  "horizontal-overflow",
+                  "layout",
+                  "Inhalt läuft horizontal über die Ansicht",
+                  issue.detail,
+                  "Breiten, Mindestbreiten und Layout des markierten Elements prüfen. Nicht pauschal mit overflow:hidden kaschieren.",
+                  "Die Seite benötigt bei dieser Breite kein unbeabsichtigtes horizontales Scrollen; Inhalte bleiben erreichbar.",
+                  { selector: issue.selector, rect: issue.rect },
+                ),
               );
-              seo(
-                "meta-description",
-                !!metadata.description,
-                "Meta Description fehlt",
-                metadata.description
-                  ? "Nicht-leere Meta Description vorhanden."
-                  : "Die Meta Description fehlt oder ist leer. Dies belegt keinen Rankingverlust.",
-                "Eine passende Zusammenfassung für diese Seite ergänzen, falls sie indexiert werden soll.",
-                "Eine redaktionell passende Meta Description ist im HTML vorhanden.",
-                "nice-to-have",
-              );
-              const noindex = hasNoindex(
-                metadata.robotsValues,
-                metadata.googlebotValues,
-                [response.headers()["x-robots-tag"] ?? ""],
-              );
-              if (metadata.signalsTruncated && !noindex)
-                addRule(
-                  "indexability",
-                  "seo",
-                  "not_run",
-                  "Robots-Metadatenbudget erreicht; vollständige Indexierungsangaben unbekannt.",
-                  pageUrl,
-                  viewport.id,
-                  state,
-                );
-              else if (job.environment === "production")
-                seo(
-                  "indexability",
-                  !noindex,
-                  "Produktionsseite untersagt Indexierung",
-                  noindex
-                    ? "noindex in Meta Robots oder X-Robots-Tag gefunden. Ob dies beabsichtigt ist, muss geprüft werden."
-                    : "Kein noindex in den geprüften Angaben. Das beweist keine Google-Indexierung.",
-                  "Indexierungsabsicht prüfen; nur versehentliches noindex entfernen.",
-                  "Robots-Angaben entsprechen der dokumentierten Indexierungsabsicht.",
-                );
-              else
-                addRule(
-                  "indexability",
-                  "seo",
-                  "not_applicable",
-                  "Indexierungsabsicht für Staging/lokal nicht als Produktionsanforderung gewertet.",
-                  pageUrl,
-                  viewport.id,
-                  state,
-                );
-              const validCanonical =
-                !metadata.canonical ||
-                (() => {
-                  try {
-                    return ["http:", "https:"].includes(
-                      new URL(metadata.canonical, page.url()).protocol,
-                    );
-                  } catch {
-                    return false;
-                  }
-                })();
-              if (metadata.signalsTruncated)
-                addRule(
-                  "canonical-valid",
-                  "seo",
-                  "not_run",
-                  "Metadatenerfassung begrenzt; vollständiges Canonical-Syntaxurteil unbekannt.",
-                  pageUrl,
-                  viewport.id,
-                  state,
-                );
-              else
-                seo(
-                  "canonical-valid",
-                  validCanonical,
-                  "Canonical-Ziel ist ungültig",
-                  validCanonical
-                    ? "Kein syntaktisch ungültiges Canonical gefunden; korrekte Zielabsicht ist nicht geprüft."
-                    : "Canonical kann nicht zu einer HTTP(S)-URL aufgelöst werden.",
-                  "Canonical auf die beabsichtigte kanonische URL setzen.",
-                  "Canonical ist syntaktisch gültig und redaktionell korrekt.",
-                );
-              const invalidJson = metadata.jsonld.some((item) => {
-                if (item.oversized) return false;
-                try {
-                  JSON.parse(item.text);
-                  return false;
-                } catch {
-                  return true;
-                }
-              });
-              if (
-                !invalidJson &&
-                (metadata.jsonldTruncated ||
-                  metadata.jsonld.some((item) => item.oversized))
-              )
-                addRule(
-                  "structured-data-json",
-                  "seo",
-                  "not_run",
-                  "JSON-LD-Erfassung überschreitet 20 Blöcke oder 100 KB pro Block; kein vollständiges Syntaxurteil.",
-                  pageUrl,
-                  viewport.id,
-                  state,
-                );
-              else
-                seo(
-                  "structured-data-json",
-                  !invalidJson,
-                  "Strukturierte Daten enthalten ungültiges JSON",
-                  invalidJson
-                    ? "Mindestens ein JSON-LD-Block lässt sich nicht als JSON parsen."
-                    : "Kein syntaktisch ungültiges JSON-LD gefunden. Schema-Eignung ist nicht geprüft.",
-                  "JSON-LD-Syntax korrigieren und danach Schema-Eignung separat validieren.",
-                  "Alle JSON-LD-Blöcke sind gültiges JSON.",
+              if (geometry.pageOverflow && !overflows.length)
+                overflows.push(
+                  make(
+                    "horizontal-overflow",
+                    "layout",
+                    "Seite ist breiter als die Ansicht",
+                    "Die Dokumentbreite überschreitet den Viewport; der konkrete Auslöser wurde nicht eindeutig lokalisiert.",
+                    "Überbreite Container und transformierte Elemente im Quellprojekt untersuchen.",
+                    "Die Dokumentbreite überschreitet den Viewport nicht unbeabsichtigt.",
+                  ),
                 );
               addRule(
-                "http-status",
-                "runtime",
-                response.status() < 400 ? "pass" : "fail",
-                `Dokument antwortet mit HTTP ${response.status()}.`,
+                "horizontal-overflow",
+                "layout",
+                geometry.pageOverflow ? "fail" : "pass",
+                geometry.pageOverflow
+                  ? "Horizontales Dokument-Overflow gemessen."
+                  : "Kein horizontales Dokument-Overflow in diesem Zustand.",
                 pageUrl,
                 viewport.id,
                 state,
-                response.status() < 400
-                  ? []
-                  : [
-                      make(
-                        "http-status",
-                        "runtime",
-                        "Dokument liefert Fehlerstatus",
-                        `HTTP ${response.status()}`,
-                        "Routing und Erreichbarkeit dieser Seite prüfen.",
-                        "Die Seite liefert den vorgesehenen erfolgreichen HTTP-Status.",
-                        {
-                          priority:
-                            response.status() >= 500 ? "critical" : "important",
-                        },
-                      ),
-                    ],
+                overflows,
                 2,
               );
-              try {
-                const axePath = require.resolve("axe-core/axe.min.js");
-                await page.addScriptTag({
-                  content: await readFile(axePath, "utf8"),
-                });
-                const locale = JSON.parse(
-                  await readFile(
-                    require.resolve("axe-core/locales/de.json"),
-                    "utf8",
-                  ),
+              const covers = geometry.covered.map((issue) =>
+                make(
+                  "covered-control",
+                  "layout",
+                  issue.uncertain
+                    ? "Bedienfläche hinter fester Ebene — Absicht prüfen"
+                    : "Bedienfläche wird von anderem Element verdeckt",
+                  issue.detail +
+                    (issue.uncertain
+                      ? " Die feste/haftende Ebene kann ein beabsichtigter Hinweis, eine Navigation oder eine Kopfzeile sein. Kein automatisch bestätigter Websitefehler."
+                      : ""),
+                  "Zuerst beabsichtigten Zustand und Schließmöglichkeit prüfen; danach bei Bedarf Stacking und Pointer-Events im Quellprojekt untersuchen.",
+                  "An den untersuchten Punkten trifft der Hit-Test das Bedienelement oder dessen Inhalt.",
+                  {
+                    selector: issue.selector,
+                    rect: issue.rect,
+                    evidenceStatus: issue.uncertain ? "heuristic" : "measured",
+                    priority: issue.uncertain ? "nice-to-have" : "important",
+                  },
+                ),
+              );
+              addRule(
+                "covered-control",
+                "layout",
+                covers.some((item) => item.evidenceStatus === "measured")
+                  ? "fail"
+                  : covers.length
+                    ? "not_run"
+                    : "pass",
+                `${covers.length} an fünf Punkten verdeckte Bedienflächen. Feste/haftende Ebenen sind Prüfkandidaten mit unbekannter Fehlerbewertung. Kein vollständiger Funktionstest.`,
+                pageUrl,
+                viewport.id,
+                state,
+                covers,
+                2,
+              );
+              for (const issue of geometry.clipped)
+                make(
+                  "clipped-text-candidate",
+                  "layout",
+                  "Möglicherweise abgeschnittener Text",
+                  issue.detail,
+                  "Feste Höhe und Overflow-Einstellungen prüfen; beabsichtigte Vorschauen gegebenenfalls bestätigen.",
+                  "Der vollständige relevante Text bleibt lesbar oder ist über eine eindeutige Aktion erreichbar.",
+                  {
+                    selector: issue.selector,
+                    rect: issue.rect,
+                    evidenceStatus: "heuristic",
+                    priority: "nice-to-have",
+                  },
                 );
-                await page.evaluate((locale) => {
-                  (
-                    window as unknown as {
-                      axe: { configure: (options: unknown) => void };
-                    }
-                  ).axe.configure({ locale });
-                }, locale);
-                const axeResult = await page.evaluate(async () => {
-                  const axe = (
-                    window as unknown as {
-                      axe: {
-                        run: (
-                          context: Document,
-                          options: unknown,
-                        ) => Promise<{
-                          violations: {
-                            id: string;
-                            impact: string;
-                            description: string;
-                            helpUrl: string;
-                            nodes: {
-                              target: string[];
-                              failureSummary?: string;
-                            }[];
-                          }[];
-                          incomplete: unknown[];
-                        }>;
-                      };
-                    }
-                  ).axe;
-                  return axe.run(document, {
-                    runOnly: {
-                      type: "tag",
-                      values: [
-                        "wcag2a",
-                        "wcag2aa",
-                        "wcag21a",
-                        "wcag21aa",
-                        "wcag22aa",
-                      ],
-                    },
-                  });
-                });
-                const axeFindings: Finding[] = [];
-                for (const violation of axeResult.violations.slice(0, 30))
-                  for (const node of violation.nodes.slice(0, 3)) {
-                    const locator = node.target.join(" ");
-                    let box;
-                    try {
-                      box = await page
-                        .locator(locator)
-                        .first()
-                        .boundingBox({ timeout: 1000 });
-                    } catch {
-                      /* Shadow/iframe target cannot be represented by a plain locator. */
-                    }
-                    axeFindings.push(
-                      make(
-                        `axe-${violation.id}`,
-                        "accessibility",
-                        violation.description,
-                        (node.failureSummary || violation.description).slice(
-                          0,
-                          1200,
+              if (initial) {
+                const seo = (
+                  id: string,
+                  pass: boolean,
+                  title: string,
+                  detail: string,
+                  recommendation: string,
+                  acceptance: string,
+                  priority: Finding["priority"] = "important",
+                ) => {
+                  const findings = pass
+                    ? []
+                    : [
+                        make(
+                          id,
+                          "seo",
+                          title,
+                          detail,
+                          recommendation,
+                          acceptance,
+                          { priority },
                         ),
-                        `Regel ${violation.id} am betroffenen Element korrigieren; Dokumentation beachten.`,
-                        "axe meldet diese Verletzung beim gleichen Zustand nicht mehr; nötige manuelle Prüfung bleibt bestehen.",
-                        {
-                          selector: locator,
-                          rect:
-                            box &&
-                            box.y < viewport.height &&
-                            box.y + box.height > 0
-                              ? box
-                              : undefined,
-                          source: violation.helpUrl,
-                          priority:
-                            violation.impact === "minor"
-                              ? "nice-to-have"
-                              : "important",
-                        },
-                      ),
-                    );
+                      ];
+                  addRule(
+                    id,
+                    "seo",
+                    pass ? "pass" : "fail",
+                    detail,
+                    pageUrl,
+                    viewport.id,
+                    state,
+                    findings,
+                  );
+                };
+                seo(
+                  "document-title",
+                  !!metadata.title,
+                  "Seitentitel fehlt",
+                  metadata.title
+                    ? `Titel vorhanden: ${metadata.title.slice(0, 200)}`
+                    : "Kein nicht-leerer title im gerenderten Dokument.",
+                  "Einen eindeutigen passenden Seitentitel ergänzen.",
+                  "Der Seitentitel ist nicht leer und beschreibt diese Seite.",
+                );
+                seo(
+                  "meta-description",
+                  !!metadata.description,
+                  "Meta Description fehlt",
+                  metadata.description
+                    ? "Nicht-leere Meta Description vorhanden."
+                    : "Die Meta Description fehlt oder ist leer. Dies belegt keinen Rankingverlust.",
+                  "Eine passende Zusammenfassung für diese Seite ergänzen, falls sie indexiert werden soll.",
+                  "Eine redaktionell passende Meta Description ist im HTML vorhanden.",
+                  "nice-to-have",
+                );
+                const noindex = hasNoindex(
+                  metadata.robotsValues,
+                  metadata.googlebotValues,
+                  [response.headers()["x-robots-tag"] ?? ""],
+                );
+                if (metadata.signalsTruncated && !noindex)
+                  addRule(
+                    "indexability",
+                    "seo",
+                    "not_run",
+                    "Robots-Metadatenbudget erreicht; vollständige Indexierungsangaben unbekannt.",
+                    pageUrl,
+                    viewport.id,
+                    state,
+                  );
+                else if (job.environment === "production")
+                  seo(
+                    "indexability",
+                    !noindex,
+                    "Produktionsseite untersagt Indexierung",
+                    noindex
+                      ? "noindex in Meta Robots oder X-Robots-Tag gefunden. Ob dies beabsichtigt ist, muss geprüft werden."
+                      : "Kein noindex in den geprüften Angaben. Das beweist keine Google-Indexierung.",
+                    "Indexierungsabsicht prüfen; nur versehentliches noindex entfernen.",
+                    "Robots-Angaben entsprechen der dokumentierten Indexierungsabsicht.",
+                  );
+                else
+                  addRule(
+                    "indexability",
+                    "seo",
+                    "not_applicable",
+                    "Indexierungsabsicht für Staging/lokal nicht als Produktionsanforderung gewertet.",
+                    pageUrl,
+                    viewport.id,
+                    state,
+                  );
+                const validCanonical =
+                  !metadata.canonical ||
+                  (() => {
+                    try {
+                      return ["http:", "https:"].includes(
+                        new URL(metadata.canonical, page.url()).protocol,
+                      );
+                    } catch {
+                      return false;
+                    }
+                  })();
+                if (metadata.signalsTruncated)
+                  addRule(
+                    "canonical-valid",
+                    "seo",
+                    "not_run",
+                    "Metadatenerfassung begrenzt; vollständiges Canonical-Syntaxurteil unbekannt.",
+                    pageUrl,
+                    viewport.id,
+                    state,
+                  );
+                else
+                  seo(
+                    "canonical-valid",
+                    validCanonical,
+                    "Canonical-Ziel ist ungültig",
+                    validCanonical
+                      ? "Kein syntaktisch ungültiges Canonical gefunden; korrekte Zielabsicht ist nicht geprüft."
+                      : "Canonical kann nicht zu einer HTTP(S)-URL aufgelöst werden.",
+                    "Canonical auf die beabsichtigte kanonische URL setzen.",
+                    "Canonical ist syntaktisch gültig und redaktionell korrekt.",
+                  );
+                const invalidJson = metadata.jsonld.some((item) => {
+                  if (item.oversized) return false;
+                  try {
+                    JSON.parse(item.text);
+                    return false;
+                  } catch {
+                    return true;
                   }
+                });
+                if (
+                  !invalidJson &&
+                  (metadata.jsonldTruncated ||
+                    metadata.jsonld.some((item) => item.oversized))
+                )
+                  addRule(
+                    "structured-data-json",
+                    "seo",
+                    "not_run",
+                    "JSON-LD-Erfassung überschreitet 20 Blöcke oder 100 KB pro Block; kein vollständiges Syntaxurteil.",
+                    pageUrl,
+                    viewport.id,
+                    state,
+                  );
+                else
+                  seo(
+                    "structured-data-json",
+                    !invalidJson,
+                    "Strukturierte Daten enthalten ungültiges JSON",
+                    invalidJson
+                      ? "Mindestens ein JSON-LD-Block lässt sich nicht als JSON parsen."
+                      : "Kein syntaktisch ungültiges JSON-LD gefunden. Schema-Eignung ist nicht geprüft.",
+                    "JSON-LD-Syntax korrigieren und danach Schema-Eignung separat validieren.",
+                    "Alle JSON-LD-Blöcke sind gültiges JSON.",
+                  );
                 addRule(
-                  "axe-automated",
-                  "accessibility",
-                  axeResult.violations.length ? "fail" : "pass",
-                  `${axeResult.violations.length} axe-Regelverletzungen; ${axeResult.incomplete.length} Ergebnisse brauchen manuelle Prüfung. Nur automatisierter Umfang.`,
+                  "http-status",
+                  "runtime",
+                  response.status() < 400 ? "pass" : "fail",
+                  `Dokument antwortet mit HTTP ${response.status()}.`,
                   pageUrl,
                   viewport.id,
                   state,
-                  axeFindings,
-                  3,
+                  response.status() < 400
+                    ? []
+                    : [
+                        make(
+                          "http-status",
+                          "runtime",
+                          "Dokument liefert Fehlerstatus",
+                          `HTTP ${response.status()}`,
+                          "Routing und Erreichbarkeit dieser Seite prüfen.",
+                          "Die Seite liefert den vorgesehenen erfolgreichen HTTP-Status.",
+                          {
+                            priority:
+                              response.status() >= 500
+                                ? "critical"
+                                : "important",
+                          },
+                        ),
+                      ],
+                  2,
                 );
-              } catch {
-                addRule(
-                  "axe-automated",
-                  "accessibility",
-                  "not_run",
-                  "axe konnte auf dieser Seite nicht vollständig ausgeführt werden.",
-                  pageUrl,
-                  viewport.id,
-                  state,
-                  [],
-                  3,
-                );
+              }
+              if (initial || state.startsWith("journey:")) {
+                try {
+                  const axePath = require.resolve("axe-core/axe.min.js");
+                  await page.addScriptTag({
+                    content: await readFile(axePath, "utf8"),
+                  });
+                  const locale = JSON.parse(
+                    await readFile(
+                      require.resolve("axe-core/locales/de.json"),
+                      "utf8",
+                    ),
+                  );
+                  await page.evaluate((locale) => {
+                    (
+                      window as unknown as {
+                        axe: { configure: (options: unknown) => void };
+                      }
+                    ).axe.configure({ locale });
+                  }, locale);
+                  const axeResult = await page.evaluate(async () => {
+                    const axe = (
+                      window as unknown as {
+                        axe: {
+                          run: (
+                            context: Document,
+                            options: unknown,
+                          ) => Promise<{
+                            violations: {
+                              id: string;
+                              impact: string;
+                              description: string;
+                              helpUrl: string;
+                              nodes: {
+                                target: string[];
+                                failureSummary?: string;
+                              }[];
+                            }[];
+                            incomplete: unknown[];
+                          }>;
+                        };
+                      }
+                    ).axe;
+                    return Promise.race([
+                      axe.run(document, {
+                        runOnly: {
+                          type: "tag",
+                          values: [
+                            "wcag2a",
+                            "wcag2aa",
+                            "wcag21a",
+                            "wcag21aa",
+                            "wcag22aa",
+                          ],
+                        },
+                      }),
+                      new Promise<never>((_, reject) =>
+                        setTimeout(
+                          () => reject(new Error("axe-Zeitlimit")),
+                          6000,
+                        ),
+                      ),
+                    ]);
+                  });
+                  const axeFindings: Finding[] = [];
+                  for (const violation of axeResult.violations.slice(0, 30))
+                    for (const node of violation.nodes.slice(0, 3)) {
+                      const locator = node.target.join(" ");
+                      let box;
+                      try {
+                        box = await page
+                          .locator(locator)
+                          .first()
+                          .boundingBox({ timeout: 1000 });
+                      } catch {
+                        /* Shadow/iframe target cannot be represented by a plain locator. */
+                      }
+                      axeFindings.push(
+                        make(
+                          `axe-${violation.id}`,
+                          "accessibility",
+                          violation.description,
+                          (node.failureSummary || violation.description).slice(
+                            0,
+                            1200,
+                          ),
+                          `Regel ${violation.id} am betroffenen Element korrigieren; Dokumentation beachten.`,
+                          "axe meldet diese Verletzung beim gleichen Zustand nicht mehr; nötige manuelle Prüfung bleibt bestehen.",
+                          {
+                            selector: locator,
+                            rect:
+                              box &&
+                              box.y < viewport.height &&
+                              box.y + box.height > 0
+                                ? box
+                                : undefined,
+                            source: violation.helpUrl,
+                            priority:
+                              violation.impact === "minor"
+                                ? "nice-to-have"
+                                : "important",
+                          },
+                        ),
+                      );
+                    }
+                  addRule(
+                    "axe-automated",
+                    "accessibility",
+                    axeResult.violations.length ? "fail" : "pass",
+                    `${axeResult.violations.length} axe-Regelverletzungen; ${axeResult.incomplete.length} Ergebnisse brauchen manuelle Prüfung. Nur automatisierter Umfang.`,
+                    pageUrl,
+                    viewport.id,
+                    state,
+                    axeFindings,
+                    3,
+                  );
+                } catch {
+                  addRule(
+                    "axe-automated",
+                    "accessibility",
+                    "not_run",
+                    "axe konnte auf dieser Seite nicht vollständig ausgeführt werden.",
+                    pageUrl,
+                    viewport.id,
+                    state,
+                    [],
+                    3,
+                  );
+                }
               }
             }
             const matching = report.findings.filter(
@@ -1505,6 +1613,15 @@ export async function runAudit(
                   })),
                 },
               });
+            return currentEvidence!;
+          };
+          for (const [stateIndex, y] of positions.entries()) {
+            await page.evaluate((y) => scrollTo(0, y), y);
+            await page.waitForTimeout(80);
+            await captureState(
+              stateIndex === 0 ? "initial" : `scroll-${stateIndex}`,
+              stateIndex === 0,
+            );
           }
           const state = "initial";
           // A fixed rule budget per page/viewport: extra scroll samples cannot inflate the score with more passes.
@@ -1513,7 +1630,8 @@ export async function runAudit(
               (item) =>
                 item.pageUrl === pageUrl &&
                 item.viewportId === viewport.id &&
-                item.ruleId === ruleId,
+                item.ruleId === ruleId &&
+                !item.state.startsWith("journey:"),
             );
             report.rules = report.rules.filter(
               (item) => !sampled.includes(item),
@@ -1634,12 +1752,141 @@ export async function runAudit(
               ),
               jsonldTruncated: metadata.jsonldTruncated,
             });
+          for (const j of (options.journeys ?? []).filter(
+            (j) => j.pageUrl === pageUrl && j.viewportIds.includes(viewport.id),
+          )) {
+            const run = report.journeyRuns!.find(
+              (r) => r.journeyId === j.id && r.viewportId === viewport.id,
+            )!;
+            try {
+              await control?.checkpoint();
+              await context.close();
+              context = await createContext(
+                browser,
+                target,
+                policy,
+                viewport,
+                options.excludedPaths,
+              );
+              page = await context.newPage();
+              await documentGuards.get(page);
+              page.setDefaultTimeout(8000);
+              const initialResponse = await page.goto(j.pageUrl, {
+                waitUntil: "domcontentloaded",
+                timeout: 10000,
+              });
+              if (
+                !initialResponse ||
+                initialResponse.status() >= 400 ||
+                !inScope(page.url(), target, options.excludedPaths)
+              )
+                throw Error(
+                  "Ablaufstart nicht erreichbar oder nicht freigegeben.",
+                );
+              await stabilize(page);
+              interactionContexts.add(context);
+              await executeJourney(j, run, page, {
+                checkpoint: async () => {
+                  await control?.checkpoint();
+                },
+                blocked: () => !!blockedByContext.get(context)?.size,
+                settle: async () => {
+                  await stabilize(page);
+                },
+                progress: (message) =>
+                  emit({
+                    type: "progress",
+                    progress: {
+                      phase: "journey",
+                      message,
+                      completed: report.coverage.completed,
+                      total: report.coverage.planned,
+                      pageUrl,
+                      viewportId: viewport.id,
+                      updatedAt: new Date().toISOString(),
+                    },
+                  }),
+                capture: async (state, ready, measure) => {
+                  const evidence = await captureState(
+                    state,
+                    false,
+                    measure,
+                    ready,
+                  );
+                  return evidence;
+                },
+              });
+            } catch (error) {
+              run.status = "unknown";
+              run.detail = (error as Error).message
+                .split("\n")[0]!
+                .slice(0, 350);
+              if (control?.cancelled()) throw error;
+            } finally {
+              await context.close();
+              interactionContexts.delete(context);
+            }
+            for (const step of run.steps) {
+              if (step.status !== "completed") {
+                for (const rule of report.rules.filter(
+                  (r) =>
+                    r.pageUrl === pageUrl &&
+                    r.viewportId === viewport.id &&
+                    r.state === step.state,
+                )) {
+                  rule.status = "not_run";
+                  rule.detail = step.detail;
+                  rule.findingIds = [];
+                }
+                report.findings = report.findings.filter(
+                  (f) =>
+                    !(
+                      f.pageUrl === pageUrl &&
+                      f.viewportId === viewport.id &&
+                      f.state === step.state
+                    ),
+                );
+                for (const e of report.evidence.filter(
+                  (e) =>
+                    e.pageUrl === pageUrl &&
+                    e.viewportId === viewport.id &&
+                    (e.state === step.state ||
+                      e.state === step.state + ":before"),
+                ))
+                  if (e.capture) e.capture.stateReady = false;
+              }
+              const evidence = report.evidence.find(
+                (e) => e.id === step.afterId,
+              );
+              report.pages.push({
+                id: randomUUID(),
+                pageUrl,
+                finalUrl: evidence?.capture?.documentUrl ?? page.url(),
+                viewportId: viewport.id,
+                state: step.state,
+                title: metadata.title,
+                statusCode: null,
+                status: step.status === "completed" ? "completed" : "failed",
+                durationMs: step.durationMs,
+                evidenceId: step.afterId,
+                ...(step.status !== "completed" ? { error: step.detail } : {}),
+              });
+            }
+          }
           report.coverage.completed++;
         } catch (error) {
           const message =
             error instanceof Error
               ? error.message.split("\n")[0]!.slice(0, 300)
               : "Seite konnte nicht geprüft werden.";
+          report.pages = report.pages.filter(
+            (p) =>
+              !(
+                p.pageUrl === pageUrl &&
+                p.viewportId === viewport.id &&
+                p.state === "initial"
+              ),
+          );
           report.pages.push({
             id: randomUUID(),
             pageUrl,
@@ -1658,6 +1905,7 @@ export async function runAudit(
           report.rules = report.rules.filter(
             (item) =>
               item.category === "performance" ||
+              item.state.startsWith("journey:") ||
               item.pageUrl !== pageUrl ||
               item.viewportId !== viewport.id,
           );

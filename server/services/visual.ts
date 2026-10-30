@@ -32,6 +32,12 @@ export function visualPairs(before: Scan, after: Scan): VisualPair[] {
     else if (!sameExecution(a, b))
       reason =
         "Engine, Browser oder Ausführungsumgebung unterscheiden sich oder sind unbekannt.";
+    else if (
+      old.capture?.stateReady === false ||
+      next.capture?.stateReady === false
+    )
+      reason =
+        "Interaktionszustand wurde nicht bestätigt; kein numerischer Bildvergleich.";
     else if (!old.capture || !next.capture)
       reason =
         "Historische Aufnahmebedingungen fehlen. Kein belastbarer Pixelvergleich.";

@@ -8,31 +8,32 @@ Manage websites you own, inspect desktop/tablet/mobile layouts, collect evidence
 
 The repository and package are now **`sitefenn`**. Existing data stays in the legacy `website-audit-hub` directory so the rename does not reset your projects. Name/domain clearance is still pending.
 
-![SiteFenn 1.4 metadata comparison and linked repair candidates](docs/screenshots/1.4-metadata.jpg)
+![SiteFenn 1.5 checks the explicitly opened mobile menu](docs/screenshots/1.5-menu-check.jpg)
 
 _Actual application, owned synthetic demo. Missing measurements remain unknown._
 
-[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.4.md) · [Changelog](CHANGELOG.md)
+[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.5.md) · [Changelog](CHANGELOG.md)
 
-## What's new in 1.4
+## What's new in 1.5
 
-**Technical SEO with context.** Import a bounded XML/gzip sitemap, deliberately choose the pages to capture, and inspect internal links, HTTP failures, redirect chains, repeated metadata and canonical/robots signals together. The new **SEO-Kontext** workspace links observations directly to their finding and repair action.
+**Check the opened state, too.** Define and explicitly approve a short page recipe: open a menu, expand an accordion, reveal a dialog or scroll to a chosen position. Every step names its expected result and gets before/after evidence when capture is possible. Layout and automated accessibility checks run on confirmed resulting states.
 
-Measured HTTP errors remain separate from review candidates: similar titles do not establish a shared template bug or ranking loss. A blocked, excluded, timed-out or unrequested target stays unknown. JSON-LD syntax and the limited inline Breadcrumb profile have distinct results.
+The new **Seitenzustände** area keeps reached expectations separate from audit-rule outcomes. Missing targets, blocked requests, unexpected navigation and timeouts stay unknown. Retesting a state finding repeats its approved recipe; changed or unconfirmed states cannot establish a verified fix or numeric image comparison.
 
-The page assistant receives these saved SEO records as bounded context; Markdown/JSON exports carry the observations and scope. Local AI stays optional and unverified; the [1.2 small-model limitations](docs/RELEASE-1.2.md) still apply. Visual comparisons, masks and targeted retests from [1.3](docs/RELEASE-1.3.md) remain available.
+1.5 also corrects mobile overflow measurement when an overwide element expands `innerWidth`. Existing [technical SEO context](docs/RELEASE-1.4.md), [visual references/retests](docs/RELEASE-1.3.md) and the optional [page assistant](docs/RELEASE-1.2.md) remain available. Local model advice is still unverified.
 
-See [1.4 verification, request budgets and limits](docs/RELEASE-1.4.md).
+[Verification, supported controls and budgets](docs/RELEASE-1.5.md) · [Actual state report](docs/screenshots/1.5-state-evidence.jpg)
 
 ## The workflow
 
 1. **Add a project:** production, staging, or an explicitly authorized local target.
 2. **Choose scope:** discover same-origin links or import sitemap candidates, select pages and exclusions, and choose up to three versioned viewport profiles.
-3. **Watch the check:** streamed browser frames show bounded scroll samples and finding overlays. This is a preview, not an interactive remote browser or target iframe.
-4. **Review evidence:** measured observations, heuristic candidates and optional AI suggestions are separate.
-5. **Work the checklist:** related findings are grouped into tasks with acceptance criteria. Export Markdown/JSON or an optional evidence ZIP.
-6. **Retest:** launch a scoped task retest or another full check. A manual checkbox means ready for review; an explicit compatible passing check verifies a fix.
-7. **Compare visually:** choose a saved reference, inspect paired page/device/scroll captures, explicitly mask regions and review changed pixels separately from rule findings.
+3. **Optionally approve page states:** define the start page, devices, UI/scroll actions and expected results; review the preview before approving.
+4. **Watch the check:** streamed browser frames show bounded scroll samples and finding overlays. This is a preview, not an interactive remote browser or target iframe.
+5. **Review evidence:** measured observations, heuristic candidates and optional AI suggestions are separate.
+6. **Work the checklist:** related findings are grouped into tasks with acceptance criteria. Export Markdown/JSON or an optional evidence ZIP.
+7. **Retest:** launch a scoped task retest or another full check. A manual checkbox means ready for review; an explicit compatible passing check verifies a fix.
+8. **Compare visually:** choose a saved reference, inspect paired page/device/scroll captures, explicitly mask regions and review changed pixels separately from rule findings.
 
 The built-in demo is an authorized fixture for trying the workflow without an external website. No external user pilot or security certification is implied; [release verification](docs/RELEASE-1.0.md) lists the actual checks and remaining validation.
 
@@ -52,6 +53,27 @@ The built-in demo is an authorized fixture for trying the workflow without an ex
 ![Actual SiteFenn page-analysis workspace](docs/screenshots/1.2-page-analysis.jpg)
 
 </details>
+
+## Approved page states
+
+In **Übersicht → Seitenabläufe**, choose a selected start page and devices, then add up to five steps. Supported actions are a declared UI switch and a vertical scroll position. Each step states a target and an expectation: rendered visible/hidden, or a native details/dialog open/closed. The preview shows the complete sequence and stop conditions. Approve the recipe explicitly; editing it revokes approval. Starting a check is disabled while a recipe is unapproved.
+
+Selectors are deliberately small: `#id`, `[data-testid="…"]` or `[aria-label="…"]`. Clicks support native `button type="button"` controls with `aria-controls` and disclosure/dialog semantics, or a `summary` controlling its own `details`. Links, forms, arbitrary scripts, login and transactional actions are outside this feature. Navigation is the explicit fresh start page per recipe, not autonomous multi-page exploration.
+
+In **Seitenzustände**, inspect the saved sequence, before/after images and findings for each step. Opening a finding leads to its rule, screenshot and repair criterion. **Retest this task** retains the relevant recipe and checks the same state identity. A partial run does not replace the full-project score.
+
+![Actual approved state evidence](docs/screenshots/1.5-state-evidence.jpg)
+
+<details>
+<summary>Editor, mobile layout and corrected-state retest</summary>
+
+![Actual recipe preview and approval](docs/screenshots/1.5-journey-editor.jpg)
+![Actual mobile state report](docs/screenshots/1.5-mobile.jpg)
+![Actual corrected-state retest](docs/screenshots/1.5-state-retest.jpg)
+
+</details>
+
+Each recipe/device starts in a fresh browser context. Up to three recipes, five steps each and 18 step/device combinations are allowed. A 30-second execution deadline closes that recipe's context; start navigation has its own bounded timeout. Missing/ambiguous controls, unfulfilled expectations, blocked requests or URL changes stop the remaining steps. Before/after images and records remain local; sharing exports needs review. Approval of a recipe is not proof its site's JavaScript has no side effects. Use authorized trusted sites only. See [precise boundaries and tests](docs/RELEASE-1.5.md).
 
 ## Technical SEO in context
 
@@ -96,7 +118,7 @@ From **Maßnahmenplan**, select **Diese Maßnahme nachtesten**. The server deriv
 
 | Area              | Implemented scope                                                                                            | Limit                                                                                      |
 | ----------------- | ------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
-| Layout            | Desktop 1440×900, tablet 768×1024, mobile 390×844; bounded scrolling; overflow and covered-control hit tests | A few captured positions, not every interaction. Clipped-text candidates need review.      |
+| Layout            | Desktop 1440×900, tablet 768×1024, mobile 390×844; bounded scrolling and explicitly approved UI states; overflow and covered-control hit tests | A few captured positions, not every interaction. Clipped-text candidates need review.      |
 | Accessibility     | axe automated WCAG-tagged checks and affected elements                                                       | Not a complete WCAG audit; semantic and incomplete cases need human judgement.             |
 | Technical SEO     | Metadata presence/similarity, internal link/redirect samples, canonical/robots context, JSON syntax and limited Breadcrumb profile            | Not a ranking prediction, full SEO crawler, schema-eligibility test, or proof of indexing. |
 | Runtime           | Document status, observed script errors and failed own-origin resources                                      | Not a comprehensive functional/security test.                                              |

@@ -126,9 +126,7 @@ export function compareScans(before: Scan, after: Scan): ScanComparison {
       /^performance-(lcp|cls|tbt)$/.test(finding.ruleId)
     ) {
       const metric = finding.ruleId.slice("performance-".length) as
-        | "lcp"
-        | "cls"
-        | "tbt";
+        "lcp" | "cls" | "tbt";
       return (
         b.rules.some(
           (rule) =>
@@ -146,6 +144,17 @@ export function compareScans(before: Scan, after: Scan): ScanComparison {
             sample.metrics[metric] !== null,
         )
       );
+    }
+    if (finding.state.startsWith("journey:")) {
+      const confirmed = (r: AuditReport) =>
+        r.journeyRuns?.some(
+          (j) =>
+            samePageViewport(j, finding) &&
+            j.steps.some(
+              (s) => s.state === finding.state && s.status === "completed",
+            ),
+        );
+      if (!confirmed(a) || !confirmed(b)) return false;
     }
     const originalDocument = a.pages.find(
       (page) =>
@@ -205,7 +214,10 @@ export function compareScans(before: Scan, after: Scan): ScanComparison {
             samePageViewport(rule, finding) &&
             rule.ruleId === finding.ruleId &&
             rule.category === "layout" &&
-            rule.state === "initial" &&
+            rule.state ===
+              (finding.state.startsWith("journey:")
+                ? finding.state
+                : "initial") &&
             rule.status === "pass",
         )
       );

@@ -119,7 +119,14 @@ export class Runner {
       30 * 60_000,
       Math.max(
         120_000,
-        count * 30_000 + (scan.options?.performance ? 300_000 : 0) + 60_000,
+        count * 30_000 +
+          (scan.options?.performance ? 300_000 : 0) +
+          60_000 +
+          (scan.options?.technicalSeo ? 90_000 : 0) +
+          (scan.options?.journeys ?? []).reduce(
+            (n, j) => n + j.viewportIds.length * 45_000,
+            0,
+          ),
       ),
     );
     let remaining = duration,

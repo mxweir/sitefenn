@@ -244,6 +244,20 @@ function exportEvidence(
       finding.evidenceId ? [finding.evidenceId] : [],
     ),
   );
+  for (const run of report.journeyRuns ?? [])
+    for (const step of run.steps) {
+      if (
+        findings.some(
+          (f) =>
+            f.pageUrl === run.pageUrl &&
+            f.viewportId === run.viewportId &&
+            f.state === step.state,
+        )
+      ) {
+        if (step.beforeId) referenced.add(step.beforeId);
+        if (step.afterId) referenced.add(step.afterId);
+      }
+    }
   const selected = options.selectedEvidenceIds
     ? options.selectedEvidenceIds.filter((id) => referenced.has(id))
     : [...referenced];
@@ -303,6 +317,35 @@ export function buildJsonReport(
               report.seo,
               options.selectedFindingIds ? findings : undefined,
             ),
+          }
+        : {}),
+      ...(report.journeyRuns
+        ? {
+            journeys: report.journeyRuns
+              .filter(
+                (r) =>
+                  !options.selectedFindingIds ||
+                  findings.some(
+                    (f) =>
+                      f.pageUrl === r.pageUrl && f.viewportId === r.viewportId,
+                  ),
+              )
+              .map((r) => ({
+                ...r,
+                pageUrl: urlLabel(r.pageUrl),
+                definition: report.options.journeys?.find(
+                  (j) => j.id === r.journeyId,
+                )?.steps,
+                steps: r.steps.map((step) => ({
+                  ...step,
+                  beforeId: exportedEvidence.has(step.beforeId ?? "")
+                    ? step.beforeId
+                    : undefined,
+                  afterId: exportedEvidence.has(step.afterId ?? "")
+                    ? step.afterId
+                    : undefined,
+                })),
+              })),
           }
         : {}),
       coverage: report.coverage,
@@ -396,6 +439,40 @@ export function buildMarkdownReport(
     ),
     "",
   ];
+  if (report.journeyRuns) {
+    lines.push(
+      "",
+      "## Approved page states",
+      "",
+      "Reached expectations are not passed audit rules. Unknown/skipped steps cannot verify a fix; screenshots remain opt-in.",
+    );
+    for (const run of report.journeyRuns.filter(
+      (r) =>
+        !options.selectedFindingIds ||
+        findings.some(
+          (f) => f.pageUrl === r.pageUrl && f.viewportId === r.viewportId,
+        ),
+    )) {
+      lines.push(
+        "",
+        `### ${text(run.name)} · ${text(run.viewportId)} · ${text(run.status)}`,
+        text(urlLabel(run.pageUrl)),
+        `Signature: ${text(run.signature)}`,
+        text(run.detail),
+      );
+      for (const step of run.steps) {
+        lines.push(
+          `- Step ${step.index + 1}: ${text(step.status)} — ${text(step.detail)}`,
+        );
+        if (evidence.has(step.beforeId ?? ""))
+          lines.push(
+            `  - [Before screenshot](${evidence.get(step.beforeId!)})`,
+          );
+        if (evidence.has(step.afterId ?? ""))
+          lines.push(`  - [After screenshot](${evidence.get(step.afterId!)})`);
+      }
+    }
+  }
   if (report.seo) {
     const seo = exportSeoContext(
       report.seo,

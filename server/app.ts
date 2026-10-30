@@ -405,6 +405,23 @@ export async function createApp(options: {
           performance: findings.some((f) => f.category === "performance"),
           performanceRuns: report.options.performanceRuns,
           technicalSeo: report.options.technicalSeo === true,
+          ...(report.options.journeys?.length
+            ? {
+                journeys: report.options.journeys
+                  .filter(
+                    (j) =>
+                      pages.includes(j.pageUrl) &&
+                      j.viewportIds.some((v) => devices.has(v)) &&
+                      findings.some((f) =>
+                        f.state.startsWith(`journey:${j.id}:`),
+                      ),
+                  )
+                  .map((j) => ({
+                    ...j,
+                    viewportIds: j.viewportIds.filter((v) => devices.has(v)),
+                  })),
+              }
+            : {}),
         },
         {
           sourceScanId: source.id,

@@ -1,3 +1,4 @@
+import { normalizeJourneys } from "./services/journey-options.js";
 import { VIEWPORTS, type ScanOptions } from "../shared/types.js";
 
 export function normalizeScanOptions(
@@ -11,6 +12,7 @@ export function normalizeScanOptions(
       : {};
   const allowed = new Set([
     "technicalSeo",
+    "journeys",
     "pages",
     "maxPages",
     "maxDepth",
@@ -126,7 +128,13 @@ export function normalizeScanOptions(
     throw new Error("Ein oder drei Performance-Messläufe wählen.");
   if (body.technicalSeo !== undefined && typeof body.technicalSeo !== "boolean")
     throw new Error("Technisches SEO muss ein Boolean sein.");
+  const journeys = normalizeJourneys(
+    body.journeys,
+    pages,
+    viewports.map((v) => v.id),
+  );
   return {
+    ...(journeys.length ? { journeys } : {}),
     ...(body.technicalSeo === true ? { technicalSeo: true } : {}),
     pages,
     maxPages,

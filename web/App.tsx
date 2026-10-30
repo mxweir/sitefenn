@@ -1,3 +1,4 @@
+import JourneyReport from "./JourneyReport.js";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { APP_VERSION } from "../shared/version.js";
 import {
@@ -18,6 +19,7 @@ import {
   Plus,
   Radio,
   Search,
+  ScanLine,
   ShieldCheck,
   TerminalSquare,
 } from "lucide-react";
@@ -68,6 +70,7 @@ type Tab =
   | "analysis"
   | "tasks"
   | "compare"
+  | "states"
   | "seo"
   | "search";
 const empty: Bootstrap = {
@@ -84,6 +87,7 @@ const tabs = [
   { id: "live", label: "On-Screen-Check", icon: Radio },
   { id: "report", label: "Befunde", icon: FileText },
   { id: "seo", label: "SEO-Kontext", icon: Globe2 },
+  { id: "states", label: "Seitenzustände", icon: ScanLine },
   { id: "analysis", label: "Seite erklären", icon: FileText },
   { id: "tasks", label: "Maßnahmenplan", icon: CheckSquare2 },
   { id: "compare", label: "Vergleich", icon: ArrowLeftRight },
@@ -264,7 +268,7 @@ export default function App() {
           {project && (
             <>
               <button
-                className={`nav-item ${screen === "projects" && ["history", "live", "report", "seo", "analysis", "compare"].includes(tab) ? "selected" : ""}`}
+                className={`nav-item ${screen === "projects" && ["history", "live", "report", "seo", "states", "analysis", "compare"].includes(tab) ? "selected" : ""}`}
                 onClick={() => {
                   setScreen("projects");
                   setTab("history");
@@ -800,6 +804,16 @@ export default function App() {
                           }}
                         />
                       )}
+                      {tab === "states" && (
+                        <JourneyReport
+                          key={selectedScan?.id}
+                          scan={selectedScan}
+                          onFinding={(id) => {
+                            setReportFinding(id);
+                            setTab("report");
+                          }}
+                        />
+                      )}
                       {tab === "analysis" && (
                         <PageAnalysis
                           key={selectedScan?.id}
@@ -903,7 +917,8 @@ export default function App() {
         />
       )}
       {!(
-        screen === "projects" && ["analysis", "compare", "seo"].includes(tab)
+        screen === "projects" &&
+        ["analysis", "compare", "seo", "states"].includes(tab)
       ) && (
         <button
           className="fenn-launcher"

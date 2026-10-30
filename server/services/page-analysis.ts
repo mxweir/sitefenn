@@ -168,6 +168,25 @@ export function preparePage(
       })(),
     })),
   ];
+  for (const run of report.journeyRuns?.filter((r) => r.pageUrl === pageUrl) ??
+    []) {
+    const flow = report.options.journeys?.find((j) => j.id === run.journeyId);
+    units.push({
+      id: `journey:${run.journeyId}:${run.viewportId}`,
+      value: {
+        ...run,
+        steps: undefined,
+        definition: flow,
+        meaning:
+          "Reached expectation is separate from passed audit rules. Unknown states were not assessed; action proposal is not a performed repair.",
+      },
+    });
+    for (const step of run.steps)
+      units.push({
+        id: `journey-step:${run.journeyId}:${run.viewportId}:${step.index}`,
+        value: step,
+      });
+  }
   const sourceHash = sha256(JSON.stringify({ header, units }));
   if (parent && parent.sourceHash !== sourceHash)
     throw new Error(
