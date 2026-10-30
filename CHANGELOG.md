@@ -2,6 +2,17 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 1.8.0 — 2026-10-30
+
+### Developer handoff and release gate
+
+- Added focused Markdown work packages for 1–20 selected findings, with measured scope and reproducible acceptance tests. Optional read-only Git source previews expose bounded literal ID/test-ID candidates; selected snippets are explicitly included and file hashes checked again. No unproven source mapping becomes fact.
+- Added downloadable check profiles/CLI baselines, `npm run audit:check`, local JSON results and a GitHub Actions example with no automatic private artifact uploads.
+- Gate exit codes distinguish compatible no-new-blocker checks (0), new measured regressions (1), and missing/incompatible/error results (2). Non-success HTTP documents cannot yield a layout-only green gate.
+- 117 Node tests and 18 browser tests passed locally, including real CLI baseline → regression → fix → unreachable-target cases. [Verification and limits](docs/RELEASE-1.8.md).
+
+![Actual developer work package](docs/screenshots/1.8-developer-handoff.jpg)
+
 ## 1.7.0 — 2026-10-30
 
 ### Reach-aware work priorities

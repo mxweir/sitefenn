@@ -1,4 +1,10 @@
 import {
+  sourcePreview,
+  selectedFindings,
+  handoffMarkdown,
+} from "./services/developer-handoff.js";
+import { DEFAULT_GATE } from "./services/release-gate.js";
+import {
   GoogleSearch,
   nativeVault,
   type SecretVault,
@@ -75,7 +81,8 @@ export async function createApp(options: {
   const origin = `http://127.0.0.1:${options.port}`;
   const runner = new Runner(store, origin);
   const session = randomBytes(32).toString("hex");
-  let operation: "discovery" | "ai" | "backup" | "visual" | null = null;
+  let operation: "discovery" | "ai" | "backup" | "visual" | "source" | null =
+    null;
   const aiControllers = new Set<AbortController>();
   let pageWork: Promise<void> | undefined;
   let activePage: { id: string; controller: AbortController } | undefined;
@@ -1146,6 +1153,112 @@ export async function createApp(options: {
       throw bad("Zwei gültige unterschiedliche Datenimporte auswählen.");
     return compareSearchDatasets(before, after);
   });
+  app.get<{ Params: { id: string } }>(
+    "/api/scans/:id/check-profile",
+    async (request, reply) => {
+      const scan = requireScan(request.params.id),
+        project = requireProject(scan.projectId);
+      if (!scan.options || scan.options.retest)
+        throw bad("Vollständigen Check mit gespeichertem Profil wählen.");
+      return reply
+        .header(
+          "Content-Disposition",
+          'attachment; filename="sitefenn-profile.json"',
+        )
+        .send({
+          version: "sitefenn-profile-1",
+          projectId: project.id,
+          url: projectUrl(project.id),
+          environment: project.environment,
+          options: scan.options,
+          gate: DEFAULT_GATE,
+        });
+    },
+  );
+  app.get<{ Params: { id: string } }>(
+    "/api/scans/:id/cli-baseline",
+    async (request, reply) => {
+      const scan = requireScan(request.params.id);
+      if (
+        scan.status !== "completed" ||
+        !scan.result?.audit ||
+        scan.options?.retest
+      )
+        throw bad("Abgeschlossenen vollständigen Check wählen.");
+      const copy = structuredClone(scan);
+      for (const e of copy.result!.audit!.evidence) e.path = "[image omitted]";
+      return reply
+        .header(
+          "Content-Disposition",
+          'attachment; filename="sitefenn-baseline.json"',
+        )
+        .send(copy);
+    },
+  );
+  app.post<{ Params: { id: string } }>(
+    "/api/scans/:id/source-preview",
+    async (request) => {
+      idle();
+      operation = "source";
+      try {
+        const scan = requireScan(request.params.id),
+          body = object(request.body);
+        if (!scan.result?.audit || body.acknowledged !== true)
+          throw bad(
+            "Lesenden Zugriff auf den ausgewählten Quellordner ausdrücklich wählen.",
+          );
+        const findings = selectedFindings(scan.result.audit, body.findingIds);
+        return await sourcePreview(body.root, findings);
+      } catch (error) {
+        throw bad((error as Error).message);
+      } finally {
+        operation = null;
+      }
+    },
+  );
+  app.post<{ Params: { id: string } }>(
+    "/api/scans/:id/handoff",
+    async (request) => {
+      idle();
+      operation = "source";
+      try {
+        const scan = requireScan(request.params.id),
+          body = object(request.body);
+        if (!scan.result?.audit) throw bad("Bericht fehlt.");
+        const findings = selectedFindings(scan.result.audit, body.findingIds);
+        let sources: Awaited<ReturnType<typeof sourcePreview>>["candidates"] =
+          [];
+        if (body.includeSource === true) {
+          if (
+            body.acknowledged !== true ||
+            !Array.isArray(body.sourceSelection) ||
+            body.sourceSelection.length > 20
+          )
+            throw bad("Quellvorschau und Auswahl erforderlich.");
+          const preview = await sourcePreview(body.root, findings);
+          sources = body.sourceSelection.map((selection: unknown) => {
+            const s = object(selection);
+            const match = preview.candidates.find(
+              (c) =>
+                c.path === s.path && c.line === s.line && c.sha256 === s.sha256,
+            );
+            if (!match)
+              throw bad(
+                "Quelltreffer geändert oder nicht im gewählten Umfang. Vorschau erneuern.",
+              );
+            return match;
+          });
+        }
+        return {
+          markdown: handoffMarkdown(scan.result.audit, findings, sources),
+        };
+      } catch (error) {
+        throw bad((error as Error).message);
+      } finally {
+        operation = null;
+      }
+    },
+  );
   app.get("/api/google/status", () => google.status());
   const googleAction = async <T>(action: () => Promise<T>) => {
     try {

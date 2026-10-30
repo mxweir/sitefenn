@@ -18,6 +18,8 @@ Freigabeumfang angepasst am 30. Oktober 2026, ausdrücklich vom Nutzer bestätig
 
 Fortschritt 1.7: Erklärbare Arbeitspriorität mit Projektgewichten und explizitem Seiten-Reichweitenimport ist implementiert. Der Google-Connector ist experimentell; Protokoll und echter macOS-Schlüsselbund sind geprüft, echter autorisierter Google-Abruf/Widerruf bleiben unvalidiert. CrUX und Klick-Rückgangskandidaten sind zurückgestellt. [RELEASE-1.7.md](docs/RELEASE-1.7.md).
 
+Fortschritt 1.8: Gezielte Arbeitspakete, begrenzte lesende Git-Quellvorschau als ausdrücklich unbestätigte literale Kandidaten sowie CLI-Profile und Regression-Gate sind umgesetzt. Ein echter CLI-Ablauf erkennt neue Überläufe, bestätigt die korrigierte Variante und lässt einen nicht erreichbaren HTTP-502-Proxylauf unbekannt. [RELEASE-1.8.md](docs/RELEASE-1.8.md). Keine automatische Reparatur oder nachgewiesene Quellcodeursache.
+
 ## Produktziel
 
 **SiteFenn hilft dir, Website-Probleme nachweisbar zu beheben und neue Fehler vor der Veröffentlichung zu erkennen.**

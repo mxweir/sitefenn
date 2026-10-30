@@ -1,0 +1,32 @@
+# Copy to YOUR repository's .github/workflows after reviewing your authorized profile.
+# Pin SiteFenn's full release commit and Node 24; never run untrusted PR app code with secrets.
+name: Authorized website regression check
+on: [workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  sitefenn:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Get a reviewed SiteFenn release
+        uses: actions/checkout@v4
+        with:
+          repository: mxweir/sitefenn
+          ref: v1.8.0 # Replace with reviewed full commit SHA for a pinned workflow.
+          path: .sitefenn-tool
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm ci
+        working-directory: .sitefenn-tool
+      - run: npx playwright install --with-deps chromium
+        working-directory: .sitefenn-tool
+      - run: node .github/scripts/setup-browser-sandbox.mjs
+        working-directory: .sitefenn-tool
+      - name: Check explicitly authorized targets
+        # Profile/baseline must be authored/reviewed, same tool/browser/OS identity.
+        # First run without baseline exits 2; review locally and establish a baseline.
+        run: npm run audit:check -- --profile ../sitefenn-profile.json --baseline ../sitefenn-baseline.json --out ../sitefenn-result --authorized
+        working-directory: .sitefenn-tool
+      # No upload-artifact step: reports/screenshots may be private.

@@ -12,7 +12,15 @@ The repository and package are now **`sitefenn`**. Existing data stays in the le
 
 _Actual application, owned synthetic demo. Missing measurements remain unknown._
 
-[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.7.md) · [Changelog](CHANGELOG.md)
+[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.8.md) · [Changelog](CHANGELOG.md)
+
+## What's new in 1.8
+
+**Hand off a concrete fix and check its release.** Each action can produce a selected Markdown work package with original findings and acceptance tests. Optional read-only source previews show explicitly selected literal candidates, without pretending to know the runtime cause. Export a check profile and use the standalone CLI gate to distinguish new regressions from incomplete measurements.
+
+[CLI usage, actual regression test and source limits](docs/RELEASE-1.8.md) · [Actions integration example](examples/sitefenn-check.yml)
+
+![Actual 1.8 handoff](docs/screenshots/1.8-developer-handoff.jpg)
 
 ## What's new in 1.7
 

@@ -1,3 +1,4 @@
+import DeveloperHandoff from "./DeveloperHandoff.js";
 import WorkPriority from "./WorkPriority.js";
 import { useEffect, useState } from "react";
 import {
@@ -664,6 +665,7 @@ export function Tasks({
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [exportOpen, setExportOpen] = useState(false);
+  const [handoffIds, setHandoffIds] = useState<string[] | null>(null);
   if (!scan?.result)
     return (
       <Empty
@@ -801,6 +803,12 @@ export function Tasks({
                 </div>
               </div>
             </div>
+            <button
+              className="button secondary"
+              onClick={() => setHandoffIds(task.findingIds)}
+            >
+              Entwickler-Arbeitspaket
+            </button>
             <p>{task.summary}</p>
             <p>
               <strong>Maßnahme:</strong> {task.recommendation}
@@ -905,6 +913,13 @@ export function Tasks({
         Ohne angebundenen Quellcode nennt der Plan keine erfundenen Dateien oder
         Zeilennummern. Akzeptierte Risiken bleiben im Messergebnis sichtbar.
       </p>
+      {handoffIds && (
+        <DeveloperHandoff
+          scan={scan}
+          findingIds={handoffIds}
+          onClose={() => setHandoffIds(null)}
+        />
+      )}
       {exportOpen && (
         <ExportDialog scan={scan} onClose={() => setExportOpen(false)} />
       )}
@@ -964,6 +979,38 @@ function ExportDialog({ scan, onClose }: { scan: Scan; onClose: () => void }) {
           können private Seiteninhalte enthalten. Auch Textberichte und URLs vor
           dem Teilen prüfen.
         </p>
+        <details className="plan-note">
+          <summary>Reproduzierbarer CLI-Releasecheck</summary>
+          <p>
+            Prüfprofil und Baseline enthalten lokale Prüfziele und
+            Berichtsdaten. Vor Weitergabe prüfen; Screenshots werden nicht
+            eingebettet. Eine Baseline gilt nur mit identischer vollständiger
+            Messidentität.
+          </p>
+          <a
+            className="button secondary"
+            href={`/api/scans/${scan.id}/check-profile`}
+            download
+          >
+            CLI-Profil herunterladen
+          </a>
+          <a
+            className="button secondary"
+            href={`/api/scans/${scan.id}/cli-baseline`}
+            download
+          >
+            CLI-Baseline herunterladen
+          </a>
+          <pre className="export-preview">
+            npm run audit:check -- --profile profile.json --out new-result
+            --baseline baseline.json --authorized
+          </pre>
+          <p>
+            Exit 0: keine neuen gemessenen Blocker; 1: Regression; 2:
+            unbekannt/inkompatibel/Fehler. Ein erster Lauf ohne Baseline liefert
+            ausdrücklich Status 2.
+          </p>
+        </details>
         <div className="export-options">
           {["markdown", "json", "zip"].map((format) => (
             <a

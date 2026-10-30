@@ -1156,3 +1156,61 @@ test("analysis intent is explicit and grounded proposals show known evidence, al
     390,
   );
 });
+
+test("developer handoff starts without source access and exports only the selected findings", async ({
+  page,
+}) => {
+  await mockWorkspace(page);
+  let request: Record<string, unknown> | undefined;
+  await page.route("**/api/scans/*/handoff", async (route) => {
+    request = route.request().postDataJSON();
+    await route.fulfill({
+      json: {
+        markdown:
+          "# Owned work package\n\nOnly the chosen finding. Source mapping unknown.",
+      },
+    });
+  });
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "Maßnahmenplan", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Entwickler-Arbeitspaket", exact: true })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("heading", {
+      name: "Gezieltes Entwickler-Arbeitspaket",
+      exact: true,
+    }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", {
+      name: "Arbeitspaket als Vorschau erstellen",
+      exact: true,
+    })
+    .click();
+  await expect(page.getByLabel("Arbeitspaket Vorschau")).toContainText(
+    "Only the chosen finding.",
+  );
+  expect(request?.findingIds).toEqual([finding.id]);
+  expect(request?.includeSource).toBeUndefined();
+  expect(request?.root).toBeUndefined();
+  await page
+    .getByText("Optional: Quellordner nur lesend prüfen", { exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", {
+      name: "Quelltreffer lokal anzeigen",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  await page.keyboard.press("Escape");
+  await expect(
+    page.getByRole("heading", {
+      name: "Gezieltes Entwickler-Arbeitspaket",
+      exact: true,
+    }),
+  ).toHaveCount(0);
+});
