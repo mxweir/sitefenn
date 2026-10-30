@@ -1,6 +1,6 @@
 {
   "name": "sitefenn",
-  "version": "1.6.0",
+  "version": "1.7.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -48,5 +48,8 @@
     "tsx": "4.23.15",
     "typescript": "7.0.2",
     "vite": "8.3.5"
+  },
+  "optionalDependencies": {
+    "@napi-rs/keyring": "2.1.2"
   }
 }

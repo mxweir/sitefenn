@@ -1,3 +1,9 @@
+import {
+  GoogleSearch,
+  nativeVault,
+  type SecretVault,
+} from "./services/google-search.js";
+import { priorityWeights, workPriorities } from "./services/work-priority.js";
 import { analysisContext } from "./services/analysis-context.js";
 import Fastify from "fastify";
 import { readFile, access } from "node:fs/promises";
@@ -58,9 +64,14 @@ export async function createApp(options: {
   dev?: boolean;
   runJobs?: boolean;
   aiDependencies?: AiDependencies;
+  googleDependencies?: { vault: SecretVault; fetch: typeof fetch };
 }) {
   const app = Fastify({ logger: false, bodyLimit: 2_200_000 });
   const store = new Store(options.dataDir);
+  const google = new GoogleSearch(
+    options.googleDependencies?.vault ?? nativeVault(resolve(options.dataDir)),
+    options.googleDependencies?.fetch,
+  );
   const origin = `http://127.0.0.1:${options.port}`;
   const runner = new Runner(store, origin);
   const session = randomBytes(32).toString("hex");
@@ -1135,6 +1146,96 @@ export async function createApp(options: {
       throw bad("Zwei gültige unterschiedliche Datenimporte auswählen.");
     return compareSearchDatasets(before, after);
   });
+  app.get("/api/google/status", () => google.status());
+  const googleAction = async <T>(action: () => Promise<T>) => {
+    try {
+      return await action();
+    } catch (error) {
+      throw bad(
+        error instanceof Error
+          ? error.message
+          : "Google-Anfrage fehlgeschlagen.",
+      );
+    }
+  };
+  app.post("/api/google/configure", (request) => {
+    const body = object(request.body);
+    if (body.acknowledged !== true)
+      throw bad("Schlüsselbund-Speicherung ausdrücklich auswählen.");
+    return googleAction(() => google.configure(body.config));
+  });
+  app.post("/api/google/start", (request) => {
+    if (object(request.body).acknowledged !== true)
+      throw bad("Rein lesenden Google-Zugriff ausdrücklich auswählen.");
+    return googleAction(() => google.start());
+  });
+  app.post("/api/google/cancel", async () => {
+    google.close();
+    return google.status();
+  });
+  app.post("/api/google/disconnect", (request) => {
+    if (object(request.body).confirmed !== true)
+      throw bad("Widerruf bestätigen.");
+    return googleAction(() => google.disconnect());
+  });
+  app.get("/api/google/properties", () => googleAction(() => google.sites()));
+  app.post<{ Params: { id: string } }>(
+    "/api/projects/:id/search/google",
+    async (request) => {
+      const project = requireProject(request.params.id),
+        body = object(request.body);
+      if (body.acknowledged !== true)
+        throw bad("Google-Abruf ausdrücklich auswählen.");
+      if (store.searchDatasets(project.id).length >= 50)
+        throw bad("Maximal 50 Importe pro Projekt.");
+      const dataset = await googleAction(() =>
+        google.import(
+          project.id,
+          project.url,
+          body.metadata as SearchImportMetadata,
+        ),
+      );
+      store.saveSearchDataset(dataset);
+      return { dataset };
+    },
+  );
+  app.post<{ Params: { id: string } }>(
+    "/api/scans/:id/work-priority",
+    async (request) => {
+      const scan = requireScan(request.params.id);
+      if (scan.status !== "completed" || !scan.result?.audit)
+        throw bad("Abgeschlossenen Check wählen.");
+      const body = object(request.body);
+      let weights;
+      try {
+        weights = priorityWeights(
+          body.weights ?? store.preference(`priority:${scan.projectId}`),
+        );
+      } catch (error) {
+        throw bad((error as Error).message);
+      }
+      const dataset = body.datasetId
+        ? store
+            .searchDatasets(scan.projectId)
+            .find((d) => d.id === body.datasetId)
+        : undefined;
+      if (body.datasetId && !dataset)
+        throw bad("Import dieses Projekts wählen.");
+      try {
+        const result = workPriorities(
+          scan.result.audit,
+          ensureTasks(scan),
+          dataset,
+          weights,
+        );
+        if (body.save === true)
+          store.savePreference(`priority:${scan.projectId}`, weights);
+        return result;
+      } catch (error) {
+        throw bad((error as Error).message);
+      }
+    },
+  );
   app.get("/api/data/backup", async (_request, reply) => {
     idle();
     operation = "backup";
@@ -1194,6 +1295,7 @@ export async function createApp(options: {
     }
   }
   app.addHook("onClose", async () => {
+    google.close();
     for (const controller of aiControllers) controller.abort();
     await pageWork;
     stopSpeech();

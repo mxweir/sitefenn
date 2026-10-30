@@ -60,7 +60,7 @@ function isoDate(value: string): boolean {
   );
 }
 
-function validateMetadata(metadata: SearchImportMetadata): void {
+export function validateMetadata(metadata: SearchImportMetadata): void {
   if (!metadata || !dimensions.includes(metadata.dimension))
     throw new Error("An explicit supported CSV dimension is required.");
   if (

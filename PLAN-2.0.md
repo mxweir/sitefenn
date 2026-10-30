@@ -14,6 +14,10 @@ Fortschritt 1.5: Freigegebene Startseiten-/UI-/Scroll-Abläufe, erwartete Zustä
 
 Fortschritt 1.6: Begrenzter gemessener DOM-/Style-Kontext, befundnahe Kontextteile, Analyseausrichtung, Aufgaben-/Vergleichs-Snapshots, bekannte Belegreferenzen, Alternativen und fehlende Informationen sind implementiert. Native Kontextkürzung/-verschiebung ist im neuen Seitenpfad deaktiviert; Teilfehler bleiben sichtbar. [EVALUATION-1.6.md](docs/EVALUATION-1.6.md) trennt synthetische Vertragsprüfungen von realen Modellantworten und deren sachlichen Fehlern. Kein eigener Trainingslauf, Screenshot-Vision oder allgemeiner Nachweis verlässlicher Modellqualität wird behauptet. Unabhängige Beschriftung und ein separates zurückgehaltenes Modell-Testset bleiben offen.
 
+Freigabeumfang angepasst am 30. Oktober 2026, ausdrücklich vom Nutzer bestätigt: 2.0 darf als lokal getestete Web-/CLI-Version erscheinen. Echte Google-Kontoabnahme, signierte Desktop-Pakete, realer Windows-Lauf und externe Pilot-/Screenreader-Abnahme sind keine vorgetäuschten bestandenen Release-Prüfungen; sie bleiben offen und werden veröffentlicht. Experimentelle Connector-/Desktop-Arbeit wird als solche ausgewiesen.
+
+Fortschritt 1.7: Erklärbare Arbeitspriorität mit Projektgewichten und explizitem Seiten-Reichweitenimport ist implementiert. Der Google-Connector ist experimentell; Protokoll und echter macOS-Schlüsselbund sind geprüft, echter autorisierter Google-Abruf/Widerruf bleiben unvalidiert. CrUX und Klick-Rückgangskandidaten sind zurückgestellt. [RELEASE-1.7.md](docs/RELEASE-1.7.md).
+
 ## Produktziel
 
 **SiteFenn hilft dir, Website-Probleme nachweisbar zu beheben und neue Fehler vor der Veröffentlichung zu erkennen.**

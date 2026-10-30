@@ -457,6 +457,8 @@ export interface PageAnalysis {
 }
 export type SearchDimension = "date" | "page" | "query" | "country" | "device";
 export interface SearchImportMetadata {
+  source?: "google-api" | "csv";
+  rowLimit?: number;
   property: string;
   startDate: string;
   endDate: string;

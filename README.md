@@ -12,7 +12,15 @@ The repository and package are now **`sitefenn`**. Existing data stays in the le
 
 _Actual application, owned synthetic demo. Missing measurements remain unknown._
 
-[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.6.md) · [Changelog](CHANGELOG.md)
+[Quick start](#quick-start) · [Local AI](#optional-local-ai-and-speech) · [Release verification](docs/RELEASE-1.7.md) · [Changelog](CHANGELOG.md)
+
+## What's new in 1.7
+
+**Work on the right fixes first.** Open the actions workspace's work-priority view, explicitly choose page reach and adjust project weights. The view explains its ordering, keeps missing reach unknown and leaves the Audit-Score intact. Low-CTR/high-impression rows become investigation candidates.
+
+Search Console CSV remains available. An optional **experimental read-only Google connector** adds bounded direct imports with Desktop OAuth/PKCE and macOS Keychain storage. Real account authorization/import/revocation remains unvalidated; other platforms keep CSV. [Setup, checks and limitations](docs/RELEASE-1.7.md).
+
+![Actual 1.7 priorities — owned synthetic metrics](docs/screenshots/1.7-priority-results.jpg)
 
 ## What's new in 1.6
 

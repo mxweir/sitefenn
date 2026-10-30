@@ -2,6 +2,17 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 1.7.0 — 2026-10-30
+
+### Reach-aware work priorities
+
+- Added an explicit ordering view in the actions workspace: measured severity, selected page-dimension reach and persisted project category weights. Exact page matches and maximum observed page counts avoid multiplying reach across devices. Missing rows stay unknown; Audit-Score is untouched.
+- Added bounded low-CTR/high-impression investigation candidates, with declared thresholds and source/date/filter context.
+- Added an experimental read-only Google Search Console connector with Desktop OAuth/PKCE, one-use loopback callback, fixed bounded HTTPS requests, explicit imports and confirmed revocation. Refresh credentials use macOS Keychain; no plaintext backup/export fallback. Other OS users retain CSV.
+- Actual macOS Keychain round trip and controlled OAuth protocol checks passed. **Live Google account authorization/import/revocation remains unvalidated.** 115 Node tests and 17 browser tests passed locally, plus types/build. [Verification, setup and limits](docs/RELEASE-1.7.md).
+
+![Actual 1.7 ordering — owned synthetic data](docs/screenshots/1.7-priority-results.jpg)
+
 ## 1.6.0 — 2026-10-30
 
 ### Better evidence for page explanations

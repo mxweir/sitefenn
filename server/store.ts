@@ -91,7 +91,8 @@ export class Store {
       if (!columns.has("progress"))
         this.db.exec("ALTER TABLE scans ADD COLUMN progress TEXT");
       this.db
-        .exec(`CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK(id=1), payload TEXT NOT NULL);
+        .exec(`CREATE TABLE IF NOT EXISTS workspace_preferences (key TEXT PRIMARY KEY,payload TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK(id=1), payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, scanId TEXT NOT NULL REFERENCES scans(id), projectId TEXT NOT NULL REFERENCES projects(id), payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS search_datasets (id TEXT PRIMARY KEY, projectId TEXT NOT NULL REFERENCES projects(id), payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS ai_plans (id TEXT PRIMARY KEY, scanId TEXT NOT NULL REFERENCES scans(id), payload TEXT NOT NULL);
@@ -139,6 +140,19 @@ export class Store {
       this.close();
       throw error;
     }
+  }
+  preference(key: string): unknown {
+    const row = this.db
+      .prepare("SELECT payload FROM workspace_preferences WHERE key=?")
+      .get(key);
+    return row ? JSON.parse(String(row.payload)) : undefined;
+  }
+  savePreference(key: string, value: unknown) {
+    this.db
+      .prepare(
+        "INSERT OR REPLACE INTO workspace_preferences(key,payload) VALUES (?,?)",
+      )
+      .run(key, JSON.stringify(value));
   }
   projects(): Project[] {
     return this.db

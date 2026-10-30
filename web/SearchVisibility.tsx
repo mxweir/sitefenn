@@ -1,3 +1,4 @@
+import GoogleConnect from "./GoogleConnect.js";
 import { useEffect, useState } from "react";
 import { Download, FileUp, Search } from "lucide-react";
 import type {
@@ -84,12 +85,32 @@ export default function SearchVisibility({ project }: { project: Project }) {
           <p className="eyebrow">ECHTE DATEN, KEIN ERFUNDENER GOOGLE-RANG</p>
           <h2>Google-Sichtbarkeit</h2>
           <p>
-            Importiere einen eigenen Search-Console-CSV-Export. Keine
-            Google-Verbindung und kein automatisches Suchergebnis-Scraping.
+            Importiere einen eigenen Search-Console-CSV-Export oder verbinde
+            Google optional mit rein lesendem Zugriff.
           </p>
         </div>
         <Search size={25} />
       </div>
+      <GoogleConnect
+        projectId={project.id}
+        metadata={{
+          property,
+          startDate,
+          endDate,
+          dimension,
+          filters: (() => {
+            try {
+              return filters.trim() ? JSON.parse(filters) : {};
+            } catch {
+              return null;
+            }
+          })(),
+        }}
+        onImport={(dataset) => {
+          setDatasets((current) => [dataset, ...current]);
+          setSelected(dataset.id);
+        }}
+      />
       <div className="two-column">
         <section className="panel workspace-form">
           <div className="panel-head">

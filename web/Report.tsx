@@ -1,3 +1,4 @@
+import WorkPriority from "./WorkPriority.js";
 import { useEffect, useState } from "react";
 import {
   ChevronDown,
@@ -766,6 +767,7 @@ export function Tasks({
           ))}
         </select>
       </div>
+      <WorkPriority scan={scan} />
       <div className="task-list">
         {visible.map((task) => (
           <article key={task.id} className="task-card">
