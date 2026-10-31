@@ -1,3 +1,5 @@
+import AnalysisFacts from "./AnalysisFacts.js";
+import ProposalEditor from "./ProposalEditor.js";
 import { useContext } from "react";
 import { WorkspaceReadiness } from "./workspace-state.js";
 import { pageFacts } from "../shared/report-contract.js";
@@ -398,8 +400,8 @@ export default function PageAnalysis({
             {current && (
               <p className="hint">
                 Eine Rückfrage nutzt denselben Messstand und die vorherige
-                ungeprüfte Interpretation. Dafür wird eine neue Auswertung
-                gespeichert.
+                Frage. Modellantworten werden nicht als Messkontext übernommen.
+                Dafür wird eine neue Auswertung gespeichert.
               </p>
             )}
             <p className="small-label">
@@ -441,8 +443,14 @@ export default function PageAnalysis({
           <Notice>
             KI-Vorschläge sind ungeprüft und können den Messungen widersprechen.
             Ursachen bleiben Vermutungen, Codebeispiele sind Anpassungshilfen.
-            Es wurde nichts repariert oder manuell bestätigt.
+            Modelltext bestätigt keine Reparatur. Redaktionelle Entwurfsprüfung
+            und gemessener Nachtest bleiben getrennt.
           </Notice>
+          <AnalysisFacts
+            key={`${scan?.id}:${url}`}
+            report={report}
+            pageUrl={url}
+          />
           {error && <Notice error>{error}</Notice>}
           {notice && (
             <p className="notice success" role="status">
@@ -519,7 +527,7 @@ export default function PageAnalysis({
                 />
                 <p className="hint">
                   {current.stage === "summary"
-                    ? "Teilinterpretationen werden zur Seitenzusammenfassung verbunden."
+                    ? "Historischer Zusammenfassungsschritt · keine neue Messung."
                     : running
                       ? "Lokale Verarbeitung läuft nacheinander. Du kannst den Bereich wechseln; die Auswertung bleibt gespeichert."
                       : "Historisch an diesen Scan und diese Seite gebunden. Nach einem neuen Check erneut analysieren."}
@@ -600,47 +608,7 @@ export default function PageAnalysis({
                   Bericht bleibt vollständig nutzbar.
                 </p>
               )}
-              {report && (
-                <section className="panel canonical-observation">
-                  <p className="small-label">
-                    MESSFAKTEN · AUS DEM GESPEICHERTEN BERICHT
-                  </p>
-                  <h3>Belegter Stand dieser Seite</h3>
-                  <p>
-                    {pageFacts(report, url).findings.length} Befunde ·{" "}
-                    {
-                      pageFacts(report, url).rules.filter(
-                        (r) => r.status === "not_run",
-                      ).length
-                    }{" "}
-                    nicht ausgeführte Regeln.
-                  </p>
-                  {!pageFacts(report, url).valid && (
-                    <Notice error>
-                      Messvertrag unvollständig oder ungültig. Keine Freigabe;
-                      Bericht erneut prüfen.
-                    </Notice>
-                  )}
-                  <p>
-                    Geräte:{" "}
-                    {pageFacts(report, url)
-                      .viewports.map(
-                        (v) => `${v.id} (${v.width} × ${v.height})`,
-                      )
-                      .join(", ")}
-                  </p>
-                  <p className="hint">
-                    Sachliche KI-Faktenprüfung: nicht durchgeführt · Menschliche
-                    Freigabe: nicht erfasst.
-                  </p>
-                  <p className="hint">
-                    Technische Fundstellen, Messwerte und Prüfergebnisse stehen
-                    im Originalbericht. KI-Texte sind Lösungsvorschläge und
-                    bestätigen keine Fakten oder Reparaturen.
-                  </p>
-                </section>
-              )}
-              {current.summary && (
+              {current.summary && current.summaryKind !== "measured" && (
                 <section className="panel">
                   <p className="small-label">
                     KI-INTERPRETATION · KEINE FAKTENBESTÄTIGUNG
@@ -719,7 +687,22 @@ export default function PageAnalysis({
                         Regelbasiertes Abnahmekriterium (zukünftiger Nachtest):{" "}
                         {finding.acceptance}
                       </p>
-                      <p className="small-label">KI-EINORDNUNG · UNGEPRÜFT</p>
+                      {!!solution.groundingIssues?.length && (
+                        <Notice error>
+                          <strong>
+                            Automatischer Ankercheck: Prüfung nötig
+                          </strong>
+                          <ul>
+                            {solution.groundingIssues.map((i) => (
+                              <li key={i.code}>{i.detail}</li>
+                            ))}
+                          </ul>
+                        </Notice>
+                      )}
+                      <p className="small-label">
+                        KI-EINORDNUNG · UNGEPRÜFT · URSACHE UND WIRKUNG SIND
+                        HYPOTHESEN
+                      </p>
                       <p>{solution.explanation}</p>
                       {finding.elementContext && (
                         <details className="solution-references">
@@ -845,36 +828,14 @@ export default function PageAnalysis({
                           />
                         </details>
                       )}
-                      <button
-                        className="button secondary"
-                        disabled={
-                          !["completed", "partial"].includes(current.status)
-                        }
-                        onClick={async () => {
-                          try {
-                            const result = await post<{ duplicate: boolean }>(
-                              `/api/page-analyses/${current.id}/adopt`,
-                              { findingId: solution.findingId },
-                            );
-                            await onTasksChanged();
-                            setNotice(
-                              result.duplicate
-                                ? "Dieser Vorschlag ist bereits an der bestehenden Maßnahme hinterlegt."
-                                : "KI-Vorschlag an der bestehenden Maßnahme hinterlegt. Status: offen. Keine Behebung bestätigt.",
-                            );
-                          } catch (err) {
-                            setError(message(err));
-                          }
-                        }}
-                      >
-                        <Sparkles size={15} />
-                        Als Maßnahme übernehmen
-                      </button>
-                      <p className="hint">
-                        Der Vorschlag bleibt ungeprüft. Eine vorhandene offene
-                        Maßnahme wird ergänzt; es entsteht keine doppelte
-                        Aufgabe.
-                      </p>
+                      <ProposalEditor
+                        key={`${current.id}:${solution.findingId}`}
+                        job={current}
+                        solution={solution}
+                        finding={finding}
+                        report={report}
+                        onAdopted={onTasksChanged}
+                      />
                     </article>
                   );
                 })}

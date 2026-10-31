@@ -1,3 +1,11 @@
+import { analysisFacts } from "../shared/analysis-facts.js";
+import { FEEDBACK_CLASSES } from "../shared/proposal-review.js";
+import {
+  makeReview,
+  parseEdits,
+  originalSolution,
+  assertReviewCurrent,
+} from "./services/proposal-review.js";
 import {
   scanHeads,
   projectStats,
@@ -988,6 +996,7 @@ export async function createApp(options: {
       return {
         analysis,
         review: report ? analysisReview(analysis, report) : null,
+        facts: report ? analysisFacts(report, analysis.pageUrl) : null,
       };
     },
   );
@@ -1135,7 +1144,112 @@ export async function createApp(options: {
           'attachment; filename="sitefenn-page-analysis.md"',
         )
         .type("text/markdown; charset=utf-8")
-        .send(pageAnalysisMarkdown(job, scan.result.audit));
+        .send(
+          pageAnalysisMarkdown(job, scan.result.audit, {
+            reviews: store.analysisReviews(job.id),
+            feedback: store.analysisFeedback(job.id),
+          }),
+        );
+    },
+  );
+  app.get<{ Params: { id: string } }>(
+    "/api/page-analyses/:id/reviews",
+    async (request) => {
+      const job = store.pageAnalysis(request.params.id);
+      if (!job) throw bad("Seitenanalyse fehlt.", 404);
+      return {
+        reviews: store.analysisReviews(job.id),
+        feedback: store.analysisFeedback(job.id),
+      };
+    },
+  );
+  app.post<{ Params: { id: string } }>(
+    "/api/page-analyses/:id/reviews",
+    async (request) => {
+      const job = store.pageAnalysis(request.params.id);
+      if (!job) throw bad("Seitenanalyse fehlt.", 404);
+      if (!["completed", "partial"].includes(job.status))
+        throw bad("Zuerst die Auswertung abschließen.");
+      const body = object(request.body);
+      if (
+        Object.keys(body).some(
+          (k) => !["findingId", "status", "edits", "confirmed"].includes(k),
+        ) ||
+        !["draft", "approved", "needs-context"].includes(String(body.status)) ||
+        (body.status === "approved" && body.confirmed !== true)
+      )
+        throw bad("Entwurf prüfen und Übernahme ausdrücklich bestätigen.");
+      const report = requireScan(job.scanId).result?.audit,
+        finding = report?.findings.find((f) => f.id === body.findingId),
+        solution = originalSolution(job, String(body.findingId));
+      if (!report || !finding || !solution)
+        throw bad("Originalvorschlag oder Messbefund fehlt.");
+      try {
+        return {
+          review: store.saveProposalReview(
+            makeReview(
+              job,
+              report,
+              finding,
+              solution,
+              parseEdits(body.edits),
+              body.status as "draft" | "approved" | "needs-context",
+            ),
+          ),
+        };
+      } catch (e) {
+        throw bad((e as Error).message);
+      }
+    },
+  );
+  app.post<{ Params: { id: string } }>(
+    "/api/page-analyses/:id/feedback",
+    async (request) => {
+      const job = store.pageAnalysis(request.params.id);
+      if (!job) throw bad("Seitenanalyse fehlt.", 404);
+      const body = object(request.body);
+      if (
+        Object.keys(body).some(
+          (k) => !["findingId", "category", "note", "reviewId"].includes(k),
+        ) ||
+        !FEEDBACK_CLASSES.includes(body.category as never) ||
+        typeof body.note !== "string" ||
+        body.note.length > 2000
+      )
+        throw bad(
+          "Fehlerklasse und höchstens 2000 Zeichen Rückmeldung angeben.",
+        );
+      if (
+        body.findingId !== undefined &&
+        !originalSolution(job, String(body.findingId))
+      )
+        throw bad("Unbekannter Vorschlag.");
+      const review = body.reviewId
+        ? store.proposalReview(String(body.reviewId))
+        : undefined;
+      if (
+        body.reviewId &&
+        (!review ||
+          review.analysisId !== job.id ||
+          review.findingId !== body.findingId)
+      )
+        throw bad("Rückmeldung gehört zu einem anderen Entwurf.");
+      try {
+        return {
+          feedback: store.saveAnalysisFeedback({
+            id: randomUUID(),
+            analysisId: job.id,
+            scanId: job.scanId,
+            createdAt: new Date().toISOString(),
+            category: body.category as (typeof FEEDBACK_CLASSES)[number],
+            note: body.note.trim(),
+            ...(body.findingId ? { findingId: String(body.findingId) } : {}),
+            ...(review ? { reviewId: review.id } : {}),
+          }),
+        };
+      } catch (e) {
+        throw bad((e as Error).message);
+      }
     },
   );
   app.post<{ Params: { id: string } }>(
@@ -1153,6 +1267,18 @@ export async function createApp(options: {
       if (!solution)
         throw bad("Kein gültiger Lösungsvorschlag für diesen Befund.");
       const scan = requireScan(job.scanId);
+      const review = store.proposalReview(String(body.reviewId ?? ""));
+      if (!review)
+        throw bad("Vor Übernahme einen Entwurf prüfen und freigeben.", 409);
+      const finding = scan.result?.audit?.findings.find(
+        (f) => f.id === solution.findingId,
+      );
+      if (!finding || !scan.result?.audit) throw bad("Messbefund fehlt.");
+      try {
+        assertReviewCurrent(review, job, scan.result.audit, finding, solution);
+      } catch (e) {
+        throw bad((e as Error).message, 409);
+      }
       ensureTasks(scan);
       const task = store
         .tasks(scan.id)
@@ -1165,14 +1291,33 @@ export async function createApp(options: {
         );
       const duplicate =
         task.aiProposal?.analysisId === job.id &&
-        task.aiProposal.findingId === solution.findingId;
+        task.aiProposal.findingId === solution.findingId &&
+        task.aiProposal.reviewId === review.id;
       const updated = duplicate
         ? task
         : store.putTask({
             ...task,
             status: "open",
             updatedAt: new Date().toISOString(),
-            aiProposal: { ...solution, analysisId: job.id },
+            aiProposal: {
+              findingId: finding.id,
+              factRefs: [`finding:${finding.id}`],
+              evidenceRefs: [`finding:${finding.id}`],
+              explanation:
+                "Redaktionell geprüfte Schritte; maßgeblich bleibt der ursprüngliche Messbefund.",
+              cause: "Unbekannt; keine gemessene Ursache bestätigt.",
+              steps: review.edits.steps,
+              code: review.edits.code,
+              acceptance: review.edits.acceptance,
+              uncertainty:
+                "Lokale redaktionelle Freigabe, keine verifizierte Reparatur.",
+              analysisId: job.id,
+              reviewId: review.id,
+              reviewedAt: review.createdAt,
+              origin: "local-review",
+              codeOrigin: review.edits.codeMode,
+              factsSha256: review.factsSha256,
+            },
           });
       return { task: updated, duplicate };
     },

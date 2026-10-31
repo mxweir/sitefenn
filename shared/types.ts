@@ -337,7 +337,14 @@ export type TaskStatus =
   | "verified"
   | "accepted";
 export interface AuditTask {
-  aiProposal?: PageSolution & { analysisId: string };
+  aiProposal?: PageSolution & {
+    analysisId: string;
+    reviewId?: string;
+    reviewedAt?: string;
+    origin?: "local-review";
+    codeOrigin?: "none" | "captured" | "illustrative";
+    factsSha256?: string;
+  };
   id: string;
   scanId: string;
   projectId: string;
@@ -419,6 +426,8 @@ export interface AnalysisContext {
   };
 }
 export interface PageSolution {
+  factRefs?: string[];
+  groundingIssues?: { code: string; detail: string }[];
   evidenceRefs?: string[];
   relevance?: string;
   alternatives?: string[];
@@ -443,6 +452,7 @@ export interface AnalysisPart {
   provenance?: AiPlan["provenance"];
 }
 export interface PageAnalysis {
+  summaryKind?: "measured";
   contractVersion?: string;
   context?: AnalysisContext;
   sources?: { id: string; excerpt: string; truncated?: boolean }[];

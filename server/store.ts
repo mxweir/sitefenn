@@ -1,3 +1,7 @@
+import type {
+  ProposalReview,
+  AnalysisFeedback,
+} from "../shared/proposal-review.js";
 import { summaryPayload } from "./workspace-queries.js";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
@@ -103,6 +107,10 @@ export class Store {
         CREATE TABLE IF NOT EXISTS search_datasets (id TEXT PRIMARY KEY, projectId TEXT NOT NULL REFERENCES projects(id), payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS ai_plans (id TEXT PRIMARY KEY, scanId TEXT NOT NULL REFERENCES scans(id), payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS visual_references (id TEXT PRIMARY KEY, projectId TEXT NOT NULL REFERENCES projects(id), payload TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS analysis_reviews (id TEXT PRIMARY KEY,analysisId TEXT NOT NULL,scanId TEXT NOT NULL REFERENCES scans(id) ON DELETE CASCADE,payload TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS analysis_feedback (id TEXT PRIMARY KEY,analysisId TEXT NOT NULL,scanId TEXT NOT NULL REFERENCES scans(id) ON DELETE CASCADE,payload TEXT NOT NULL);
+        CREATE INDEX IF NOT EXISTS analysis_reviews_job ON analysis_reviews(analysisId);
+        CREATE INDEX IF NOT EXISTS analysis_feedback_job ON analysis_feedback(analysisId);
         CREATE INDEX IF NOT EXISTS scans_project ON scans(projectId,createdAt);
         CREATE INDEX IF NOT EXISTS tasks_scan ON tasks(scanId);
         CREATE INDEX IF NOT EXISTS tasks_project ON tasks(projectId);
@@ -222,6 +230,18 @@ export class Store {
           payload: string;
         }[];
         plans: { id: string; scanId: string; payload: string }[];
+        reviews?: {
+          id: string;
+          analysisId: string;
+          scanId: string;
+          payload: string;
+        }[];
+        feedback?: {
+          id: string;
+          analysisId: string;
+          scanId: string;
+          payload: string;
+        }[];
       }
     | undefined {
     const row = this.db
@@ -251,7 +271,17 @@ export class Store {
           .run(
             id,
             new Date().toISOString(),
-            JSON.stringify({ scan, tasks, plans }),
+            JSON.stringify({
+              scan,
+              tasks,
+              plans,
+              reviews: this.db
+                .prepare("SELECT * FROM analysis_reviews WHERE scanId=?")
+                .all(id),
+              feedback: this.db
+                .prepare("SELECT * FROM analysis_feedback WHERE scanId=?")
+                .all(id),
+            }),
           );
         this.db.prepare("DELETE FROM tasks WHERE scanId=?").run(id);
         this.db.prepare("DELETE FROM ai_plans WHERE scanId=?").run(id);
@@ -299,6 +329,14 @@ export class Store {
         this.db
           .prepare("INSERT INTO ai_plans(id,scanId,payload) VALUES (?,?,?)")
           .run(p.id, p.scanId, p.payload);
+      for (const row of value.reviews ?? [])
+        this.db
+          .prepare("INSERT INTO analysis_reviews VALUES (?,?,?,?)")
+          .run(row.id, row.analysisId, row.scanId, row.payload);
+      for (const row of value.feedback ?? [])
+        this.db
+          .prepare("INSERT INTO analysis_feedback VALUES (?,?,?,?)")
+          .run(row.id, row.analysisId, row.scanId, row.payload);
       this.db.prepare("DELETE FROM scan_trash WHERE id=?").run(id);
       this.db.exec("COMMIT");
     } catch (error) {
@@ -566,6 +604,58 @@ export class Store {
       )
       .get(scanId);
     return row ? JSON.parse(String(row.payload)) : undefined;
+  }
+  analysisReviews(analysisId: string): ProposalReview[] {
+    return this.db
+      .prepare(
+        "SELECT payload FROM analysis_reviews WHERE analysisId=? ORDER BY rowid DESC LIMIT 500",
+      )
+      .all(analysisId)
+      .map((r) => JSON.parse(String(r.payload)));
+  }
+  proposalReview(id: string): ProposalReview | undefined {
+    const r = this.db
+      .prepare("SELECT payload FROM analysis_reviews WHERE id=?")
+      .get(id);
+    return r ? JSON.parse(String(r.payload)) : undefined;
+  }
+  saveProposalReview(review: ProposalReview) {
+    if (
+      Number(
+        this.db
+          .prepare("SELECT count(*) n FROM analysis_reviews WHERE analysisId=?")
+          .get(review.analysisId)!.n,
+      ) >= 500
+    )
+      throw Error("Maximal 500 Entwurfsrevisionen pro Auswertung.");
+    this.db
+      .prepare("INSERT INTO analysis_reviews VALUES (?,?,?,?)")
+      .run(review.id, review.analysisId, review.scanId, JSON.stringify(review));
+    return review;
+  }
+  analysisFeedback(analysisId: string): AnalysisFeedback[] {
+    return this.db
+      .prepare(
+        "SELECT payload FROM analysis_feedback WHERE analysisId=? ORDER BY rowid DESC LIMIT 500",
+      )
+      .all(analysisId)
+      .map((r) => JSON.parse(String(r.payload)));
+  }
+  saveAnalysisFeedback(value: AnalysisFeedback) {
+    if (
+      Number(
+        this.db
+          .prepare(
+            "SELECT count(*) n FROM analysis_feedback WHERE analysisId=?",
+          )
+          .get(value.analysisId)!.n,
+      ) >= 500
+    )
+      throw Error("Maximal 500 Rückmeldungen pro Auswertung.");
+    this.db
+      .prepare("INSERT INTO analysis_feedback VALUES (?,?,?,?)")
+      .run(value.id, value.analysisId, value.scanId, JSON.stringify(value));
+    return value;
   }
   savePageAnalysis(job: PageAnalysis) {
     this.db

@@ -199,6 +199,8 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
     settings: { model: "", speechEnabled: false },
     datasets: [] as SearchDataset[],
     analyses: [] as PageAnalysis[],
+    reviews: [] as any[],
+    feedback: [] as any[],
     analysisRequest: null as unknown,
     references: [] as VisualReference[],
     diffRequest: null as unknown,
@@ -353,9 +355,35 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
       state.analyses[0].parts[0].status = "cancelled";
       return json({ cancelled: true });
     }
+    if (pathname === "/api/page-analyses/analysis-ui/reviews") {
+      if (request.method() === "GET")
+        return json({ reviews: state.reviews, feedback: state.feedback });
+      const body = request.postDataJSON();
+      const review = {
+        ...body,
+        id: `review-${state.reviews.length}`,
+        analysisId: analysis.id,
+        scanId: scan.id,
+        createdAt: new Date().toISOString(),
+        meaning: "Lokale redaktionelle Prüfung; keine verifizierte Reparatur.",
+      };
+      state.reviews.unshift(review);
+      return json({ review });
+    }
+    if (pathname === "/api/page-analyses/analysis-ui/feedback") {
+      const feedback = {
+        ...request.postDataJSON(),
+        id: `feedback-${state.feedback.length}`,
+      };
+      state.feedback.unshift(feedback);
+      return json({ feedback });
+    }
     if (pathname === "/api/page-analyses/analysis-ui/adopt") {
       state.tasks[0].aiProposal = {
         ...analysis.parts[0].solutions[0],
+        ...state.reviews[0]?.edits,
+        reviewId: state.reviews[0]?.id,
+        origin: "local-review",
         analysisId: analysis.id,
       };
       return json({ task: state.tasks[0], duplicate: false });
@@ -644,7 +672,38 @@ test("optional CSV visibility and explicit local model selection work without cl
     "href",
     "/api/page-analyses/analysis-ui/export",
   );
-  await page.getByRole("button", { name: /Maßnahme übernehmen/ }).click();
+  await page
+    .getByRole("button", { name: "Vorschlag prüfen & bearbeiten" })
+    .click();
+  const adopt = page.getByRole("button", {
+    name: "Geprüften Entwurf übernehmen",
+  });
+  await expect(adopt).toBeDisabled();
+  await page
+    .getByRole("button", { name: "Code verwerfen", exact: true })
+    .click();
+  await page.getByLabel(/Ich habe diesen Entwurf/).check();
+  await page
+    .getByLabel("Geprüfte Schritte", { exact: true })
+    .fill("Den Titel im Quellprojekt ergänzen und erneut prüfen.");
+  await expect(adopt).toBeDisabled();
+  await page
+    .getByRole("button", { name: "Mehr Kontext nötig", exact: true })
+    .click();
+  await expect.poll(() => state.reviews[0]?.status).toBe("needs-context");
+  expect(state.tasks[0].aiProposal).toBeUndefined();
+  await page
+    .getByLabel("Fehlerklasse", { exact: true })
+    .selectOption("bad-code");
+  await page
+    .getByLabel("Rückmeldung", { exact: true })
+    .fill("Codebeispiel passt nicht zum Quellprojekt.");
+  await page
+    .getByRole("button", { name: "Rückmeldung lokal speichern", exact: true })
+    .click();
+  await expect.poll(() => state.feedback[0]?.category).toBe("bad-code");
+  await page.getByLabel(/Ich habe diesen Entwurf/).check();
+  await adopt.click();
   await expect
     .poll(() => state.tasks[0].aiProposal?.analysisId)
     .toBe(analysis.id);
@@ -731,7 +790,7 @@ test("partial and cancelled model work stays visible without successful repair a
     page.getByText(incomplete.parts[0].error, { exact: true }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /Als Maßnahme übernehmen/ }),
+    page.getByRole("button", { name: /Geprüften Entwurf übernehmen/ }),
   ).toHaveCount(0);
   incomplete.status = "running";
   incomplete.stage = "context";
@@ -1701,3 +1760,50 @@ test("2.2 report filters and scan drafts persist per project without bleeding in
   await page.getByRole("button", { name: project.name, exact: true }).click();
   await expect(page.getByLabel("Maximale Seitenzahl")).toHaveValue("17");
 });
+
+for (const width of [320, 390, 768, 1280]) {
+  test(`2.3 facts matrix and review editor keep core actions reachable at ${width}px`, async ({
+    page,
+  }) => {
+    const state = await mockWorkspace(page);
+    state.analyses = [structuredClone(analysis)];
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await openContext(page, "Seite erklären");
+    await expect(
+      page.getByRole("region", { name: "Deterministische Messfakten" }),
+    ).toBeVisible();
+    await page
+      .getByText("Geräte-, Zustands- und Regelmatrix", { exact: true })
+      .click();
+    await expect(
+      page.getByText("Einzelne Regelinstanzen · unbekannt ist kein Bestehen", {
+        exact: true,
+      }),
+    ).toBeVisible();
+    await page
+      .getByRole("button", {
+        name: "Vorschlag prüfen & bearbeiten",
+        exact: true,
+      })
+      .click();
+    await expect(
+      page.getByLabel("Geprüfte Schritte", { exact: true }),
+    ).toBeEditable();
+    await page
+      .getByRole("button", { name: "Code verwerfen", exact: true })
+      .click();
+    const save = page.getByRole("button", {
+      name: "Entwurf speichern",
+      exact: true,
+    });
+    await save.focus();
+    await expect(save).toBeFocused();
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    expect(state.tasks[0].status).toBe("open");
+  });
+}

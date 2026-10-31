@@ -3314,3 +3314,21 @@ h1 {
 .fix-detail .task-list .retest-action {padding:0;border:0;background:none;margin:12px 0;}
 .fix-detail .task-list .task-status-row {margin-top:8px;}
 @media(max-width:480px){.fix-capture-scroll{max-height:440px;}}
+
+.facts-panel {border-left:5px solid var(--deep);margin-bottom:24px;}
+.facts-panel .check-row,.reviewed-draft .check-row {display:flex;gap:10px;align-items:start;line-height:1.6;}
+.facts-panel .facts-summary {font-size:16px;line-height:1.7;}
+.facts-table-scroll {max-width:100%;max-height:440px;overflow:auto;margin-top:18px;}
+.facts-table-scroll table {border-collapse:collapse;width:100%;font-size:13px;}
+.facts-table-scroll th,.facts-table-scroll td {padding:12px;text-align:left;border:1px solid #3d365c44;vertical-align:top;}
+.facts-table-scroll caption {text-align:left;margin-bottom:12px;}
+.facts-table-scroll th {overflow-wrap:anywhere;}
+.proposal-editor {margin-top:24px;}
+.reviewed-draft {margin-top:18px;border:2px solid var(--deep);}
+.reviewed-draft textarea {display:block;width:100%;min-height:110px;font-size:14px;line-height:1.6;}
+.reviewed-draft label {display:block;margin:18px 0 8px;}
+.reviewed-draft details {margin:24px 0;}
+.reviewed-draft .toolbar {flex-wrap:wrap;}
+.reviewed-draft pre,.reviewed-draft code {white-space:pre-wrap;overflow-wrap:anywhere;}
+.reviewed-draft .button {max-width:100%;white-space:normal;}
+@media(max-width:600px){.facts-table-scroll table{min-width:570px;}.reviewed-draft{padding:18px;}.facts-panel h3{line-height:1.5;}}

@@ -1,0 +1,24 @@
+{
+  "kind": "actual-owned-local-ui-2.3",
+  "model": "qwen2.5:7b",
+  "status": "completed",
+  "completedParts": 4,
+  "totalParts": 4,
+  "totalUnits": 50,
+  "solutionCount": 3,
+  "promptVersion": "page-report-2.3.0",
+  "summaryKind": "measured",
+  "revisionStatuses": [
+    "needs-context",
+    "approved"
+  ],
+  "feedbackClasses": [
+    "bad-code"
+  ],
+  "taskStatus": "open",
+  "adoptedCodeOrigin": "none",
+  "adoptedCodeLength": 0,
+  "verifiedByScan": false,
+  "reviewRevisionSurvivedActualRestart": true,
+  "meaning": "Implementation-agent UI/service acceptance on actual local demo and installed model; no independent human/semantic certification."
+}

@@ -537,9 +537,15 @@ export function buildMarkdownReport(
     );
     if (task.aiProposal) {
       lines.push(
-        `  - Unverified AI proposal (${text(task.aiProposal.analysisId)}): ${text(task.aiProposal.explanation)}`,
+        `  - ${task.aiProposal.origin === "local-review" ? "Locally reviewed draft (not a verified repair)" : "Unverified AI proposal"} (${text(task.aiProposal.analysisId)}): ${text(task.aiProposal.explanation)}`,
+        ...(task.aiProposal.reviewId
+          ? [
+              `  - Review: ${text(task.aiProposal.reviewId)} · ${text(task.aiProposal.reviewedAt ?? "")} · Measurement SHA-256: ${text(task.aiProposal.factsSha256 ?? "")}`,
+            ]
+          : []),
         `  - Hypothesis: ${text(task.aiProposal.cause)}`,
         ...task.aiProposal.steps.map((step) => `    - ${text(step)}`),
+        `  - Code origin: ${text(task.aiProposal.codeOrigin ?? "historical / unknown")}`,
         `  - Proposed retest: ${text(task.aiProposal.acceptance)}`,
         `  - Uncertainty: ${text(task.aiProposal.uncertainty)}`,
       );

@@ -11,6 +11,7 @@ import {
   validatePagePart,
   pageAnalysisMarkdown,
 } from "../server/services/page-analysis.js";
+import { validReviewReport } from "./helpers/review-report.js";
 import { Store } from "../server/store.js";
 import { createApp } from "../server/app.js";
 
@@ -235,11 +236,12 @@ test("every valid chunk is processed and grounded solutions cover more than twel
   assert.equal(job.unexplainedFindingIds.length, 0);
   assert.equal(job.parts.flatMap((part) => part.solutions).length, 21);
   assert.ok(job.parts.every((part) => !!part.provenance?.modelDigest));
-  assert.ok(chats.some((content) => !!content.untrustedPartialInterpretations));
+  assert.ok(chats.every((content) => !content.untrustedPartialInterpretations));
+  assert.equal(job.summaryKind, "measured");
   assert.equal(preparePage(r, URL_PAGE, job).sourceHash, prepared.sourceHash);
   assert.ok(
     preparePage(r, URL_PAGE, job).units.some((unit) =>
-      unit.id.startsWith("previous:"),
+      unit.id.startsWith("previous-question:"),
     ),
   );
   const changed = structuredClone(r);
@@ -327,7 +329,7 @@ test("one correction attempt can recover invalid output and never retries indefi
   );
   assert.equal(job.status, "completed");
   assert.equal(job.parts[0]?.attempts, 2);
-  assert.equal(calls, prepared.chunks.length + 2);
+  assert.equal(calls, prepared.chunks.length + 1);
 });
 test("known semantic contradictions fail validation without changing source facts", () => {
   const counts = { findings: 1, unknownRules: 1 };
@@ -465,7 +467,7 @@ test("real API job persistence, scoped export and adoption reuse the determinist
       screenshotPath: "evidence/private.png",
       checks: [],
       durationMs: 1000,
-      audit: report(),
+      audit: validReviewReport(report(1)),
     });
     assert.equal(
       (
@@ -543,11 +545,76 @@ test("real API job persistence, scoped export and adoption reuse the determinist
       ).statusCode,
       400,
     );
+    assert.equal(
+      (
+        await app.inject({
+          method: "POST",
+          url: `/api/page-analyses/${id}/adopt`,
+          headers,
+          payload: { findingId: "f0" },
+        })
+      ).statusCode,
+      409,
+    );
+    const original = JSON.stringify(store.pageAnalysis(id));
+    for (const payload of [
+      {
+        findingId: "f0",
+        status: "approved",
+        edits: {
+          steps: ["Beschreibung ergänzen."],
+          acceptance: "Description vorhanden.",
+          code: { language: "none", text: "" },
+          codeMode: "none",
+        },
+      },
+      {
+        findingId: "f0",
+        status: "approved",
+        confirmed: true,
+        edits: {
+          steps: ["Gemessene Breite beträgt 999 px."],
+          acceptance: "Prüfen.",
+          code: { language: "none", text: "" },
+          codeMode: "none",
+        },
+      },
+    ])
+      assert.equal(
+        (
+          await app.inject({
+            method: "POST",
+            url: `/api/page-analyses/${id}/reviews`,
+            headers,
+            payload,
+          })
+        ).statusCode,
+        400,
+      );
+    const reviewResponse = await app.inject({
+      method: "POST",
+      url: `/api/page-analyses/${id}/reviews`,
+      headers,
+      payload: {
+        findingId: "f0",
+        status: "approved",
+        confirmed: true,
+        edits: {
+          steps: ["Passende Beschreibung ergänzen."],
+          acceptance: "Passende Description vorhanden.",
+          code: { language: "none", text: "" },
+          codeMode: "none",
+        },
+      },
+    });
+    assert.equal(reviewResponse.statusCode, 200, reviewResponse.body);
+    const reviewId = reviewResponse.json().review.id;
+    assert.equal(JSON.stringify(store.pageAnalysis(id)), original);
     const adopted = await app.inject({
       method: "POST",
       url: `/api/page-analyses/${id}/adopt`,
       headers,
-      payload: { findingId: "f0" },
+      payload: { findingId: "f0", reviewId },
     });
     assert.equal(adopted.statusCode, 200);
     assert.equal(adopted.json().task.status, "open");
@@ -556,9 +623,50 @@ test("real API job persistence, scoped export and adoption reuse the determinist
       method: "POST",
       url: `/api/page-analyses/${id}/adopt`,
       headers,
-      payload: { findingId: "f0" },
+      payload: { findingId: "f0", reviewId },
     });
     assert.equal(again.json().duplicate, true);
+    for (const payload of [
+      { category: "other", note: "x" },
+      { category: "bad-code", note: "x", findingId: "foreign" },
+      { category: "bad-code", note: "x", findingId: "f0", reviewId: "foreign" },
+    ])
+      assert.equal(
+        (
+          await app.inject({
+            method: "POST",
+            url: `/api/page-analyses/${id}/feedback`,
+            headers,
+            payload,
+          })
+        ).statusCode,
+        400,
+      );
+    assert.equal(
+      (
+        await app.inject({
+          method: "POST",
+          url: `/api/page-analyses/${id}/feedback`,
+          headers,
+          payload: {
+            category: "bad-code",
+            note: "Code verworfen.",
+            findingId: "f0",
+            reviewId,
+          },
+        })
+      ).statusCode,
+      200,
+    );
+    assert.equal(store.analysisFeedback(id)[0]?.reviewId, reviewId);
+    assert.equal(
+      store.task(adopted.json().task.id)?.aiProposal?.origin,
+      "local-review",
+    );
+    assert.equal(
+      store.task(adopted.json().task.id)?.verifiedByScanId,
+      undefined,
+    );
     assert.equal(store.tasks(scan.id).length, count);
     await app.inject({ url: `/api/scans/${scan.id}/report`, headers });
     assert.equal(

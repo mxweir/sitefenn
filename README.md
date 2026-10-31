@@ -6,21 +6,21 @@
 
 **Inspect → understand → hand off → retest.** Manage authorized websites, watch bounded Chromium checks, inspect evidence and turn findings into a practical checklist. SiteFenn keeps measured facts, review candidates and optional local AI suggestions separate. The core workflow needs no model, cloud account or paid service.
 
-![Actual SiteFenn 2.2 task, evidence and retest workspace](docs/screenshots/2.2-evidence-actions.jpg)
+![Actual SiteFenn 2.3 deterministic facts and rule matrix](docs/screenshots/2.3-measured-facts.jpg)
 
 _Actual application with an owned synthetic fixture. A checked box is not a verified fix; missing measurements stay unknown._
 
-[Get started](#quick-start) · [What it checks](#what-it-checks) · [Local AI](#optional-local-ai) · [CLI gate](#developer-handoff-and-cli) · [2.2 verification](docs/RELEASE-2.2.md) · [Changelog](CHANGELOG.md)
+[Get started](#quick-start) · [What it checks](#what-it-checks) · [Local AI](#optional-local-ai) · [CLI gate](#developer-handoff-and-cli) · [2.3 verification](docs/RELEASE-2.3.md) · [Changelog](CHANGELOG.md)
 
-## New in 2.2: keep the fix in context
+## New in 2.3: facts first, proposals you can review
 
-- **One work area:** task, exact observation, original screenshot, explanation, selected developer handoff and retest.
-- **Four primary sections:** overview, checks, work and history, with contextual details.
-- **Stable local links:** return to the same project/check/task/observation after reload or Back/Forward.
-- **Complete project history:** bounded pages and search; the startup response uses summaries.
-- **Comfort without hidden permissions:** project-specific UI drafts and a reserved Fenn dock; source access still requires fresh consent.
+- **Measured facts without a model:** page/global summaries and a complete device/state/rule matrix, generated from the saved report.
+- **No summary chain:** earlier model-written summaries never become the next model's measurement context.
+- **Editable proposals:** correct steps, discard bad code, mark missing context and deliberately approve a revision before adoption.
+- **Traceable work:** original answer, reviewed draft and later measured verification keep separate identities. Adoption keeps the existing task open.
+- **Useful local feedback:** classify factual contradictions, unsuitable code, bad retests and missing context. No upload or automatic training.
 
-[Actual screenshots, migration notes and 1,000-check / 10,000-task verification](docs/RELEASE-2.2.md).
+[Actual screenshots and migration notes](docs/RELEASE-2.3.md) · [Honest local 3B/4B/7B comparison](docs/EVALUATION-2.3.md).
 
 ## A complete repair workflow
 
@@ -100,7 +100,7 @@ Requires a verified locally backed installed model at `http://127.0.0.1:11434` a
 
 No screenshot images, raw DOM/page dump, cookies, source repository or browser tools are supplied to the model. Additional element context is an allowlist of computed layout styles/geometry; it is not source-code mapping. There is no model download, training, automatic repair, cloud fallback or canned replacement for failed inference. macOS system speech is optional and only reads text after a click.
 
-**Model suggestions remain unverified.** Known references and valid JSON do not guarantee good CSS or correct SEO advice. Actual 3B/4B/7B failures and resource samples are published in [the 1.6 evaluation](docs/EVALUATION-1.6.md); [2.2 verification](docs/RELEASE-2.2.md) records the current prompt/guard checks. No model is promoted to a verified audit expert. `qwen2.5:3b` uses a separate Qwen Research License; tested `qwen3:4b` and `qwen2.5:7b` tags have their own licenses. Weights are never bundled with SiteFenn.
+**Model suggestions remain unverified.** Known references and valid JSON do not guarantee good CSS or correct SEO advice. Actual 3B/4B/7B failures and resource samples are published in [the 1.6 evaluation](docs/EVALUATION-1.6.md); [2.3 verification](docs/RELEASE-2.3.md) records the current prompt/guard checks. No model is promoted to a verified audit expert. `qwen2.5:3b` uses a separate Qwen Research License; tested `qwen3:4b` and `qwen2.5:7b` tags have their own licenses. Weights are never bundled with SiteFenn.
 
 ## Developer handoff and CLI
 
@@ -151,7 +151,7 @@ Use only **trusted websites you own or are explicitly authorized to test**. Navi
 
 Exports omit URL queries/fragments where documented, but page text, screenshots and selected source snippets may still contain private information. Images are opt-in for portable report ZIPs. Treat website-derived content as untrusted data and review every export before sharing it with another person or AI.
 
-2.2 is released as tested **local web/CLI software**. Independent user pilots, held-out human accuracy evaluation, full screenreader review, real Google authorization and native/Windows distribution remain open. The [release verification](docs/RELEASE-2.2.md) distinguishes actual integration runs, controlled fixtures and unavailable external checks. No general accuracy or SEO-effectiveness certification is claimed.
+2.3 is released as tested **local web/CLI software**. Independent user pilots, held-out human accuracy evaluation, full screenreader review, real Google authorization and native/Windows distribution remain open. The [release verification](docs/RELEASE-2.3.md) distinguishes actual integration runs, controlled fixtures and unavailable external checks. No general accuracy or SEO-effectiveness certification is claimed.
 
 ## Development and contribution
 

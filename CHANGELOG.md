@@ -2,6 +2,28 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 2.3.0 — 2026-10-31
+
+### Measured facts, reviewed proposals
+
+- Added model-independent page/global fact cards and the expected page/device/state/rule matrix. Missing or invalid measurements remain unknown; model prose cannot alter these facts.
+- Removed model-summary synthesis and reuse of earlier answers as measurements. Canonical finding/scope/selector references and captured-selector substitution keep observations traceable; new examples require explicit origin.
+- Added editable, immutable proposal revisions, code discard, rule-based reset and needs-context status. New adoption requires explicit editorial confirmation, unchanged original/fact hashes and valid scope; the existing task stays open. Original prose is retained separately.
+- Added local classified feedback and Markdown revision/feedback provenance. Additive SQLite tables, restart, reversible trash and portable restore preserve the complete review history. No upload or automatic training.
+- Published the same-input local model comparison, raw outputs and limitations. Model completion is separate from accuracy, usable code and a verified fix; no model qualification or fine-tuning claim.
+
+**152 Node tests and 31 browser tests** passed locally, plus types/build, lifecycle, output guards and portable verification. [Full verification, migration and open external acceptance](docs/RELEASE-2.3.md).
+
+![Actual 2.3 deterministic facts and rule matrix](docs/screenshots/2.3-measured-facts.jpg)
+
+<details>
+<summary>Actual reviewed draft and mobile editor</summary>
+
+![Actual 2.3 reviewed draft](docs/screenshots/2.3-reviewed-draft.jpg)
+![Actual 2.3 mobile review](docs/screenshots/2.3-mobile-review.jpg)
+
+</details>
+
 ## 2.2.0 — 2026-10-31
 
 ### Keep the fix in context

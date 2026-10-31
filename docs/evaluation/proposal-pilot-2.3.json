@@ -1,0 +1,528 @@
+{
+  "kind": "internal-local-model-comparison-2.3",
+  "fixtureVersion": "proposal-eval-2.3-frozen-1",
+  "fixtureSha256": "b8e5eebc60fe170fa5b6f505a9b5b3e962214e043fd41d31ea7275bea679a386",
+  "promptVersion": "page-report-2.3.0",
+  "promptSha256": "ae38c396e9dc69b47253588c377d0f394a4fc0a62127d8883b1a2bbab9501d9e",
+  "validatorSha256": "025100376d4eca89241e4fb16f1ba85144db8a84e3f47923c225023592a1ed98",
+  "rows": [
+    {
+      "model": "qwen2.5:3b",
+      "caseId": "mobile-width",
+      "inputSha256": "bec3ac83ab970447ddb62ad0c02704064209f9fa6f5ab418301a51099488fa23",
+      "processing": "responded",
+      "structuralValidation": "accepted",
+      "factualAnchorIssues": [
+        {
+          "code": "unmarked-example",
+          "detail": "HTML-Code ist ein neues Anpassungsbeispiel, keine gemessene DOM-Quelle."
+        },
+        {
+          "code": "layout-fix-unproven",
+          "detail": "Verstecken/Abschneiden oder zusätzliche Mindestbreite ist keine belegte Behebung dieses Überlaufs. Ursache prüfen oder Code verwerfen."
+        }
+      ],
+      "repairUsefulness": "not_independently_reviewed",
+      "sensibleRefusal": "not_applicable",
+      "coverage": 1,
+      "partial": false,
+      "rawOutput": {
+        "summary": "1 dokumentierte Befund. Keine Regelinstanzen bestanden, 17 unbekannt, 0 nicht anwendbar. Messvertrag gültig. Keine Aussage über eine erfolgte Reparatur.",
+        "solutions": [
+          {
+            "findingId": "owned-overflow",
+            "evidenceRefs": [
+              "finding:owned-overflow"
+            ],
+            "relevance": "Der Befund deutet darauf hin, dass der rechte Rand des Elements mit der ID #wide überschreitet, was die mobile Ansicht überschreitet. Dies könnte durch eine zu große Breite oder ein ungültiges Layout des Elements oder seiner Elternklasse verursacht sein.",
+            "alternatives": [
+              "Die Breite des Elements kann reduziert werden, um die mobile Ansicht zu beibehalten.",
+              "Die Elternklasse kann angepasst werden, um sicherzustellen, dass der Inhalt der mobile Ansicht erreichbar bleibt."
+            ],
+            "missingInformation": [
+              "Die genauen CSS-Styles und die Elternklasse des Elements müssen noch bestätigt werden."
+            ],
+            "explanation": "Der Befund wurde als ungeprüfte Hypothese aufgestellt, da die Messdaten nicht genügend Informationen liefern, um eine genaue Ursache zu bestimmen. Es ist jedoch klar, dass der rechte Rand des Elements die mobile Ansicht überschreitet.",
+            "cause": "Die mögliche Ursache könnte eine zu große Breite des Elements oder ein ungültiges Layout der Elternklasse sein.",
+            "steps": [
+              "Prüfen Sie die CSS-Styles des Elements und der Elternklasse, um sicherzustellen, dass sie die mobile Ansicht beibehalten.",
+              "Prüfen Sie die Breite des Elements und der Elternklasse, um sicherzustellen, dass sie die mobile Ansicht beibehalten.",
+              "Prüfen Sie die mobile Ansicht des Elements, um sicherzustellen, dass Inhalte erreichbar bleiben.",
+              "Prüfen Sie die mobile Ansicht der Elternklasse, um sicherzustellen, dass Inhalte erreichbar bleiben."
+            ],
+            "code": {
+              "language": "html",
+              "text": "<div class=\"sf-example-1\" style=\"width: 680px; min-width: 0px; max-width: none;\">Inhalt</div>"
+            },
+            "acceptance": "Nach Änderung des Zustands bei 390 px prüfen; Inhalte bleiben erreichbar.",
+            "uncertainty": "Die genauen CSS-Styles und die Elternklasse des Elements müssen noch bestätigt werden, um eine genaue Ursache zu bestimmen."
+          }
+        ]
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1714,
+        "generatedTokens": 624,
+        "promptVersion": "page-report-2.3.0",
+        "promptSha256": "43999d5f8e289f9c454d14e39c1c883808952c4401004d5cfd8eb98f14c03525",
+        "contextSha256": "bec3ac83ab970447ddb62ad0c02704064209f9fa6f5ab418301a51099488fa23",
+        "modelDigest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b",
+        "modelMetadataSha256": "862504466a94ed5ce58a1029d1a7d76be571d6988b2d188970a6c93249551550",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 7975
+      },
+      "automaticSemanticAccuracy": "not_claimed",
+      "summaryUsedAsMeasurement": false,
+      "durationMs": 7976
+    },
+    {
+      "model": "qwen2.5:3b",
+      "caseId": "missing-description",
+      "inputSha256": "1bf0a124c3bfa1ef35d79a03037a035ea287e46b02460e312725f184c83db29c",
+      "processing": "responded",
+      "structuralValidation": "accepted",
+      "factualAnchorIssues": [
+        {
+          "code": "wrong-selector",
+          "detail": "Selektor .example ist keine erfasste Fundstelle. Kanonischen Selektor verwenden oder ein neues Beispiel ausdrücklich kennzeichnen."
+        },
+        {
+          "code": "unmarked-example",
+          "detail": "HTML-Code ist ein neues Anpassungsbeispiel, keine gemessene DOM-Quelle."
+        }
+      ],
+      "repairUsefulness": "not_independently_reviewed",
+      "sensibleRefusal": "not_applicable",
+      "coverage": 1,
+      "partial": false,
+      "rawOutput": {
+        "summary": "1 dokumentierte Befund. Keine Regelinstanzen bestanden, 17 unbekannt, 0 nicht anwendbar. Messvertrag gültig. Keine Aussage über eine erfolgte Reparatur.",
+        "solutions": [
+          {
+            "findingId": "owned-meta",
+            "evidenceRefs": [
+              "finding:owned-meta"
+            ],
+            "relevance": "Die fehlende Meta Description kann die Suchmaschinenrankung beeinflussen und somit die Anzahl der Besucher beeinflussen.",
+            "alternatives": [
+              "Die Meta Description kann durch eine passende, nicht-leere Beschreibung verbessert werden, die die Inhalte der Seite beschreibt.",
+              "Alternativ kann eine passende Beschreibung durch die Verwendung von Meta Keywords oder Meta Description in der HTML-Quelle der Seite erzeugt werden."
+            ],
+            "missingInformation": [
+              "Die genaue Inhaltsbeschreibung der Seite fehlt, was die Meta Description fehlt."
+            ],
+            "explanation": "Die Meta Description fehlt oder ist leer auf der Seite https://owned.example/. Die Meta Description ist ein wichtiger SEO-Faktor, der die Suchmaschinenrankung beeinflusst und somit die Anzahl der Besucher beeinflusst. Eine passende, nicht-leere Beschreibung der Seite kann durch die Verwendung von Meta Keywords oder Meta Description in der HTML-Quelle der Seite erzeugt werden.",
+            "cause": "Die genaue Inhaltsbeschreibung der Seite fehlt, was die Meta Description fehlt.",
+            "steps": [
+              "Erstellen Sie eine passende, nicht-leere Beschreibung für die Seite in der HTML-Quelle.",
+              "Prüfen Sie die Seite nach Änderung der Meta Description auf die Anzahl der Besucher.",
+              "Wiederholen Sie den Nachtest, wenn die Anzahl der Besucher nicht signifikant ansteigt."
+            ],
+            "code": {
+              "language": "html",
+              "text": "<head>\n  <meta name=\"description\" content=\"Beschreibung der Seite, die eine klare und nutzbare Inhaltsbeschreibung enthält.\">\n</head>\n"
+            },
+            "acceptance": "Nach Änderung der Seite auf eine nicht-leere HTML-Meta-Description prüfen.",
+            "uncertainty": "Die genaue Inhaltsbeschreibung der Seite ist unbekannt, daher kann es sein, dass die Beschreibung nicht die richtige Meta Description enthält."
+          }
+        ]
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1557,
+        "generatedTokens": 567,
+        "promptVersion": "page-report-2.3.0",
+        "promptSha256": "1a5d3531540f1c7e358a57978889a9c7d8a4b80c44030623489924e13ce78720",
+        "contextSha256": "1bf0a124c3bfa1ef35d79a03037a035ea287e46b02460e312725f184c83db29c",
+        "modelDigest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b",
+        "modelMetadataSha256": "862504466a94ed5ce58a1029d1a7d76be571d6988b2d188970a6c93249551550",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 6735
+      },
+      "automaticSemanticAccuracy": "not_claimed",
+      "summaryUsedAsMeasurement": false,
+      "durationMs": 6736
+    },
+    {
+      "model": "qwen2.5:3b",
+      "caseId": "unknown-only",
+      "inputSha256": "3f0221ce8e25d79461a30fdc74b65646a1bf196a68331545d3fe3a00aeeab72c",
+      "processing": "responded",
+      "structuralValidation": "accepted",
+      "factualAnchorIssues": [],
+      "repairUsefulness": "not_independently_reviewed",
+      "sensibleRefusal": "empty-solutions-with-unknown-context",
+      "coverage": 1,
+      "partial": false,
+      "rawOutput": {
+        "summary": "Die Seite https://owned.example/ hat keine dokumentierten Befunde. Alle gemessenen Regelinstanzen bestanden, aber 17 Befunde sind unbekannt. Die Messung ist vollständig gültig.",
+        "solutions": []
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1267,
+        "generatedTokens": 69,
+        "promptVersion": "page-report-2.3.0",
+        "promptSha256": "ffc26bb5b74e8f0fa3065ad282df4faaa89972846c758a5e94a0b1701b76851c",
+        "contextSha256": "3f0221ce8e25d79461a30fdc74b65646a1bf196a68331545d3fe3a00aeeab72c",
+        "modelDigest": "357c53fb659c5076de1d65ccb0b397446227b71a42be9d1603d46168015c9e4b",
+        "modelMetadataSha256": "862504466a94ed5ce58a1029d1a7d76be571d6988b2d188970a6c93249551550",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 1684
+      },
+      "automaticSemanticAccuracy": "not_claimed",
+      "summaryUsedAsMeasurement": false,
+      "durationMs": 1684
+    },
+    {
+      "model": "qwen3:4b",
+      "caseId": "mobile-width",
+      "inputSha256": "bec3ac83ab970447ddb62ad0c02704064209f9fa6f5ab418301a51099488fa23",
+      "processing": "responded",
+      "structuralValidation": "accepted",
+      "factualAnchorIssues": [
+        {
+          "code": "wrong-selector",
+          "detail": "CSS-Selektor .sf-example-overflow stimmt nicht mit der erfassten Fundstelle #wide überein."
+        }
+      ],
+      "repairUsefulness": "not_independently_reviewed",
+      "sensibleRefusal": "not_applicable",
+      "coverage": 1,
+      "partial": false,
+      "rawOutput": {
+        "summary": "Der mobile Viewport (390 px) wird durch das Element #wide (680 px Breite) überschritten. Die Ursache ist die zu große feste Breite des Elements. Um die Überschreitung zu beheben, müssen die Breiten der Elemente und ihrer Elterncontainer angepasst werden.",
+        "solutions": [
+          {
+            "findingId": "owned-overflow",
+            "evidenceRefs": [
+              "finding:owned-overflow"
+            ],
+            "relevance": "Ursache führt zu horizontaler Überschreitung bei mobilen Ansichten",
+            "alternatives": [
+              "Setze max-width: 390px auf #wide (Vorteil: Direkte Lösung, Nachteil: Keine Anpassung für größere Ansichten)",
+              "Verwende Flexbox für responsive Breiten (Vorteil: Flexibilität, Nachteil: Komplexere Implementierung)"
+            ],
+            "missingInformation": [
+              "Genaue Breite des Elterncontainers (main)",
+              "Gültige mobile Viewport-Größen im Projekt"
+            ],
+            "explanation": "Das Element #wide hat eine feste Breite von 680 px, die bei mobilen Ansichten (390 px Breite) zu einem horizontalen Overflow führt.",
+            "cause": "Feste Breite des Elements #wide übertrifft mobile Viewport-Breite",
+            "steps": [
+              "Prüfe die maximale Breite des Elements #wide und setze max-width: 390px",
+              "Überprüfe, ob der Elterncontainer (main) eine passende Breite von 390 px hat",
+              "Anpassen der Layout-Struktur mittels Flexbox oder Grid, um Overflow zu vermeiden",
+              "Teste die mobile Ansicht nach der Änderung, um sicherzustellen, dass alle Inhalte erreichbar sind"
+            ],
+            "code": {
+              "language": "css",
+              "text": ".sf-example-overflow {\n  width: 680px;\n  max-width: {{selector}};\n}"
+            },
+            "acceptance": "Nach Änderung der max-width auf 390 px prüfen, ob der mobile Viewport keine horizontale Überschreitung mehr zeigt",
+            "uncertainty": "Keine manuelle Prüfung oder Reparatur erfolgt"
+          }
+        ]
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1716,
+        "generatedTokens": 4031,
+        "promptVersion": "page-report-2.3.0",
+        "promptSha256": "43999d5f8e289f9c454d14e39c1c883808952c4401004d5cfd8eb98f14c03525",
+        "contextSha256": "bec3ac83ab970447ddb62ad0c02704064209f9fa6f5ab418301a51099488fa23",
+        "modelDigest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+        "modelMetadataSha256": "407b69405b8facd6c5b7ab8de7dd669281cdf6b7348509861b4cbe2a7f503945",
+        "temperature": 0,
+        "contextTokens": 12288,
+        "predictionLimit": 6144,
+        "durationMs": 54389
+      },
+      "automaticSemanticAccuracy": "not_claimed",
+      "summaryUsedAsMeasurement": false,
+      "durationMs": 54390
+    },
+    {
+      "model": "qwen3:4b",
+      "caseId": "missing-description",
+      "inputSha256": "1bf0a124c3bfa1ef35d79a03037a035ea287e46b02460e312725f184c83db29c",
+      "processing": "responded",
+      "structuralValidation": "accepted",
+      "factualAnchorIssues": [
+        {
+          "code": "unmarked-example",
+          "detail": "HTML-Code ist ein neues Anpassungsbeispiel, keine gemessene DOM-Quelle."
+        }
+      ],
+      "repairUsefulness": "not_independently_reviewed",
+      "sensibleRefusal": "not_applicable",
+      "coverage": 1,
+      "partial": false,
+      "rawOutput": {
+        "summary": "Die Meta-Description ist leer oder fehlt auf der Seite. Vermutete Ursache: Kein Meta-Description-Tag im HTML-Head-Element oder leerer Inhalt. Zukünftige Schritte: Prüfen der HTML-Datei, Hinzufügen eines nicht-leeren Meta-Description-Elements und erneute Messung.",
+        "solutions": [
+          {
+            "findingId": "owned-meta",
+            "evidenceRefs": [
+              "finding:owned-meta"
+            ],
+            "relevance": "Keine direkte Auswirkung auf die Suchmaschinenoptimierung, da die Meta-Description fehlt.",
+            "alternatives": [
+              "Kein Meta-Description-Tag im Head-Element",
+              "Leerer Inhalt im Meta-Description-Tag"
+            ],
+            "missingInformation": [
+              "Genaue HTML-Datei mit Head-Element"
+            ],
+            "explanation": "Die Meta-Description fehlt oder ist leer, was die Suchmaschinenoptimierung beeinträchtigt.",
+            "cause": "Kein Meta-Description-Tag im HTML-Head-Element oder leerer Inhalt",
+            "steps": [
+              "Prüfe die HTML-Datei auf Gegenwart eines Meta-Description-Elements im Head-Tag",
+              "Füge falls fehlend einen nicht-leeren Meta-Description-Tag mit Inhalt hinzu",
+              "Validiere die Änderung durch erneute Messung der Meta-Description"
+            ],
+            "code": {
+              "language": "html",
+              "text": "<meta name=\"description\" content=\"Testbeschreibung\">"
+            },
+            "acceptance": "Nach Änderung der Meta-Description erneut prüfen, ob sie nicht leer ist",
+            "uncertainty": "Keine manuelle Prüfung erfolgt, keine Reparatur wurde ausgeführt"
+          }
+        ]
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1559,
+        "generatedTokens": 4411,
+        "promptVersion": "page-report-2.3.0",
+        "promptSha256": "1a5d3531540f1c7e358a57978889a9c7d8a4b80c44030623489924e13ce78720",
+        "contextSha256": "1bf0a124c3bfa1ef35d79a03037a035ea287e46b02460e312725f184c83db29c",
+        "modelDigest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+        "modelMetadataSha256": "407b69405b8facd6c5b7ab8de7dd669281cdf6b7348509861b4cbe2a7f503945",
+        "temperature": 0,
+        "contextTokens": 12288,
+        "predictionLimit": 6144,
+        "durationMs": 60324
+      },
+      "automaticSemanticAccuracy": "not_claimed",
+      "summaryUsedAsMeasurement": false,
+      "durationMs": 60324
+    },
+    {
+      "model": "qwen3:4b",
+      "caseId": "unknown-only",
+      "inputSha256": "3f0221ce8e25d79461a30fdc74b65646a1bf196a68331545d3fe3a00aeeab72c",
+      "processing": "responded",
+      "structuralValidation": "accepted",
+      "factualAnchorIssues": [],
+      "repairUsefulness": "not_independently_reviewed",
+      "sensibleRefusal": "empty-solutions-with-unknown-context",
+      "coverage": 1,
+      "partial": false,
+      "rawOutput": {
+        "summary": "Keine dokumentierten Befunde in diesem Teil. 17 unbekannte Prüfungen erfordern weitere Messungen. Weitere Analysen sind notwendig, um die unbekannten Regeln zu identifizieren.",
+        "solutions": []
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1269,
+        "generatedTokens": 2752,
+        "promptVersion": "page-report-2.3.0",
+        "promptSha256": "ffc26bb5b74e8f0fa3065ad282df4faaa89972846c758a5e94a0b1701b76851c",
+        "contextSha256": "3f0221ce8e25d79461a30fdc74b65646a1bf196a68331545d3fe3a00aeeab72c",
+        "modelDigest": "359d7dd4bcdab3d86b87d73ac27966f4dbb9f5efdfcc75d34a8764a09474fae7",
+        "modelMetadataSha256": "407b69405b8facd6c5b7ab8de7dd669281cdf6b7348509861b4cbe2a7f503945",
+        "temperature": 0,
+        "contextTokens": 12288,
+        "predictionLimit": 6144,
+        "durationMs": 39009
+      },
+      "automaticSemanticAccuracy": "not_claimed",
+      "summaryUsedAsMeasurement": false,
+      "durationMs": 39009
+    },
+    {
+      "model": "qwen2.5:7b",
+      "caseId": "mobile-width",
+      "inputSha256": "bec3ac83ab970447ddb62ad0c02704064209f9fa6f5ab418301a51099488fa23",
+      "processing": "responded",
+      "structuralValidation": "accepted",
+      "factualAnchorIssues": [
+        {
+          "code": "unmarked-example",
+          "detail": "HTML-Code ist ein neues Anpassungsbeispiel, keine gemessene DOM-Quelle."
+        }
+      ],
+      "repairUsefulness": "not_independently_reviewed",
+      "sensibleRefusal": "not_applicable",
+      "coverage": 1,
+      "partial": false,
+      "rawOutput": {
+        "summary": "Es gibt einen Befund, der die Breite eines Elements über die Ansichtsgrenze von 390 px verläuft. Dies könnte eine Layoutproblematik verursachen, bei der Inhalte nicht erreichbar sind.",
+        "solutions": [
+          {
+            "findingId": "owned-overflow",
+            "evidenceRefs": [
+              "finding:owned-overflow"
+            ],
+            "relevance": "Die Breite des Elements #wide beträgt 680 px, was die 390 px breite Ansicht überschreitet. Dies könnte zu einem horizontalen Scrollbar führen oder Inhalte verdecken.",
+            "alternatives": [
+              "Breite des Elements reduzieren, um die Ansichtsgrenze nicht zu überschreiten.",
+              "Elternlayout anpassen, um genügend Platz für das Element zu gewährleisten."
+            ],
+            "missingInformation": [
+              "Die genaue Positionierung und Ausrichtung des Elements #wide im Layout."
+            ],
+            "explanation": "Das Element #wide hat eine Breite von 680 px, was die 390 px breite Ansicht überschreitet. Dies könnte zu einer horizontalen Scrollbar verursachen oder Inhalte verdecken.",
+            "cause": "Die Breite des Elements #wide ist größer als die Ansichtsbreite.",
+            "steps": [
+              "Prüfen Sie die Breite des Elements #wide und reduzieren Sie sie, wenn sie über 390 px beträgt.",
+              "Überprüfen Sie das Elternlayout, um sicherzustellen, dass es genügend Platz für das Element #wide bietet.",
+              "Testen Sie die Änderung, um sicherzustellen, dass Inhalte erreichbar bleiben.",
+              "Erstellen Sie ein kleines Beispiel, um die Änderung anzuwenden: <div id=\"wide\" style=\"width: 350px;\">Inhalt</div>"
+            ],
+            "code": {
+              "language": "html",
+              "text": "<div id=\"wide\" style=\"width: 350px;\">Inhalt</div>"
+            },
+            "acceptance": "Nach Änderung denselben Zustand bei 390 px prüfen; Inhalte bleiben erreichbar.",
+            "uncertainty": "Der Befund ist unbekannt, da keine manuelle Prüfung oder Reparatur durchgeführt wurde."
+          }
+        ]
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1714,
+        "generatedTokens": 551,
+        "promptVersion": "page-report-2.3.0",
+        "promptSha256": "43999d5f8e289f9c454d14e39c1c883808952c4401004d5cfd8eb98f14c03525",
+        "contextSha256": "bec3ac83ab970447ddb62ad0c02704064209f9fa6f5ab418301a51099488fa23",
+        "modelDigest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+        "modelMetadataSha256": "2a3b5178bccd9e1fd2d7e0e2ca972d5273065056556998e6dd1ca60d0deafd40",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 14023
+      },
+      "automaticSemanticAccuracy": "not_claimed",
+      "summaryUsedAsMeasurement": false,
+      "durationMs": 14023
+    },
+    {
+      "model": "qwen2.5:7b",
+      "caseId": "missing-description",
+      "inputSha256": "1bf0a124c3bfa1ef35d79a03037a035ea287e46b02460e312725f184c83db29c",
+      "processing": "responded",
+      "structuralValidation": "accepted",
+      "factualAnchorIssues": [
+        {
+          "code": "unmarked-example",
+          "detail": "HTML-Code ist ein neues Anpassungsbeispiel, keine gemessene DOM-Quelle."
+        }
+      ],
+      "repairUsefulness": "not_independently_reviewed",
+      "sensibleRefusal": "not_applicable",
+      "coverage": 1,
+      "partial": false,
+      "rawOutput": {
+        "summary": "Es wurde keine Meta Description gefunden oder sie ist leer. Dies könnte die Suchmaschinenoptimierung beeinträchtigen.",
+        "solutions": [
+          {
+            "findingId": "owned-meta",
+            "evidenceRefs": [
+              "finding:owned-meta"
+            ],
+            "relevance": "Eine leere Meta Description kann die Suchmaschinenrelevanz und die Benutzererfahrung beeinträchtigen.",
+            "alternatives": [
+              "Eine leere Meta Description",
+              "Eine passende Meta Description hinterlegen"
+            ],
+            "missingInformation": [
+              "Der genaue Text der fehlenden Meta Description"
+            ],
+            "explanation": "Es wurde keine Meta Description gefunden oder sie ist leer. Dies könnte die Suchmaschinenoptimierung beeinträchtigen.",
+            "cause": "Es gibt keine Meta Description oder sie ist leer.",
+            "steps": [
+              "Fügen Sie eine passende Meta Description hinzu, die die Seite kurz und prägnant beschreibt.",
+              "Verwenden Sie einen Text, der die Suchmaschinenrelevanz und die Benutzererfahrung verbessert.",
+              "Überprüfen Sie, ob die Meta Description für alle Viewports korrekt ist.",
+              "Prüfen Sie, ob die Meta Description in der HTML-Datei korrekt platziert ist."
+            ],
+            "code": {
+              "language": "html",
+              "text": "<meta name=\"description\" content=\"Dies ist eine passende Meta Description für die Seite.\">"
+            },
+            "acceptance": "Nach Änderung dieselbe Seite auf eine nicht-leere HTML-Meta-Description prüfen.",
+            "uncertainty": "Die Meta Description ist nicht gefunden oder leer. Weitere Prüfung erforderlich."
+          }
+        ]
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1557,
+        "generatedTokens": 391,
+        "promptVersion": "page-report-2.3.0",
+        "promptSha256": "1a5d3531540f1c7e358a57978889a9c7d8a4b80c44030623489924e13ce78720",
+        "contextSha256": "1bf0a124c3bfa1ef35d79a03037a035ea287e46b02460e312725f184c83db29c",
+        "modelDigest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+        "modelMetadataSha256": "2a3b5178bccd9e1fd2d7e0e2ca972d5273065056556998e6dd1ca60d0deafd40",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 10291
+      },
+      "automaticSemanticAccuracy": "not_claimed",
+      "summaryUsedAsMeasurement": false,
+      "durationMs": 10291
+    },
+    {
+      "model": "qwen2.5:7b",
+      "caseId": "unknown-only",
+      "inputSha256": "3f0221ce8e25d79461a30fdc74b65646a1bf196a68331545d3fe3a00aeeab72c",
+      "processing": "responded",
+      "structuralValidation": "accepted",
+      "factualAnchorIssues": [],
+      "repairUsefulness": "not_independently_reviewed",
+      "sensibleRefusal": "empty-solutions-with-unknown-context",
+      "coverage": 1,
+      "partial": false,
+      "rawOutput": {
+        "summary": "Es gibt keine dokumentierten Befunde, aber es ist eine unbekannte Regelinstanz vorhanden, die noch nicht geprüft wurde.",
+        "solutions": []
+      },
+      "provenance": {
+        "providerVersion": "0.40.12",
+        "truncation": "disabled",
+        "promptEvalCount": 1267,
+        "generatedTokens": 49,
+        "promptVersion": "page-report-2.3.0",
+        "promptSha256": "ffc26bb5b74e8f0fa3065ad282df4faaa89972846c758a5e94a0b1701b76851c",
+        "contextSha256": "3f0221ce8e25d79461a30fdc74b65646a1bf196a68331545d3fe3a00aeeab72c",
+        "modelDigest": "845dbda0ea48ed749caafd9e6037047aa19acfcfd82e704d7ca97d631a0b697e",
+        "modelMetadataSha256": "2a3b5178bccd9e1fd2d7e0e2ca972d5273065056556998e6dd1ca60d0deafd40",
+        "temperature": 0,
+        "contextTokens": 8192,
+        "predictionLimit": 3072,
+        "durationMs": 3735
+      },
+      "automaticSemanticAccuracy": "not_claimed",
+      "summaryUsedAsMeasurement": false,
+      "durationMs": 3735
+    }
+  ],
+  "meaning": "Same frozen synthetic input set for installed models. No independent human labels, general semantic accuracy, usefulness certification or model qualification. Cold model loads; architecture-specific bounded inference budgets recorded in provenance."
+}

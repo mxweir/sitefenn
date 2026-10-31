@@ -47,6 +47,8 @@ for (const p of [
   "index.html",
   "LICENSE",
   "README.md",
+  "CHANGELOG.md",
+  "PLAN-3.0.md",
   "SiteFenn.command",
   "SiteFenn-Windows.cmd",
 ])

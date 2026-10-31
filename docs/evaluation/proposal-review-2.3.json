@@ -1,0 +1,72 @@
+{
+  "kind": "implementation-agent-editorial-review",
+  "independentHumanLabels": false,
+  "heldOut": false,
+  "repairExecutionTested": false,
+  "meaning": "Qualitative development review, not model accuracy scoring. Blank refusal on measured findings would not count as usable action. A guard warning about a new example is an origin check, not automatically a factual error.",
+  "cases": [
+    {
+      "model": "qwen2.5:3b",
+      "caseId": "mobile-width",
+      "factualAssessment": "No detected device/numeric anchor contradiction; repeated generic checking steps.",
+      "codeAssessment": "Unusable as a fix: HTML retains width680px/max-width:none and reuses the captured ID.",
+      "actionOrAbstentionAssessment": "Partly reusable after editing; no tested repair."
+    },
+    {
+      "model": "qwen2.5:3b",
+      "caseId": "missing-description",
+      "factualAssessment": "Contradictory no-known-errors summary; unsupported ranking-factor claim.",
+      "codeAssessment": "HTML presence example can be explicitly illustrative; ranking-recheck steps must be removed.",
+      "actionOrAbstentionAssessment": "First two steps reusable after editing; later steps unsupported."
+    },
+    {
+      "model": "qwen2.5:3b",
+      "caseId": "unknown-only",
+      "factualAssessment": "Correctly omits solutions but invents invalid-context/missing-selector explanations for unknown rules.",
+      "codeAssessment": "No code or invented repair.",
+      "actionOrAbstentionAssessment": "Abstention present, summary overstates what is known."
+    },
+    {
+      "model": "qwen3:4b",
+      "caseId": "mobile-width",
+      "factualAssessment": "Correct dimensions; computed parent width is not proof of a fixed CSS declaration or root cause.",
+      "codeAssessment": "New sf-example class is explicitly an example, not the captured element. Valid-looking CSS is not a tested source fix; hidden-overflow alternative unsuitable.",
+      "actionOrAbstentionAssessment": "Some inspect/retest steps reusable; no general repair validation."
+    },
+    {
+      "model": "qwen3:4b",
+      "caseId": "missing-description",
+      "factualAssessment": "Unsupported no-conversion-impact statement.",
+      "codeAssessment": "Basic illustrative meta tag; origin must be selected before adoption.",
+      "actionOrAbstentionAssessment": "Three HTML-presence/edit/retest steps are usable subject to local review."
+    },
+    {
+      "model": "qwen3:4b",
+      "caseId": "unknown-only",
+      "factualAssessment": "Correctly reports17 unknown rules and no documented findings.",
+      "codeAssessment": "No code or invented repair.",
+      "actionOrAbstentionAssessment": "Appropriate abstention on this case, not proof of general quality."
+    },
+    {
+      "model": "qwen2.5:7b",
+      "caseId": "mobile-width",
+      "factualAssessment": "Conflates a measured overflow with unknown status and asks for widths already provided.",
+      "codeAssessment": "New example fixed350px width is arbitrary and does not bind to the captured #wide.",
+      "actionOrAbstentionAssessment": "Generic inspection/retention steps partly reusable; no tested responsive fix."
+    },
+    {
+      "model": "qwen2.5:7b",
+      "caseId": "missing-description",
+      "factualAssessment": "Vague unsupported search-relevance effect.",
+      "codeAssessment": "Illustrative meta tag; search-result visibility/relevance steps are not reproducible HTML acceptance tests.",
+      "actionOrAbstentionAssessment": "HTML insertion/presence steps reusable only after removing unsupported steps."
+    },
+    {
+      "model": "qwen2.5:7b",
+      "caseId": "unknown-only",
+      "factualAssessment": "Correct17 unknown rules; calls for further measurement.",
+      "codeAssessment": "No code or invented repair.",
+      "actionOrAbstentionAssessment": "Appropriate abstention on this case, not proof of general quality."
+    }
+  ]
+}

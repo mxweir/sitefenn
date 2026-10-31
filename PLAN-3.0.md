@@ -1,6 +1,6 @@
 # SiteFenn — Verbesserungsplan bis 3.0
 
-Stand: **31. Oktober 2026**. Status: **2.1 und 2.2 implementiert und lokal geprüft; 2.3–3.0 bleiben Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
+Stand: **31. Oktober 2026**. Status: **2.1–2.3 implementiert und lokal geprüft; 2.4–3.0 bleiben Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
 
 Grundlage: drei spezialisierte Agentenreviews für Architektur/Betrieb/Security, Produkt/UX/Frontend und KI/QA/SEO, anschließend gemeinsame Priorisierung. Das ist ein tatsächlicher Code-/Artefaktreview durch Softwareagenten, **keine externe Fachpersonen- oder Nutzerstudie**. Für diese Planung wurden keine neuen Modellläufe, Funktionstests oder Kundenscans ausgeführt.
 
@@ -80,6 +80,8 @@ Jede Version soll einen benutzbaren vertikalen Ablauf liefern. Die Nummern sind 
 **Abnahme:** Eine Aufgabe lässt sich ohne Verlust von URL/Gerät/Zustand vom Originalnachweis bis zum Nachtest bearbeiten. Reload/Zurück stellt den gewählten Kontext wieder her. Mit 1.000 Checks und 10.000 Aufgaben bleibt die Historie vollständig erreichbar; Antwortzeit und Speicher werden veröffentlicht. Layoutprüfung bei 320/390/768/1280 px und 200 % Zoom, ohne verdeckte Kernaktionen.
 
 ### 2.3 — Fenn erklärt einen belegten Zustand
+
+**Umgesetzt:** deterministische Fakten-/Regelmatrix, keine Modell-Synthesekette, bearbeitbare gebundene Entwürfe, bewusste Übernahme und lokale Fehlerklassen. [2.3-Abnahme und Grenzen](docs/RELEASE-2.3.md). Der Modellvergleich bleibt interne Entwicklungsregression; unabhängige Beschriftung und externe Modellqualifikation sind offen.
 
 **Verantwortung:** KI/QA und Fullstack; redaktionelle UX durch Produkt/Frontend.
 

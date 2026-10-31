@@ -1,0 +1,65 @@
+{
+  "version": "proposal-eval-2.3-frozen-2",
+  "labelSource": "Internal synthetic cases by implementation agent, not independent human labels or held-out model accuracy. Development regression set; guards were refined after pilot observations. This is not a held-out generalization test.",
+  "cases": [
+    {
+      "id": "mobile-width",
+      "finding": {
+        "id": "owned-overflow",
+        "fingerprint": "owned-overflow",
+        "ruleId": "horizontal-overflow",
+        "category": "layout",
+        "priority": "important",
+        "title": "Element läuft über die mobile Ansicht",
+        "detail": "Rechter Rand 680 px überschreitet die 390 px breite Ansicht.",
+        "pageUrl": "https://owned.example/",
+        "viewportId": "mobile",
+        "state": "initial",
+        "selector": "#wide",
+        "evidenceStatus": "measured",
+        "recommendation": "Breite und Elternlayout prüfen.",
+        "acceptance": "Nach Änderung denselben Zustand bei 390 px prüfen; Inhalte bleiben erreichbar.",
+        "elementContext": {
+          "version": "element-context-1.6",
+          "status": "captured",
+          "tag": "div",
+          "styles": {
+            "width": "680px",
+            "min-width": "0px",
+            "max-width": "none"
+          },
+          "parent": {
+            "tag": "main",
+            "styles": {
+              "width": "390px"
+            }
+          }
+        }
+      }
+    },
+    {
+      "id": "missing-description",
+      "finding": {
+        "id": "owned-meta",
+        "fingerprint": "owned-meta",
+        "ruleId": "meta-description",
+        "category": "seo",
+        "priority": "important",
+        "title": "Meta Description fehlt",
+        "detail": "Die Meta Description fehlt oder ist leer.",
+        "pageUrl": "https://owned.example/",
+        "viewportId": "mobile",
+        "state": "initial",
+        "selector": null,
+        "evidenceStatus": "measured",
+        "recommendation": "Eine passende nicht-leere HTML-Meta-Description hinterlegen.",
+        "acceptance": "Nach Änderung dieselbe Seite auf eine nicht-leere HTML-Meta-Description prüfen.",
+        "elementContext": null
+      }
+    },
+    {
+      "id": "unknown-only",
+      "finding": null
+    }
+  ]
+}

@@ -929,7 +929,11 @@ export function Tasks({
             )}
             {task.aiProposal && (
               <details className="plan-note">
-                <summary>Übernommener KI-Vorschlag · ungeprüft</summary>
+                <summary>
+                  {task.aiProposal.reviewId
+                    ? "Redaktionell geprüfter Entwurf · Fix nicht verifiziert"
+                    : "Historischer KI-Vorschlag · ungeprüft"}
+                </summary>
                 <p>{task.aiProposal.explanation}</p>
                 <p>Vermutete Ursache: {task.aiProposal.cause}</p>
                 <ol>
@@ -937,6 +941,16 @@ export function Tasks({
                     <li key={i}>{step}</li>
                   ))}
                 </ol>
+                {task.aiProposal.codeOrigin && (
+                  <p>
+                    Codeherkunft:{" "}
+                    {task.aiProposal.codeOrigin === "captured"
+                      ? "Entwurf am erfassten Selektor"
+                      : task.aiProposal.codeOrigin === "illustrative"
+                        ? "Bewusst neues Beispiel"
+                        : "Kein Code übernommen"}
+                  </p>
+                )}
                 {task.aiProposal.code.text && (
                   <pre className="solution-code">
                     <code>{task.aiProposal.code.text}</code>
@@ -946,6 +960,9 @@ export function Tasks({
                 <p>Unsicherheit: {task.aiProposal.uncertainty}</p>
                 <p className="small-label">
                   Auswertung {task.aiProposal.analysisId}
+                  {task.aiProposal.reviewId
+                    ? ` · Entwurf ${task.aiProposal.reviewId}`
+                    : ""}
                 </p>
               </details>
             )}
