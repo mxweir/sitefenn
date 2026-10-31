@@ -157,7 +157,7 @@ npm run test:ai-contract
 npm run test:ai-contract -- --model qwen2.5:7b
 ```
 
-[Contributing](CONTRIBUTING.md) · [Architecture](docs/ARCHITECTURE.md) · [Stack](docs/STACK.md) · [Roadmap and approved scope](PLAN-2.0.md) · [Brand](docs/branding/BRAND.md)
+[Contributing](CONTRIBUTING.md) · [Architecture](docs/ARCHITECTURE.md) · [Stack](docs/STACK.md) · [Plan bis 3.0](PLAN-3.0.md) · [2.0 scope](PLAN-2.0.md) · [Brand](docs/branding/BRAND.md)
 
 ## License
 
