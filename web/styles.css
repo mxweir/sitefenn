@@ -3271,3 +3271,46 @@ h1 {
 .readiness-status.working {
   border-color: #bf8c30;
 }
+
+/* 2.2: reserve space for assistance and keep the repair context readable. */
+.workspace-subnav {display:flex;gap:8px 22px;flex-wrap:wrap;margin:0 0 26px;padding:0 4px 14px;border-bottom:1px solid #39324e44;}
+.workspace-subnav button {font-size:14px;min-height:40px;}
+.workspace-subnav [aria-current=page] {font-weight:800;text-decoration:underline;text-underline-offset:6px;}
+.primary-tabs {display:grid;grid-template-columns:repeat(4,minmax(0,1fr));width:100%;overflow:visible;}
+.primary-tabs button {justify-content:center;min-width:0;white-space:normal;min-height:48px;font-size:15px;}
+.fenn-dock {display:flex;align-items:center;gap:20px;flex-wrap:wrap;padding:24px;margin-top:36px;border:1px solid #39324e;background:#eee8d7;box-shadow:4px 4px 0 #39324e;}
+.fenn-dock>svg {width:46px;height:46px;flex:0 0 46px;}
+.fenn-dock>div {flex:1 1 220px;min-width:0;}
+.fenn-dock p {font-size:14px;line-height:1.6;margin:6px 0 0;}
+.fix-grid {display:grid;grid-template-columns:minmax(240px,0.85fr) minmax(0,2fr);gap:24px;align-items:start;}
+.fix-list {position:sticky;top:16px;max-height:calc(100vh - 32px);overflow:auto;}
+.fix-list label,.fix-context label {display:block;font-weight:650;font-size:14px;margin-bottom:16px;}
+.fix-list input[type=search],.fix-list select,.fix-context select {display:block;width:100%;max-width:100%;margin-top:8px;min-height:44px;}
+.fix-task-buttons {display:grid;gap:10px;}
+.fix-task {display:flex;flex-direction:column;align-items:start;gap:8px;text-align:left;min-width:0;padding:16px;border:1px solid #39324e66;background:#f9f7f1;font-size:15px;line-height:1.55;overflow-wrap:anywhere;}
+.fix-task.selected {background:#eeed68;border:2px solid #39324e;}
+.fix-task small,.fix-task span {font-size:13px;}
+.fix-detail,.fix-context,.fix-evidence {min-width:0;}
+.fix-detail>.panel,.fix-detail>.page-analysis {margin-bottom:22px;}
+.fix-detail .panel-head {align-items:start;flex-wrap:wrap;gap:16px;}
+.fix-detail h3 {line-height:1.4;overflow-wrap:anywhere;}
+.fix-detail p {font-size:15px;line-height:1.7;overflow-wrap:anywhere;}
+.fix-detail code,.fix-detail pre {white-space:pre-wrap;overflow-wrap:anywhere;max-width:100%;font-size:13px;}
+.fix-detail-tabs {display:flex;gap:10px;flex-wrap:wrap;margin-top:20px;}
+.fix-detail-tabs [aria-current=page] {background:#eeed68;}
+.fix-evidence .frame-wrap {max-height:650px;overflow:auto;}
+.fix-context .external-url {overflow-wrap:anywhere;word-break:break-word;}
+.fix-detail textarea {display:block;width:100%;min-height:110px;max-width:100%;font-size:15px;}
+.fix-list .check-row {display:flex;gap:10px;align-items:center;font-weight:400;}
+.history-workspace .history-row {gap:20px;white-space:normal;font-size:15px;}
+.history-workspace small {line-height:1.6;overflow-wrap:anywhere;}
+@media(max-width:1100px) {.fix-grid {grid-template-columns:minmax(210px,0.75fr) minmax(0,1.6fr);} .fix-list {position:static;max-height:650px;}}
+@media(max-width:850px) {.fix-grid {grid-template-columns:minmax(0,1fr);} .fix-list {max-height:420px;} .fix-task-buttons {grid-template-columns:repeat(auto-fit,minmax(210px,1fr));} .fix-detail-tabs .button {flex:1 1 140px;} .fix-detail .scope-row {display:flex;flex-wrap:wrap;} .fix-detail .scope-row>* {min-width:0;}}
+@media(max-width:480px) {.primary-tabs button {font-size:13px;padding:10px 6px;flex-direction:column;gap:6px;} .fenn-dock {gap:12px;padding:18px;}.fenn-dock .button {width:100%;}.fix-task-buttons {grid-template-columns:1fr;}.fix-detail .panel {padding:18px;}.fix-detail .toolbar {flex-wrap:wrap;}.fix-detail .button {white-space:normal;max-width:100%;}.history-workspace .history-row {flex-direction:column;align-items:start;}.workspace-subnav {gap:4px 16px;}.project-context {min-width:0;}.project-context select {max-width:100%;}.fix-detail .workspace-form fieldset {min-width:0;}}
+.fix-capture-scroll {max-height:520px;overflow:auto;overscroll-behavior:contain;}
+.fix-capture-scroll:focus {outline:3px solid #39324e;outline-offset:4px;}
+.fix-detail .task-list {margin-bottom:16px;}
+.fix-detail .task-list .task-card {padding:18px;}
+.fix-detail .task-list .retest-action {padding:0;border:0;background:none;margin:12px 0;}
+.fix-detail .task-list .task-status-row {margin-top:8px;}
+@media(max-width:480px){.fix-capture-scroll{max-height:440px;}}

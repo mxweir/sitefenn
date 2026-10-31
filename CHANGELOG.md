@@ -2,6 +2,28 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 2.2.0 — 2026-10-31
+
+### Keep the fix in context
+
+- Added the connected **Arbeiten** workspace: task selection, exact URL/device/state/selector, original evidence, optional explanation, inline developer handoff, review/status and targeted retest. Returning from a retest preserves the chosen observation; manual review remains separate from verification.
+- Introduced four primary project sections with contextual views and stable project/check/task/finding/pane URLs. Reload, Back/Forward, older direct links and missing-target recovery keep context explicit.
+- Added project-specific browser UI filters, uncritical configuration drafts and task notes. Source roots, previews, credentials and consent are not silently restored. Fenn occupies reserved document space.
+- Replaced full-report/global-task startup loading with cached summaries and complete project counters. Project history/tasks and older comparison options use bounded cursor pages, search and filters. Added transactional summary backfill and restore regeneration without rewriting original reports.
+- Added shared-readiness action gating, a reproducible 1,000-check/10,000-task benchmark and actual desktop/mobile screenshots. Rule/report/score identities remain unchanged from 2.1; strict application-version compatibility remains in effect.
+
+**146 Node tests and 27 browser tests** passed locally, plus types/build/lifecycle and the AI output guards. Complete scale enumeration, cache migration, direct links, source-consent reset, project drafts, controlled responsive/reflow profiles and the real repair/backup workflows are covered. [Full verification, measured limits and remaining external acceptance](docs/RELEASE-2.2.md).
+
+![Actual 2.2 connected evidence and task actions](docs/screenshots/2.2-evidence-actions.jpg)
+
+<details>
+<summary>Actual inline developer package and mobile observation</summary>
+
+![Actual 2.2 inline handoff](docs/screenshots/2.2-inline-handoff.jpg)
+![Actual 2.2 mobile work view](docs/screenshots/2.2-mobile-workspace.jpg)
+
+</details>
+
 ## 2.1.0 — 2026-10-31
 
 ### Trust the saved evidence

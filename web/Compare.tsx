@@ -1,3 +1,4 @@
+import { useScanOptions } from "./use-scan-options.js";
 import { useEffect, useState } from "react";
 import { ArrowLeftRight, LoaderCircle } from "lucide-react";
 import type { Scan, ScanComparison } from "../shared/types.js";
@@ -14,12 +15,14 @@ const labels: Record<string, string> = {
   "not-comparable": "Nicht vergleichbar",
 };
 export default function Compare({
-  scans,
+  scans: initialScans,
   projectId,
 }: {
   scans: Scan[];
   projectId: string;
 }) {
+  const options = useScanOptions(projectId, initialScans);
+  const scans = options.scans;
   const completed = scans.filter((s) => s.status === "completed" && s.result);
   const [before, setBefore] = useState(
     completed[0]?.options?.retest?.sourceScanId ??
@@ -41,9 +44,33 @@ export default function Compare({
     setAfter(completed[0]?.id ?? "");
     setResult(null);
   }, [scans[0]?.projectId]);
+  useEffect(() => {
+    if (!before && completed.length > 1) setBefore(completed[1]!.id);
+    if (!after && completed.length) setAfter(completed[0]!.id);
+  }, [completed.map((s) => s.id).join("|")]);
+  const pagination = (
+    <>
+      <p className="hint">
+        Vergleich aus {completed.length} geladenen Checks dieses Projekts
+        wählen. Ältere Checks bleiben über den Verlauf und weitere Seiten
+        erreichbar.
+      </p>
+      {options.error && <Notice error>{options.error}</Notice>}
+      {options.cursor && (
+        <button
+          className="button secondary"
+          disabled={options.busy}
+          onClick={() => void options.more()}
+        >
+          Ältere Vergleichschecks laden
+        </button>
+      )}
+    </>
+  );
   if (completed.length < 2)
     return (
       <>
+        {pagination}
         {completed.length > 0 && (
           <VisualCompare scans={scans} projectId={projectId} />
         )}
@@ -60,6 +87,7 @@ export default function Compare({
     );
   return (
     <>
+      {pagination}
       <VisualCompare scans={scans} projectId={projectId} />
       <div className="panel workspace-form">
         <div className="panel-head">

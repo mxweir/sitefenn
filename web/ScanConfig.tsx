@@ -1,3 +1,4 @@
+import { useProjectDraft } from "./workspace-state.js";
 import JourneyBuilder from "./JourneyBuilder.js";
 import type { Journey } from "../shared/types.js";
 import { useEffect, useState } from "react";
@@ -24,24 +25,48 @@ export default function ScanConfig({
 }) {
   const [pages, setPages] = useState<string[]>([project.url]);
   const [discovered, setDiscovered] = useState<string[]>([project.url]);
-  const [maxPages, setMaxPages] = useState(10);
-  const [maxDepth, setMaxDepth] = useState(2);
-  const [excluded, setExcluded] = useState("");
-  const [viewportIds, setViewportIds] = useState([
-    "desktop",
-    "tablet",
-    "mobile",
-  ]);
+  const [maxPages, setMaxPages] = useProjectDraft(
+    project.id,
+    "scan:maxPages",
+    10,
+  );
+  const [maxDepth, setMaxDepth] = useProjectDraft(
+    project.id,
+    "scan:maxDepth",
+    2,
+  );
+  const [excluded, setExcluded] = useProjectDraft(
+    project.id,
+    "scan:excluded",
+    "",
+  );
+  const [viewportIds, setViewportIds] = useProjectDraft(
+    project.id,
+    "scan:viewports",
+    ["desktop", "tablet", "mobile"],
+  );
   const [journeys, setJourneys] = useState<Journey[]>([]);
-  const [technicalSeo, setTechnicalSeo] = useState(true);
+  const [technicalSeo, setTechnicalSeo] = useProjectDraft(
+    project.id,
+    "scan:technicalSeo",
+    true,
+  );
   const [sitemapUrl, setSitemapUrl] = useState(
     new URL("/sitemap.xml", project.url).href,
   );
   const [sitemapResult, setSitemapResult] = useState<SitemapImport | null>(
     null,
   );
-  const [performance, setPerformance] = useState(false);
-  const [repetitions, setRepetitions] = useState<1 | 3>(1);
+  const [performance, setPerformance] = useProjectDraft(
+    project.id,
+    "scan:performance",
+    false,
+  );
+  const [repetitions, setRepetitions] = useProjectDraft<1 | 3>(
+    project.id,
+    "scan:repetitions",
+    1,
+  );
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);

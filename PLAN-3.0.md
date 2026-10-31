@@ -1,6 +1,6 @@
 # SiteFenn — Verbesserungsplan bis 3.0
 
-Stand: **31. Oktober 2026**. Status: **2.1 implementiert und lokal geprüft; 2.2–3.0 bleiben Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
+Stand: **31. Oktober 2026**. Status: **2.1 und 2.2 implementiert und lokal geprüft; 2.3–3.0 bleiben Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
 
 Grundlage: drei spezialisierte Agentenreviews für Architektur/Betrieb/Security, Produkt/UX/Frontend und KI/QA/SEO, anschließend gemeinsame Priorisierung. Das ist ein tatsächlicher Code-/Artefaktreview durch Softwareagenten, **keine externe Fachpersonen- oder Nutzerstudie**. Für diese Planung wurden keine neuen Modellläufe, Funktionstests oder Kundenscans ausgeführt.
 
@@ -65,6 +65,8 @@ Jede Version soll einen benutzbaren vertikalen Ablauf liefern. Die Nummern sind 
 **Stoppregel:** Keine zusätzliche automatische Bereinigung oder Parallelisierung, solange diese Fälle nicht geprüft sind. Falls nötig zuerst ein kleines 2.0.x-Datenintegritätspaket, statt auf den kompletten 2.1-Umfang zu warten.
 
 ### 2.2 — Weniger Navigation, mehr erledigte Arbeit
+
+**Umgesetzt:** verbundener Fix-Arbeitsbereich, vier Hauptbereiche, stabile Kontextlinks, projektbezogene UI-Entwürfe, paginierte Zusammenfassungen/Historie und reservierter Fenn-Bereich. [2.2-Abnahme, echter UI-Ablauf und Skalierungsmessung](docs/RELEASE-2.2.md). 200%-äquivalenter Reflow ist geprüft; native Zoom-/Screenreader- und unabhängige UX-Abnahmen bleiben ausdrücklich offen.
 
 **Verantwortung:** Produkt/UX und Frontend; Backend für paginierte Abfragen.
 

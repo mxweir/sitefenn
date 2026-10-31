@@ -1,0 +1,35 @@
+{
+  "kind": "internal-workspace-scale-2.2",
+  "platform": "darwin",
+  "arch": "arm64",
+  "node": "v24.19.0",
+  "fixture": {
+    "checks": 1000,
+    "tasks": 10000,
+    "additionalOldQuietProjectChecks": 1,
+    "fullReportDetailBytesPerCheck": 16384
+  },
+  "backfillMs": 41.47745900000001,
+  "overview": {
+    "samples": 30,
+    "p50Ms": 6.63900000000001,
+    "p95Ms": 7.1919169999999895,
+    "responseBytes": 1048,
+    "maximumSampledProcessRssBytes": 120012800
+  },
+  "scanPage50": {
+    "samples": 30,
+    "p50Ms": 3.0759160000000065,
+    "p95Ms": 3.3567500000000337,
+    "responseBytes": 31791,
+    "maximumSampledProcessRssBytes": 120242176
+  },
+  "taskPage50": {
+    "samples": 30,
+    "p50Ms": 0.16295800000000327,
+    "p95Ms": 0.18116599999996197,
+    "responseBytes": 20193,
+    "maximumSampledProcessRssBytes": 120389632
+  },
+  "meaning": "Controlled local SQLite/query+JSON samples after five warmups; RSS sampled after calls, not whole-system/peak browser memory. Synthetic metadata, no website/AI accuracy or remote latency claim."
+}

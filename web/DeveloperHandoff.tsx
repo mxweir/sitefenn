@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useContext } from "react";
+import { WorkspaceReadiness } from "./workspace-state.js";
+import { useState, type ReactNode } from "react";
 import type { Scan } from "../shared/types.js";
 import type { SourcePreview } from "../server/services/developer-handoff.js";
 import { post, message } from "./api.js";
@@ -7,11 +9,14 @@ export default function DeveloperHandoff({
   scan,
   findingIds,
   onClose,
+  inline = false,
 }: {
+  inline?: boolean;
   scan: Scan;
   findingIds: string[];
   onClose: () => void;
 }) {
+  const readiness = useContext(WorkspaceReadiness);
   const findings =
     scan.result?.audit?.findings.filter((f) => findingIds.includes(f.id)) ?? [];
   const [selected, setSelected] = useState(
@@ -35,8 +40,9 @@ export default function DeveloperHandoff({
       setBusy(false);
     }
   };
+  const Wrapper = inline ? InlineHandoff : Dialog;
   return (
-    <Dialog
+    <Wrapper
       title="Gezieltes Entwickler-Arbeitspaket"
       onClose={onClose}
       busy={busy}
@@ -109,7 +115,13 @@ export default function DeveloperHandoff({
           </label>
           <button
             className="button secondary"
-            disabled={busy || !ack || !root || !selected.length}
+            disabled={
+              busy ||
+              !ack ||
+              !root ||
+              !selected.length ||
+              (!!readiness && !readiness.allowed.startExclusive)
+            }
             onClick={() =>
               void action(async () => {
                 setPreview(
@@ -176,7 +188,11 @@ export default function DeveloperHandoff({
         </details>
         <button
           className="button primary"
-          disabled={busy || !selected.length}
+          disabled={
+            busy ||
+            !selected.length ||
+            (!!readiness && !readiness.allowed.startExclusive)
+          }
           onClick={() =>
             void action(async () => {
               const r = await post<{ markdown: string }>(
@@ -221,6 +237,29 @@ export default function DeveloperHandoff({
           </>
         )}
       </div>
-    </Dialog>
+    </Wrapper>
+  );
+}
+
+function InlineHandoff({
+  title,
+  children,
+  onClose,
+}: {
+  title: string;
+  children: ReactNode;
+  onClose: () => void;
+  busy?: boolean;
+}) {
+  return (
+    <section className="panel inline-handoff">
+      <div className="panel-head">
+        <h3>{title}</h3>
+        <button className="text-button" onClick={onClose}>
+          Zum Nachweis
+        </button>
+      </div>
+      {children}
+    </section>
   );
 }

@@ -1,7 +1,8 @@
+import { WorkspaceReadiness, useProjectDraft } from "./workspace-state.js";
 import { validateReport } from "../shared/report-contract.js";
 import DeveloperHandoff from "./DeveloperHandoff.js";
 import WorkPriority from "./WorkPriority.js";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import {
   ChevronDown,
   ChevronUp,
@@ -54,12 +55,36 @@ export function Report({
   initialFindingId?: string;
   tasks?: AuditTask[];
 }) {
-  const [category, setCategory] = useState("all");
-  const [priority, setPriority] = useState("all");
-  const [query, setQuery] = useState("");
-  const [page, setPage] = useState("all");
-  const [device, setDevice] = useState("all");
-  const [status, setStatus] = useState("all");
+  const [category, setCategory] = useProjectDraft(
+    scan?.projectId ?? "none",
+    "report:category",
+    "all",
+  );
+  const [priority, setPriority] = useProjectDraft(
+    scan?.projectId ?? "none",
+    "report:priority",
+    "all",
+  );
+  const [query, setQuery] = useProjectDraft(
+    scan?.projectId ?? "none",
+    "report:query",
+    "",
+  );
+  const [page, setPage] = useProjectDraft(
+    scan?.projectId ?? "none",
+    "report:page",
+    "all",
+  );
+  const [device, setDevice] = useProjectDraft(
+    scan?.projectId ?? "none",
+    "report:device",
+    "all",
+  );
+  const [status, setStatus] = useProjectDraft(
+    scan?.projectId ?? "none",
+    "report:status",
+    "all",
+  );
   const [grouped, setGrouped] = useState(true);
   const [variant, setVariant] = useState("");
   const [open, setOpen] = useState<string | null>(null);
@@ -67,15 +92,21 @@ export function Report({
   const report = scan?.result?.audit;
   const contract = report ? validateReport(report) : undefined;
   useEffect(() => {
-    setCategory("all");
-    setPriority("all");
-    setQuery("");
-    setStatus("all");
     const finding = report?.findings.find(
       (item) => item.id === initialFindingId,
     );
-    setPage(finding?.pageUrl ?? "all");
-    setDevice(finding?.viewportId ?? "all");
+    if (finding) {
+      setPage(finding.pageUrl);
+      setDevice(finding.viewportId);
+    } else {
+      if (page !== "all" && !report?.options.pages.includes(page))
+        setPage("all");
+      if (
+        device !== "all" &&
+        !report?.options.viewports.some((v) => v.id === device)
+      )
+        setDevice("all");
+    }
     setOpen(finding?.id ?? null);
     setVariant(finding?.id ?? "");
   }, [scan?.id, initialFindingId, !!report]);
@@ -683,12 +714,17 @@ export function Tasks({
   tasks,
   onChange,
   onRetestStarted,
+  compact = false,
+  onHandoff,
 }: {
+  compact?: boolean;
+  onHandoff?: () => void;
   scan?: Scan;
   tasks: AuditTask[];
   onChange: () => void | Promise<void>;
   onRetestStarted?: (scan: Scan) => void | Promise<void>;
 }) {
+  const readiness = useContext(WorkspaceReadiness);
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState("all");
   const [device, setDevice] = useState("all");
@@ -735,119 +771,162 @@ export function Tasks({
   };
   return (
     <>
-      <div className="panel-head">
-        <div>
-          <p className="eyebrow">VOM BEFUND ZUM NÄCHSTEN SCHRITT</p>
-          <h2>Dein Maßnahmenplan</h2>
-          <p>
-            Ähnliche Beobachtungen werden gebündelt. Manuell abgehakt bedeutet
-            „zur Prüfung“, nicht automatisch behoben.
-          </p>
-        </div>
-        <button className="button primary" onClick={() => setExportOpen(true)}>
-          <Download size={16} />
-          Plan exportieren
-        </button>
-      </div>
       {error && <Notice error>{error}</Notice>}
-      <div className="filter-bar">
-        <select
-          aria-label="Aufgabenstatus filtern"
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-        >
-          <option value="all">Alle Aufgaben ({tasks.length})</option>
-          {Object.entries(taskLabels).map(([status, label]) => (
-            <option key={status} value={status}>
-              {label}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Aufgabenseite filtern"
-          value={page}
-          onChange={(e) => setPage(e.target.value)}
-        >
-          <option value="all">Alle Seiten</option>
-          {scan.result.audit?.options.pages.map((url) => (
-            <option key={url} value={url}>
-              {url}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Aufgabengerät filtern"
-          value={device}
-          onChange={(e) => setDevice(e.target.value)}
-        >
-          <option value="all">Alle Geräte</option>
-          {scan.result.audit?.options.viewports.map((viewport) => (
-            <option key={viewport.id} value={viewport.id}>
-              {viewport.id}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Aufgabenkategorie filtern"
-          value={category}
-          onChange={(e) => setCategory(e.target.value)}
-        >
-          <option value="all">Alle Kategorien</option>
-          {[...new Set(tasks.map((task) => task.category))].map((item) => (
-            <option key={item} value={item}>
-              {categoryLabel(item)}
-            </option>
-          ))}
-        </select>
-      </div>
-      <WorkPriority scan={scan} />
+      {!compact && (
+        <>
+          <div className="panel-head">
+            <div>
+              <p className="eyebrow">VOM BEFUND ZUM NÄCHSTEN SCHRITT</p>
+              <h2>Dein Maßnahmenplan</h2>
+              <p>
+                Ähnliche Beobachtungen werden gebündelt. Manuell abgehakt
+                bedeutet „zur Prüfung“, nicht automatisch behoben.
+              </p>
+            </div>
+            <button
+              className="button primary"
+              onClick={() => setExportOpen(true)}
+            >
+              <Download size={16} />
+              Plan exportieren
+            </button>
+          </div>
+
+          <div className="filter-bar">
+            <select
+              aria-label="Aufgabenstatus filtern"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+            >
+              <option value="all">Alle Aufgaben ({tasks.length})</option>
+              {Object.entries(taskLabels).map(([status, label]) => (
+                <option key={status} value={status}>
+                  {label}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Aufgabenseite filtern"
+              value={page}
+              onChange={(e) => setPage(e.target.value)}
+            >
+              <option value="all">Alle Seiten</option>
+              {scan.result.audit?.options.pages.map((url) => (
+                <option key={url} value={url}>
+                  {url}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Aufgabengerät filtern"
+              value={device}
+              onChange={(e) => setDevice(e.target.value)}
+            >
+              <option value="all">Alle Geräte</option>
+              {scan.result.audit?.options.viewports.map((viewport) => (
+                <option key={viewport.id} value={viewport.id}>
+                  {viewport.id}
+                </option>
+              ))}
+            </select>
+            <select
+              aria-label="Aufgabenkategorie filtern"
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="all">Alle Kategorien</option>
+              {[...new Set(tasks.map((task) => task.category))].map((item) => (
+                <option key={item} value={item}>
+                  {categoryLabel(item)}
+                </option>
+              ))}
+            </select>
+          </div>
+          <WorkPriority scan={scan} />
+        </>
+      )}
       <div className="task-list">
         {visible.map((task) => (
           <article key={task.id} className="task-card">
-            <div className="task-card-head">
-              <button
-                className={`task-check ${["review", "verified"].includes(task.status) ? "checked" : ""}`}
-                disabled={!!busy || task.status === "verified"}
-                aria-label={`Zur Prüfung markieren: ${task.title}`}
-                aria-pressed={["review", "verified"].includes(task.status)}
-                onClick={() =>
-                  void update(
-                    task,
-                    task.status === "review" ? "open" : "review",
-                  )
-                }
-              >
-                {["review", "verified"].includes(task.status) ? "✓" : ""}
-              </button>
-              <div>
-                <h3>{task.title}</h3>
-                <div className="chip-list">
-                  <span
-                    className={`pill ${task.priority === "nice-to-have" ? "nice" : task.priority}`}
-                  >
-                    {priorityLabel(task.priority)}
-                  </span>
-                  <span className="pill">{categoryLabel(task.category)}</span>
-                  <span className="pill">
-                    {task.findingIds.length} Fundstellen
-                  </span>
-                </div>
+            {compact && (
+              <div className="task-card-head">
+                {" "}
+                <button
+                  className={`task-check ${["review", "verified"].includes(task.status) ? "checked" : ""}`}
+                  disabled={!!busy || task.status === "verified"}
+                  aria-label={`Zur Prüfung markieren: ${task.title}`}
+                  aria-pressed={["review", "verified"].includes(task.status)}
+                  onClick={() =>
+                    void update(
+                      task,
+                      task.status === "review" ? "open" : "review",
+                    )
+                  }
+                >
+                  {["review", "verified"].includes(task.status) ? "✓" : ""}
+                </button>
+                <span>Manuell zur Prüfung markieren</span>
               </div>
-            </div>
-            <button
-              className="button secondary"
-              onClick={() => setHandoffIds(task.findingIds)}
-            >
-              Entwickler-Arbeitspaket
-            </button>
-            <p>{task.summary}</p>
-            <p>
-              <strong>Maßnahme:</strong> {task.recommendation}
-            </p>
-            <div className="task-acceptance">
-              <strong>So prüfst du die Behebung</strong>
-              {task.acceptance}
-            </div>
+            )}
+            {!compact && (
+              <>
+                <div className="task-card-head">
+                  <button
+                    className={`task-check ${["review", "verified"].includes(task.status) ? "checked" : ""}`}
+                    disabled={!!busy || task.status === "verified"}
+                    aria-label={`Zur Prüfung markieren: ${task.title}`}
+                    aria-pressed={["review", "verified"].includes(task.status)}
+                    onClick={() =>
+                      void update(
+                        task,
+                        task.status === "review" ? "open" : "review",
+                      )
+                    }
+                  >
+                    {["review", "verified"].includes(task.status) ? "✓" : ""}
+                  </button>
+                  <div>
+                    <h3>{task.title}</h3>
+                    <div className="chip-list">
+                      <span
+                        className={`pill ${task.priority === "nice-to-have" ? "nice" : task.priority}`}
+                      >
+                        {priorityLabel(task.priority)}
+                      </span>
+                      <span className="pill">
+                        {categoryLabel(task.category)}
+                      </span>
+                      <span className="pill">
+                        {task.findingIds.length} Fundstellen
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <button
+                  className="button secondary"
+                  onClick={() =>
+                    onHandoff ? onHandoff() : setHandoffIds(task.findingIds)
+                  }
+                >
+                  Entwickler-Arbeitspaket
+                </button>
+                <p>{task.summary}</p>
+                <p>
+                  <strong>Maßnahme:</strong> {task.recommendation}
+                </p>
+                <div className="task-acceptance">
+                  <strong>So prüfst du die Behebung</strong>
+                  {task.acceptance}
+                </div>
+              </>
+            )}
+            {compact && (
+              <details className="plan-note">
+                <summary>Maßnahme und Abnahmetest</summary>
+                <p>{task.recommendation}</p>
+                <p>{task.acceptance}</p>
+              </details>
+            )}
             {task.aiProposal && (
               <details className="plan-note">
                 <summary>Übernommener KI-Vorschlag · ungeprüft</summary>
@@ -872,14 +951,19 @@ export function Tasks({
             )}
             {scan.status === "completed" && task.status !== "verified" && (
               <div className="retest-action">
-                <p className="hint">
-                  Nachtest: nur betroffene URLs und Geräte, mit den
-                  unterstützten anfänglichen und gescrollten Zuständen. Neuer
-                  Teillauf; kein Ersatz für den vollständigen Projekt-Score.
-                </p>
+                {!compact && (
+                  <p className="hint">
+                    Nachtest: nur betroffene URLs und Geräte, mit den
+                    unterstützten anfänglichen und gescrollten Zuständen. Neuer
+                    Teillauf; kein Ersatz für den vollständigen Projekt-Score.
+                  </p>
+                )}
+
                 <button
                   className="button secondary"
-                  disabled={!!busy}
+                  disabled={
+                    !!busy || (!!readiness && !readiness.allowed.startExclusive)
+                  }
                   onClick={async () => {
                     setBusy(task.id);
                     setError("");
@@ -940,10 +1024,21 @@ export function Tasks({
           </p>
         </Empty>
       )}
-      <p className="plan-note">
-        Ohne angebundenen Quellcode nennt der Plan keine erfundenen Dateien oder
-        Zeilennummern. Akzeptierte Risiken bleiben im Messergebnis sichtbar.
-      </p>
+      {compact && (
+        <button
+          className="button secondary"
+          onClick={() => setExportOpen(true)}
+        >
+          Plan exportieren
+        </button>
+      )}
+      {!compact && (
+        <p className="plan-note">
+          Ohne angebundenen Quellcode nennt der Plan keine erfundenen Dateien
+          oder Zeilennummern. Akzeptierte Risiken bleiben im Messergebnis
+          sichtbar.
+        </p>
+      )}
       {handoffIds && (
         <DeveloperHandoff
           scan={scan}

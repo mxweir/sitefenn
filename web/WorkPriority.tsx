@@ -7,7 +7,13 @@ import type {
 import { api, post, message, categoryLabel } from "./api.js";
 import { Notice } from "./ui.js";
 type Board = ReturnType<typeof workPriorities>;
-export default function WorkPriority({ scan }: { scan: Scan }) {
+export default function WorkPriority({
+  scan,
+  onOpenTask,
+}: {
+  scan: Scan;
+  onOpenTask?: (id: string) => void;
+}) {
   const [datasets, setDatasets] = useState<SearchDataset[]>([]),
     [datasetId, setDatasetId] = useState(""),
     [result, setResult] = useState<Board>(),
@@ -158,9 +164,18 @@ export default function WorkPriority({ scan }: { scan: Scan }) {
           <div className="task-list">
             {result.entries.map((entry, i) => (
               <article className="plan-note" key={entry.taskId}>
-                <strong>
-                  {i + 1}. {entry.title}
-                </strong>
+                {onOpenTask ? (
+                  <button
+                    className="text-button"
+                    onClick={() => onOpenTask(entry.taskId)}
+                  >
+                    {i + 1}. {entry.title} → Aufgabe öffnen
+                  </button>
+                ) : (
+                  <strong>
+                    {i + 1}. {entry.title}
+                  </strong>
+                )}
                 <p>
                   {entry.score} Sortierpunkte{" "}
                   {entry.provisional ? "· vorläufig" : ""} ·{" "}

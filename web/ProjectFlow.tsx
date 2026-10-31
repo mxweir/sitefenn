@@ -14,7 +14,7 @@ export default function ProjectFlow({
 }) {
   const running =
       !!scan && ["queued", "running", "paused"].includes(scan.status),
-    report = scan?.result?.audit,
+    report = scan?.result,
     open = tasks.filter(
       (t) => !["verified", "accepted"].includes(t.status),
     ).length;
@@ -28,7 +28,7 @@ export default function ProjectFlow({
           ? "Gespeicherte Messdaten werden geladen."
           : open
             ? "Einen Befund mit Nachweis öffnen, Maßnahme bearbeiten und gezielt nachtesten."
-            : "Aktuell keine offenen Aufgaben im ausgewählten Check. Ungeprüfte Bereiche und akzeptierte Risiken weiter beachten.";
+            : "Den gespeicherten Bericht öffnen und Aufgaben prüfen. Ungeprüfte Bereiche und akzeptierte Risiken weiter beachten.";
   return (
     <section
       role="region"

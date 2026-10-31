@@ -1,3 +1,9 @@
+import {
+  scanHeads,
+  projectStats,
+  scanPage,
+  taskPage,
+} from "./workspace-queries.js";
 import { recoverOperations } from "./operations.js";
 import { analysisReview } from "../shared/analysis-review.js";
 import { readiness } from "../shared/readiness.js";
@@ -203,25 +209,69 @@ export async function createApp(options: {
   });
   app.get("/api/readiness", async () => currentReadiness());
   app.get("/api/bootstrap", async () => {
-    const scans = store.scans();
+    const scans = scanHeads(store);
     return {
       version: VERSION,
       readiness: currentReadiness(),
       projects: store.projects(),
-      scans: scans.map((scan) => ({
-        ...scan,
-        result: scan.result ? { ...scan.result, audit: undefined } : null,
-      })),
+      scans,
+      projectStats: projectStats(store),
       dependencies: await dependencies(),
       settings: store.settings(),
-      tasks: store.tasks(),
+      tasks: [],
       speechAvailable,
       scores: Object.fromEntries(
-        scans
-          .filter((scan) => scan.result?.audit)
-          .map((scan) => [scan.id, score(scan)]),
+        scans.filter((s) => s.score).map((s) => [s.id, s.score]),
       ),
     };
+  });
+  const pageQuery = (value: unknown) => {
+    const q = (value ?? {}) as Record<string, unknown>;
+    if (
+      Object.keys(q).some(
+        (k) => !["cursor", "limit", "q", "status", "scanId"].includes(k),
+      ) ||
+      Object.values(q).some((v) => typeof v !== "string")
+    )
+      throw bad("Ungültige Verlaufsparameter.");
+    return {
+      cursor: q.cursor as string | undefined,
+      q: q.q as string | undefined,
+      status: q.status as string | undefined,
+      scanId: q.scanId as string | undefined,
+      ...(q.limit ? { limit: Number(q.limit) } : {}),
+    };
+  };
+  app.get<{ Params: { id: string } }>(
+    "/api/projects/:id/scans",
+    async (request) => {
+      requireProject(request.params.id);
+      try {
+        return scanPage(store, request.params.id, pageQuery(request.query));
+      } catch (e) {
+        throw bad((e as Error).message);
+      }
+    },
+  );
+  app.get<{ Params: { id: string } }>(
+    "/api/projects/:id/tasks",
+    async (request) => {
+      requireProject(request.params.id);
+      try {
+        return taskPage(store, request.params.id, pageQuery(request.query));
+      } catch (e) {
+        throw bad((e as Error).message);
+      }
+    },
+  );
+  app.get<{ Params: { id: string } }>("/api/tasks/:id", async (request) => {
+    const task = store.task(request.params.id);
+    if (!task)
+      throw bad(
+        "Aufgabe fehlt oder wurde archiviert. Im Verlauf einen anderen Check wählen.",
+        404,
+      );
+    return { task };
   });
   app.post(
     "/api/projects",
@@ -363,9 +413,9 @@ export async function createApp(options: {
         409,
       );
     requireProject(projectId);
-    const active = store
-      .scans()
-      .filter((scan) => ["queued", "running", "paused"].includes(scan.status));
+    const active = scanHeads(store).filter((scan) =>
+      ["queued", "running", "paused"].includes(scan.status),
+    );
     if (active.length >= 5)
       throw bad(
         "Maximal fünf Prüfungen gleichzeitig in der Warteschlange.",

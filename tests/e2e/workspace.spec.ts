@@ -174,8 +174,24 @@ const analysis: PageAnalysis = {
   warnings: [],
 };
 
+async function openContext(page: Page, name: string) {
+  const primary = ["Vergleich", "Sichtbarkeit"].includes(name)
+    ? "Verlauf"
+    : ["Maßnahmenplan", "Seite erklären"].includes(name)
+      ? "Arbeiten"
+      : "Prüfen";
+  await page
+    .getByRole("navigation", { name: "Projektbereiche", exact: true })
+    .getByRole("button", { name: primary, exact: true })
+    .click();
+  await page
+    .getByRole("navigation", { name: "Kontextansichten", exact: true })
+    .getByRole("button", { name, exact: true })
+    .click();
+}
 async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
   const state = {
+    projects: [structuredClone(project)],
     readiness: undefined as ReturnType<typeof readiness> | undefined,
     scans: structuredClone(initialScans),
     tasks: initialScans.length ? [structuredClone(task)] : [],
@@ -198,7 +214,7 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
       return json({
         readiness: state.readiness,
         version: "1.0.0",
-        projects: [project],
+        projects: state.projects,
         scans: state.scans.map((item) => ({
           ...item,
           result: item.result ? { ...item.result, audit: undefined } : null,
@@ -216,6 +232,34 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
         settings: state.settings,
         speechAvailable: false,
       });
+    if (
+      pathname === `/api/projects/${project.id}/scans` &&
+      request.method() === "GET"
+    )
+      return json({
+        items: state.scans,
+        total: state.scans.length,
+        nextCursor: null,
+      });
+    if (pathname === `/api/projects/${project.id}/tasks`) {
+      const items = state.tasks.filter(
+        (t) =>
+          (!url.searchParams.get("scanId") ||
+            t.scanId === url.searchParams.get("scanId")) &&
+          (!url.searchParams.get("q") ||
+            t.title
+              .toLowerCase()
+              .includes(url.searchParams.get("q")!.toLowerCase())) &&
+          (url.searchParams.get("status") === "all" ||
+            !url.searchParams.get("status") ||
+            t.status === url.searchParams.get("status")),
+      );
+      return json({ items, total: items.length, nextCursor: null });
+    }
+    if (pathname.startsWith("/api/tasks/") && request.method() === "GET") {
+      const task = state.tasks.find((t) => t.id === pathname.split("/").pop());
+      return task ? json({ task }) : json({ error: "Aufgabe fehlt" }, 404);
+    }
     if (pathname.includes("/evidence/")) {
       const png = new PNG({ width: 390, height: 844 });
       png.data.fill(220);
@@ -514,9 +558,7 @@ test("report evidence, task review and export preview stay distinct from verifie
     `/api/scans/${scan.id}/export?format=zip&includeEvidence=true`,
   );
   await page.keyboard.press("Escape");
-  await page
-    .getByRole("button", { name: "Maßnahmenplan", exact: true })
-    .click();
+  await openContext(page, "Maßnahmenplan");
   await page
     .getByRole("button", {
       name: "Zur Prüfung markieren: Seitentitel ergänzen",
@@ -541,7 +583,7 @@ test("incompatible scans do not invent a score improvement", async ({
     { ...scan, id: "scan-old", createdAt: "2026-10-20T10:00:00Z" },
   ]);
   await page.goto("/");
-  await page.getByRole("button", { name: "Vergleich", exact: true }).click();
+  await openContext(page, "Vergleich");
   await page
     .getByRole("button", { name: "Tests vergleichen", exact: true })
     .click();
@@ -559,7 +601,7 @@ test("optional CSV visibility and explicit local model selection work without cl
 }) => {
   const state = await mockWorkspace(page);
   await page.goto("/");
-  await page.getByRole("button", { name: "Sichtbarkeit", exact: true }).click();
+  await openContext(page, "Sichtbarkeit");
   await page.getByLabel("CSV-Datei", { exact: true }).setInputFiles({
     name: "queries.csv",
     mimeType: "text/csv",
@@ -678,9 +720,7 @@ test("partial and cancelled model work stays visible without successful repair a
   incomplete.unexplainedFindingIds = [finding.id];
   state.analyses = [incomplete];
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Seite erklären", exact: true })
-    .click();
+  await openContext(page, "Seite erklären");
   await expect(
     page.getByText("Diese Interpretation ist unvollständig", { exact: true }),
   ).toBeVisible();
@@ -697,9 +737,7 @@ test("partial and cancelled model work stays visible without successful repair a
   incomplete.stage = "context";
   incomplete.parts[0].status = "running";
   await page.reload();
-  await page
-    .getByRole("button", { name: "Seite erklären", exact: true })
-    .click();
+  await openContext(page, "Seite erklären");
   await page
     .getByRole("button", { name: "Auswertung abbrechen", exact: true })
     .click();
@@ -732,7 +770,7 @@ test("visual comparison offers wipe, explicit masks and a saved reference withou
   before.result!.audit!.evidence = [{ ...evidence, id: "capture-old" }];
   const state = await mockWorkspace(page, [after, before]);
   await page.goto("/");
-  await page.getByRole("button", { name: "Vergleich", exact: true }).click();
+  await openContext(page, "Vergleich");
   await page
     .getByRole("button", { name: "Bildpaare laden", exact: true })
     .click();
@@ -797,9 +835,7 @@ test("a task starts a scoped retest and the home project score still comes from 
 }) => {
   const state = await mockWorkspace(page);
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Maßnahmenplan", exact: true })
-    .click();
+  await openContext(page, "Maßnahmenplan");
   await page
     .getByRole("button", { name: "Diese Maßnahme nachtesten", exact: true })
     .click();
@@ -927,7 +963,7 @@ test("SEO context separates observed HTTP failures, metadata candidates, robots 
   current.result!.audit!.options.pages = [p, p2];
   await mockWorkspace(page, [current]);
   await page.goto("/");
-  await page.getByRole("button", { name: "SEO-Kontext", exact: true }).click();
+  await openContext(page, "SEO-Kontext");
   await expect(
     page.getByRole("heading", { name: "Interner Linkgraph", exact: true }),
   ).toBeVisible();
@@ -1065,9 +1101,7 @@ test("page-state evidence separates reached expectations from unknown/skipped st
   }));
   await mockWorkspace(page, [current]);
   await page.goto("/");
-  await page
-    .getByRole("button", { name: "Seitenzustände", exact: true })
-    .click();
+  await openContext(page, "Seitenzustände");
   await expect(
     page.getByRole("heading", { name: "Seitenzustände", exact: true }),
   ).toBeVisible();
@@ -1108,9 +1142,7 @@ test("analysis intent is explicit and grounded proposals show known evidence, al
     .click();
   await page.getByRole("button", { name: "Websites 1", exact: true }).click();
 
-  await page
-    .getByRole("button", { name: "Seite erklären", exact: true })
-    .click();
+  await openContext(page, "Seite erklären");
   await page.getByText("Analyse ausrichten", { exact: true }).click();
   await page
     .getByLabel("Seitenzweck (optional)", { exact: true })
@@ -1175,11 +1207,9 @@ test("developer handoff starts without source access and exports only the select
     });
   });
   await page.goto("/");
+  await openContext(page, "Maßnahmenplan");
   await page
-    .getByRole("button", { name: "Maßnahmenplan", exact: true })
-    .click();
-  await page
-    .getByRole("button", { name: "Entwickler-Arbeitspaket", exact: true })
+    .getByRole("button", { name: "Entwicklerübergabe", exact: true })
     .first()
     .click();
   await expect(
@@ -1209,7 +1239,7 @@ test("developer handoff starts without source access and exports only the select
       exact: true,
     }),
   ).toBeDisabled();
-  await page.keyboard.press("Escape");
+  await page.getByRole("button", { name: "Zum Nachweis", exact: true }).click();
   await expect(
     page.getByRole("heading", {
       name: "Gezieltes Entwickler-Arbeitspaket",
@@ -1358,4 +1388,316 @@ test("saved results remain readable during cleanup and readiness refreshes after
       .getByRole("status")
       .filter({ hasText: "Bereit für die nächste Aktion" }),
   ).toBeVisible({ timeout: 8000 });
+});
+
+test("2.2 deep links restore a particular observation and local note; back/forward preserve context and source consent resets", async ({
+  page,
+}) => {
+  const current = structuredClone(scan);
+  current.result!.audit!.findings.push({
+    ...finding,
+    id: "finding-desktop",
+    viewportId: "desktop",
+    state: "scroll-1",
+    selector: "#desktop",
+    detail: "Owned desktop observation",
+  });
+  const state = await mockWorkspace(page, [current]);
+  state.tasks[0].findingIds.push("finding-desktop");
+  await page.goto(
+    `/?project=${project.id}&scan=${scan.id}&view=tasks&task=${task.id}&finding=${finding.id}`,
+  );
+  await expect(
+    page.getByRole("region", { name: "Fix-Arbeitsbereich" }),
+  ).toBeVisible();
+  await page
+    .getByLabel("Fundstelle auswählen", { exact: true })
+    .selectOption("finding-desktop");
+  await expect(page).toHaveURL(/finding=finding-desktop/);
+  await expect(page.locator(".fix-context")).toContainText(
+    "Owned desktop observation",
+  );
+  await page.getByLabel("Lokale Arbeitsnotiz").fill("Inspect this exact state");
+  await page.reload();
+  await expect(
+    page.getByLabel("Fundstelle auswählen", { exact: true }),
+  ).toHaveValue("finding-desktop");
+  await expect(page.getByLabel("Lokale Arbeitsnotiz")).toHaveValue(
+    "Inspect this exact state",
+  );
+  await page.goBack();
+  await expect(
+    page.getByLabel("Fundstelle auswählen", { exact: true }),
+  ).toHaveValue(finding.id);
+  await page.goForward();
+  await expect(
+    page.getByLabel("Fundstelle auswählen", { exact: true }),
+  ).toHaveValue("finding-desktop");
+  await page
+    .getByRole("button", { name: "Entwicklerübergabe", exact: true })
+    .click();
+  await page
+    .getByText("Optional: Quellordner nur lesend prüfen", { exact: true })
+    .click();
+  await page
+    .getByLabel("Lokaler Git-Quellordner")
+    .fill("/owned/never-read-by-this-test");
+  await page.getByLabel(/Diesen Ordner und die ausgewählten Befunde/).check();
+  await page.reload();
+  await page
+    .getByText("Optional: Quellordner nur lesend prüfen", { exact: true })
+    .click();
+  await expect(page.getByLabel("Lokaler Git-Quellordner")).toHaveValue("");
+  await expect(
+    page.getByLabel(/Diesen Ordner und die ausgewählten Befunde/),
+  ).not.toBeChecked();
+  await expect(page.getByLabel("Lokale Arbeitsnotiz")).toHaveValue(
+    "Inspect this exact state",
+  );
+});
+
+test("2.2 an older check outside bootstrap can be linked and missing targets offer recovery", async ({
+  page,
+}) => {
+  const older = { ...structuredClone(scan), id: "older-linked-check" };
+  const state = await mockWorkspace(page, [scan]);
+  state.scans.push(older);
+  state.tasks[0].scanId = older.id;
+  await page.route("**/api/bootstrap", async (route) =>
+    route.fulfill({
+      json: {
+        version: "2.2.0",
+        projects: [project],
+        scans: [{ ...scan, result: { ...scan.result, audit: undefined } }],
+        tasks: [],
+        scores: {},
+        settings: { model: "", speechEnabled: false },
+        dependencies: [],
+      },
+    }),
+  );
+  await page.goto(
+    `/?project=${project.id}&scan=${older.id}&view=tasks&task=${task.id}`,
+  );
+  await expect(page.getByLabel("Prüfung auswählen")).toHaveValue(older.id);
+  await expect(
+    page.getByRole("button", { name: `Zur Prüfung markieren: ${task.title}` }),
+  ).toBeVisible();
+  await page.goto(`/?project=missing-project&view=tasks`);
+  await expect(
+    page.getByText("Projekt fehlt oder ist nicht mehr verfügbar."),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Zurück zu den Projekten" }).click();
+  await expect(
+    page.getByRole("heading", { name: project.name, exact: true }).first(),
+  ).toBeVisible();
+  await page.goto(
+    `/?project=${project.id}&scan=${scan.id}&task=missing-task&view=tasks`,
+  );
+  await expect(
+    page.getByRole("heading", { name: "Aufgabe nicht verfügbar", exact: true }),
+  ).toBeVisible();
+});
+
+test("2.2 history and task pages expose load-more and search without a global UI cap", async ({
+  page,
+}) => {
+  await mockWorkspace(page);
+  const rows = Array.from({ length: 55 }, (_, i) => ({
+    ...structuredClone(scan),
+    id: `history-${i}`,
+    result: { ...scan.result!, title: `History ${i}`, audit: undefined },
+  }));
+  await page.route(`**/api/projects/${project.id}/scans?**`, async (route) => {
+    const q = new URL(route.request().url()).searchParams;
+    const items = q.get("q")
+      ? rows.filter((s) => s.result.title.includes(q.get("q")!))
+      : rows;
+    const offset = q.has("cursor") ? 50 : 0;
+    await route.fulfill({
+      json: {
+        items: items.slice(offset, offset + 50),
+        total: items.length,
+        nextCursor: items.length > 50 && offset === 0 ? "page-2" : null,
+      },
+    });
+  });
+  await page.goto(`/?project=${project.id}&view=history`);
+  await expect(
+    page.getByText("50 von 55 Checks", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Weitere Checks laden", exact: true })
+    .click();
+  await expect(
+    page.getByText("55 von 55 Checks", { exact: true }),
+  ).toBeVisible();
+  await page.getByLabel("Verlauf durchsuchen").fill("History 54");
+  await expect(page.getByText("1 von 1 Checks", { exact: true })).toBeVisible();
+  await page.reload();
+  await expect(page.getByLabel("Verlauf durchsuchen")).toHaveValue(
+    "History 54",
+  );
+  const tasks = Array.from({ length: 55 }, (_, i) => ({
+    ...structuredClone(task),
+    id: `paged-task-${i}`,
+    title: `Paged task ${i}`,
+  }));
+  await page.route(`**/api/projects/${project.id}/tasks?**`, async (route) => {
+    const q = new URL(route.request().url()).searchParams;
+    const offset = q.has("cursor") ? 50 : 0;
+    await route.fulfill({
+      json: {
+        items: tasks.slice(offset, offset + 50),
+        total: tasks.length,
+        nextCursor: offset === 0 ? "task-2" : null,
+      },
+    });
+  });
+  await page
+    .getByRole("navigation", { name: "Projektbereiche", exact: true })
+    .getByRole("button", { name: "Arbeiten", exact: true })
+    .click();
+  await expect(
+    page.getByText("50 von 55 Aufgaben", { exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Weitere Aufgaben laden", exact: true })
+    .click();
+  await expect(
+    page.getByText("55 von 55 Aufgaben", { exact: true }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: /^Paged task 54 / }).click();
+  await expect(page).toHaveURL(/task=paged-task-54/);
+  await expect(page.locator(".fix-context h3")).toHaveText("Paged task 54");
+});
+
+test("2.2 work layout stays contained at 320/390/768/1280 and 200 percent equivalent reflow with a reserved Fenn dock", async ({
+  page,
+}) => {
+  await mockWorkspace(page);
+  await page.goto(
+    `/?project=${project.id}&scan=${scan.id}&view=tasks&task=${task.id}&finding=${finding.id}`,
+  );
+  await expect(
+    page.getByLabel("Fundstelle auswählen", { exact: true }),
+  ).toBeVisible();
+  for (const width of [320, 390, 768, 1280]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBe(width);
+    await expect(
+      page.getByRole("button", {
+        name: "Diese Maßnahme nachtesten",
+        exact: true,
+      }),
+    ).toBeVisible();
+    if (width === 1280) {
+      expect(
+        (await page.locator(".fix-grid").boundingBox())!.width,
+      ).toBeGreaterThan(750);
+      expect(
+        (await page.locator(".fix-detail").boundingBox())!.width,
+      ).toBeGreaterThan(400);
+    }
+  }
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("Emulation.setDeviceMetricsOverride", {
+    width: 640,
+    height: 450,
+    deviceScaleFactor: 1,
+    mobile: false,
+    scale: 2,
+  });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(
+    640,
+  );
+  await expect(
+    page.getByRole("button", {
+      name: "Diese Maßnahme nachtesten",
+      exact: true,
+    }),
+  ).toBeVisible();
+  expect(
+    await page
+      .locator(".fenn-dock")
+      .evaluate((el) => getComputedStyle(el).position),
+  ).toBe("static");
+  await cdp.send("Emulation.clearDeviceMetricsOverride");
+  await cdp.detach();
+});
+
+test("2.2 readiness disables expensive task actions during cleanup while evidence remains readable", async ({
+  page,
+}) => {
+  const state = await mockWorkspace(page);
+  state.readiness = readiness(
+    { active: true, scanId: scan.id, resultsSaved: true, queued: false },
+    null,
+  );
+  await page.goto(
+    `/?project=${project.id}&scan=${scan.id}&view=tasks&task=${task.id}`,
+  );
+  await expect(
+    page.getByRole("button", {
+      name: "Diese Maßnahme nachtesten",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  await expect(page.locator(".canonical-observation").first()).toContainText(
+    finding.detail,
+  );
+  await page
+    .getByRole("button", { name: "Entwicklerübergabe", exact: true })
+    .click();
+  await expect(
+    page.getByRole("button", {
+      name: "Arbeitspaket als Vorschau erstellen",
+      exact: true,
+    }),
+  ).toBeDisabled();
+  state.readiness = readiness(
+    { active: false, resultsSaved: false, queued: false },
+    null,
+  );
+  await expect(
+    page.getByRole("button", {
+      name: "Diese Maßnahme nachtesten",
+      exact: true,
+    }),
+  ).toBeEnabled({ timeout: 8000 });
+});
+
+test("2.2 report filters and scan drafts persist per project without bleeding into another project", async ({
+  page,
+}) => {
+  const state = await mockWorkspace(page);
+  const second = {
+    ...structuredClone(project),
+    id: "project-second",
+    name: "Second project",
+  };
+  state.projects.push(second);
+  state.scans.push({
+    ...structuredClone(scan),
+    id: "scan-second",
+    projectId: second.id,
+  });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Befunde", exact: true }).click();
+  await page.getByLabel("Befunde durchsuchen").fill("first project query");
+  await page.getByRole("button", { name: second.name, exact: true }).click();
+  await page.getByRole("button", { name: "Befunde", exact: true }).click();
+  await expect(page.getByLabel("Befunde durchsuchen")).toHaveValue("");
+  await page.getByRole("button", { name: project.name, exact: true }).click();
+  await page.getByLabel("Maximale Seitenzahl").fill("17");
+  await page.getByRole("button", { name: "Befunde", exact: true }).click();
+  await expect(page.getByLabel("Befunde durchsuchen")).toHaveValue(
+    "first project query",
+  );
+  await page.getByRole("button", { name: second.name, exact: true }).click();
+  await expect(page.getByLabel("Maximale Seitenzahl")).toHaveValue("10");
+  await page.getByRole("button", { name: project.name, exact: true }).click();
+  await expect(page.getByLabel("Maximale Seitenzahl")).toHaveValue("17");
 });

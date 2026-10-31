@@ -1,3 +1,4 @@
+import { summaryPayload } from "./workspace-queries.js";
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
@@ -89,6 +90,8 @@ export class Store {
       );
       if (!columns.has("options"))
         this.db.exec("ALTER TABLE scans ADD COLUMN options TEXT");
+      if (!columns.has("summary"))
+        this.db.exec("ALTER TABLE scans ADD COLUMN summary TEXT");
       if (!columns.has("progress"))
         this.db.exec("ALTER TABLE scans ADD COLUMN progress TEXT");
       this.db
@@ -102,9 +105,32 @@ export class Store {
         CREATE TABLE IF NOT EXISTS visual_references (id TEXT PRIMARY KEY, projectId TEXT NOT NULL REFERENCES projects(id), payload TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS scans_project ON scans(projectId,createdAt);
         CREATE INDEX IF NOT EXISTS tasks_scan ON tasks(scanId);
+        CREATE INDEX IF NOT EXISTS tasks_project ON tasks(projectId);
         PRAGMA user_version=2;`);
       this.db.exec("COMMIT");
       recoverOperations(this);
+      this.db.exec("BEGIN IMMEDIATE");
+      try {
+        for (const row of this.db
+          .prepare(
+            "SELECT id,result FROM scans WHERE result IS NOT NULL AND summary IS NULL",
+          )
+          .iterate()) {
+          let value = null;
+          try {
+            value = summaryPayload(JSON.parse(String(row.result)));
+          } catch {
+            value = JSON.stringify({ result: null });
+          }
+          this.db
+            .prepare("UPDATE scans SET summary=? WHERE id=?")
+            .run(value, row.id!);
+        }
+        this.db.exec("COMMIT");
+      } catch (e) {
+        this.db.exec("ROLLBACK");
+        throw e;
+      }
       this.db
         .prepare(
           "UPDATE scans SET status='interrupted', finishedAt=?, error=? WHERE status IN ('running','paused') OR (status='queued' AND options IS NULL)",
@@ -260,6 +286,9 @@ export class Store {
           s.options ? JSON.stringify(s.options) : null,
           s.progress ? JSON.stringify(s.progress) : null,
         );
+      this.db
+        .prepare("UPDATE scans SET summary=? WHERE id=?")
+        .run(summaryPayload(s.result), s.id);
       for (const t of value.tasks)
         this.db
           .prepare(
@@ -334,8 +363,9 @@ export class Store {
     return project;
   }
   private decodeScan(row: Record<string, unknown>): Scan {
+    const { summary: _summary, ...fields } = row;
     return {
-      ...row,
+      ...fields,
       result: row.result ? JSON.parse(String(row.result)) : null,
       options: row.options ? JSON.parse(String(row.options)) : undefined,
       progress: row.progress ? JSON.parse(String(row.progress)) : undefined,
@@ -400,8 +430,8 @@ export class Store {
   }
   checkpoint(id: string, result: ScanResult) {
     this.db
-      .prepare("UPDATE scans SET result=? WHERE id=?")
-      .run(JSON.stringify(result), id);
+      .prepare("UPDATE scans SET result=?,summary=? WHERE id=?")
+      .run(JSON.stringify(result), summaryPayload(result), id);
   }
   finish(
     id: string,
@@ -410,9 +440,15 @@ export class Store {
   ) {
     this.db
       .prepare(
-        "UPDATE scans SET status=?,result=?,finishedAt=?,error=NULL WHERE id=?",
+        "UPDATE scans SET status=?,result=?,summary=?,finishedAt=?,error=NULL WHERE id=?",
       )
-      .run(status, JSON.stringify(result), new Date().toISOString(), id);
+      .run(
+        status,
+        JSON.stringify(result),
+        summaryPayload(result),
+        new Date().toISOString(),
+        id,
+      );
   }
   fail(id: string, error: string, status: "failed" | "cancelled" = "failed") {
     this.db

@@ -1,3 +1,5 @@
+import { useContext } from "react";
+import { WorkspaceReadiness } from "./workspace-state.js";
 import { pageFacts } from "../shared/report-contract.js";
 import { useEffect, useState } from "react";
 import {
@@ -52,6 +54,7 @@ export default function PageAnalysis({
   onTasksChanged: () => void | Promise<void>;
   onShowFinding: (id: string) => void;
 }) {
+  const readiness = useContext(WorkspaceReadiness);
   const report = scan?.result?.audit;
   const pages = report?.options.pages ?? [];
   const [page, setPage] = useState("");
@@ -413,6 +416,7 @@ export default function PageAnalysis({
                 busy ||
                 !!running ||
                 !settings.model ||
+                (!!readiness && !readiness.allowed.startExclusive) ||
                 scan?.status !== "completed"
               }
             >
