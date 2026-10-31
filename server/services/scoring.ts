@@ -1,3 +1,4 @@
+import { validateReport } from "../../shared/report-contract.js";
 import type {
   AuditReport,
   Category,
@@ -6,7 +7,7 @@ import type {
   RuleResult,
 } from "../../shared/types.js";
 
-export const SCORE_VERSION = "audit-score-v1";
+export const SCORE_VERSION = "audit-score-v2.1";
 export const CATEGORY_WEIGHTS: Readonly<Record<Category, number>> =
   Object.freeze({
     layout: 25,
@@ -17,24 +18,13 @@ export const CATEGORY_WEIGHTS: Readonly<Record<Category, number>> =
   });
 
 export function calculateScore(report: AuditReport): ScoreSummary {
-  const warnings: string[] = [];
-  const ids = new Set<string>();
+  const contract = validateReport(report);
+  const warnings: string[] = contract.issues.map(
+    (i) => `${i.code}: ${i.detail}`,
+  );
   const findings = new Map(
     report.findings.map((finding) => [finding.id, finding]),
   );
-  for (const rule of report.rules) {
-    if (ids.has(rule.id))
-      throw new Error(`Duplicate rule instance: ${rule.id}`);
-    ids.add(rule.id);
-    if (
-      !Object.hasOwn(CATEGORY_WEIGHTS, rule.category) ||
-      !Number.isFinite(rule.weight) ||
-      rule.weight <= 0
-    )
-      throw new Error("Invalid category or rule weight.");
-    if (rule.status === "not_applicable" && !rule.detail.trim())
-      throw new Error("Not-applicable rules require an applicability reason.");
-  }
   const effectiveStatus = (rule: RuleResult) => {
     if (
       rule.status === "fail" &&
@@ -52,13 +42,28 @@ export function calculateScore(report: AuditReport): ScoreSummary {
     const rules = report.rules.filter(
       (rule) => rule.category === category && rule.status !== "not_applicable",
     );
+    const invalid = contract.issues.some(
+      (i) => !i.category || i.category === category,
+    );
     const sum = (status: string) =>
       rules
         .filter((rule) => effectiveStatus(rule) === status)
         .reduce((total, rule) => total + rule.weight, 0);
-    const passedWeight = sum("pass"),
-      failedWeight = sum("fail"),
-      unknownWeight = sum("not_run");
+    const passedWeight = invalid ? 0 : sum("pass"),
+      failedWeight = invalid ? 0 : sum("fail"),
+      unknownWeight = invalid
+        ? Math.max(
+            1,
+            rules.reduce(
+              (n, r) =>
+                n + (Number.isFinite(r.weight) && r.weight > 0 ? r.weight : 0),
+              0,
+            ),
+            contract.expected
+              .filter((r) => r.category === category)
+              .reduce((n, r) => n + r.weight, 0),
+          )
+        : sum("not_run");
     const applicableWeight = passedWeight + failedWeight + unknownWeight;
     if (!applicableWeight)
       warnings.push(
@@ -80,17 +85,20 @@ export function calculateScore(report: AuditReport): ScoreSummary {
         : 0,
     };
   });
-  const hasApplicable = categories.some(
-    (category) => category.applicableWeight > 0,
-  );
+  const hasApplicable =
+    report.rules.length > 0 &&
+    categories.some((category) => category.applicableWeight > 0);
   const weighted = (key: "lower" | "upper" | "coverage") =>
     categories.reduce(
       (total, category) => total + (category[key] * category.weight) / 100,
       0,
     );
-  const final = categories.every(
-    (category) => category.applicableWeight > 0 && category.unknownWeight === 0,
-  );
+  const final =
+    contract.valid &&
+    categories.every(
+      (category) =>
+        category.applicableWeight > 0 && category.unknownWeight === 0,
+    );
   if (!final)
     warnings.push(
       "Provisional bounds: unexecuted checks and missing categories are unknown. This is not a final website-wide grade.",

@@ -3256,3 +3256,18 @@ h1 {
 .analysis-intent{margin:20px 0;border-top:1px solid #3d365633;padding-top:14px}.analysis-intent label{margin-top:16px}.solution-references{margin:16px 0}.solution-references pre{white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;max-height:220px;overflow:auto;background:#fff8;padding:14px}.solution-references code{overflow-wrap:anywhere}
 
 .project-flow{margin-bottom:24px}.flow-steps{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;list-style:none;padding:0;margin:20px 0}.flow-steps li{min-width:0;border-top:2px solid var(--ink,#242027);padding-top:16px}.flow-steps p{font-size:13px;line-height:1.6}.project-flow .panel-head{flex-wrap:wrap}.project-flow .pill{white-space:normal}.flow-steps button{white-space:normal;text-align:left;max-width:100%}@media(max-width:900px){.flow-steps{grid-template-columns:repeat(2,minmax(0,1fr))}}@media(max-width:480px){.flow-steps{grid-template-columns:1fr}}
+
+.readiness-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  margin-bottom: 18px;
+  border: 1px solid var(--line, #d8dbd4);
+  border-radius: 12px;
+  font-size: 0.85rem;
+  background: var(--surface, #fff);
+}
+.readiness-status.working {
+  border-color: #bf8c30;
+}

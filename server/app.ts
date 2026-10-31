@@ -1,3 +1,6 @@
+import { recoverOperations } from "./operations.js";
+import { analysisReview } from "../shared/analysis-review.js";
+import { readiness } from "../shared/readiness.js";
 import {
   storageSummary,
   retentionPreview,
@@ -95,8 +98,13 @@ export async function createApp(options: {
   const aiControllers = new Set<AbortController>();
   let pageWork: Promise<void> | undefined;
   let activePage: { id: string; controller: AbortController } | undefined;
+  const currentReadiness = () =>
+    readiness(
+      runner.readiness(),
+      operation ?? (store.pendingOperations() ? "Wartung fortsetzen" : null),
+    );
   const idle = () => {
-    if (operation || runner.isBusy())
+    if (!currentReadiness().allowed.startExclusive)
       throw bad(
         "Zuerst die aktive Prüfung oder Analyse abschließen. Aufwendige Arbeiten laufen nacheinander.",
         409,
@@ -193,10 +201,12 @@ export async function createApp(options: {
           : "Die Anfrage konnte nicht verarbeitet werden. Prüfe den Umfang und versuche es erneut.",
     });
   });
+  app.get("/api/readiness", async () => currentReadiness());
   app.get("/api/bootstrap", async () => {
     const scans = store.scans();
     return {
       version: VERSION,
+      readiness: currentReadiness(),
       projects: store.projects(),
       scans: scans.map((scan) => ({
         ...scan,
@@ -347,7 +357,7 @@ export async function createApp(options: {
     rawOptions?: unknown,
     retest?: RetestScope,
   ) => {
-    if (operation)
+    if (!currentReadiness().allowed.enqueueScan)
       throw bad(
         "Eine andere aufwendige Arbeit ist aktiv. Bitte kurz warten.",
         409,
@@ -924,7 +934,11 @@ export async function createApp(options: {
     async (request) => {
       const analysis = store.pageAnalysis(request.params.id);
       if (!analysis) throw bad("Seitenanalyse nicht gefunden.", 404);
-      return { analysis };
+      const report = store.scan(analysis.scanId)?.result?.audit;
+      return {
+        analysis,
+        review: report ? analysisReview(analysis, report) : null,
+      };
     },
   );
   app.post<{ Params: { id: string } }>(
@@ -1287,11 +1301,22 @@ export async function createApp(options: {
   );
   const scheduler = new Scheduler(
     store,
-    () => !!operation || runner.isBusy(),
+    () => !currentReadiness().resourcesFree,
     (id, profile) => startScan(id, profile),
   );
   if (options.runJobs !== false) scheduler.startTimer();
   const storagePreviews = new Map<string, { ids: string[]; expires: number }>();
+  app.post("/api/maintenance/recover", async () => {
+    if (operation || runner.isBusy())
+      throw bad("Zuerst die aktive Arbeit abschließen.", 409);
+    operation = "backup";
+    try {
+      recoverOperations(store);
+      return { recovered: true };
+    } finally {
+      operation = null;
+    }
+  });
   app.get("/api/maintenance", async () => ({
     storage: await storageSummary(store),
     schedules: scheduler.list(),
@@ -1348,7 +1373,7 @@ export async function createApp(options: {
     if (preview.ids.some((id) => protectedIds.has(id) || !store.scan(id)))
       throw bad("Datenstand geändert; Vorschau erneuern.");
     storagePreviews.delete(String(body.token));
-    for (const id of preview.ids) store.trashScan(id);
+    store.trashScans(preview.ids);
     return { trashed: preview.ids.length, recoverable: true };
   });
   app.post("/api/storage/restore", async (request) => {

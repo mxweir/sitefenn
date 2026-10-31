@@ -3,6 +3,7 @@ import { api, post, message, stamp } from "./api.js";
 import { Notice, Success } from "./ui.js";
 interface Overview {
   storage: {
+    pendingOperations?: number;
     evidenceBytes: number;
     evidenceFiles: number;
     databaseBytes: number;
@@ -97,6 +98,24 @@ export default function Maintenance({
       <h2>Updates, Speicher & Prüfintervalle</h2>
       {error && <Notice error>{error}</Notice>}
       {success && <Success>{success}</Success>}
+      {!!data?.storage.pendingOperations && (
+        <Notice error>
+          Ein bereits bestätigter Wartungsauftrag ist noch offen. Neue
+          aufwendige Aktionen warten darauf.
+          <button
+            className="button secondary"
+            disabled={busy}
+            onClick={() =>
+              void action(async () => {
+                await post("/api/maintenance/recover", {});
+                setSuccess("Wartung abgeschlossen.");
+              })
+            }
+          >
+            Wartung fortsetzen
+          </button>
+        </Notice>
+      )}
       <details>
         <summary>Manuelles Update mit Vorsicherung</summary>
         <p>

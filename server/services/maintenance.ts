@@ -1,9 +1,24 @@
-import { readdir, lstat, unlink, writeFile } from "node:fs/promises";
+import {
+  readdir,
+  lstat,
+  readFile,
+  writeFile,
+  mkdtemp,
+  rm,
+} from "node:fs/promises";
 import { join } from "node:path";
 import { randomUUID, createHash } from "node:crypto";
 import type { Store } from "../store.js";
 import type { Scan } from "../../shared/types.js";
 import { createBackup } from "../backup.js";
+import { tmpdir } from "node:os";
+import {
+  recoverOperations,
+  journal,
+  syncFile,
+  type OperationCheckpoint,
+} from "../operations.js";
+import { restoreBackup } from "../backup.js";
 import { APP_VERSION } from "../../shared/version.js";
 export async function storageSummary(store: Store) {
   let evidenceBytes = 0,
@@ -18,6 +33,7 @@ export async function storageSummary(store: Store) {
   }
   const db = await lstat(join(store.dataDir, "hub.sqlite"));
   return {
+    pendingOperations: store.pendingOperations(),
     evidenceBytes,
     evidenceFiles: files,
     databaseBytes: db.size,
@@ -29,7 +45,7 @@ export async function storageSummary(store: Store) {
   };
 }
 export function protectedScans(store: Store) {
-  const protectedIds = new Set<string>();
+  const protectedIds = store.referencedScanIds();
   const scans = store.scans(-1);
   for (const p of store.projects()) {
     const latest = scans.find(
@@ -37,26 +53,10 @@ export function protectedScans(store: Store) {
         s.projectId === p.id && s.status === "completed" && !s.options?.retest,
     );
     if (latest) protectedIds.add(latest.id);
-    for (const ref of store.visualReferences(p.id))
-      protectedIds.add(ref.scanId);
-    const schedule = store.preference(`schedule:${p.id}`) as
-      | { sourceScanId?: string }
-      | undefined;
-    if (schedule?.sourceScanId) protectedIds.add(schedule.sourceScanId);
   }
-  for (const task of store.tasks()) {
-    if (task.verifiedByScanId) protectedIds.add(task.verifiedByScanId);
-  }
-  for (const scan of scans) {
-    if (scan.options?.retest)
-      protectedIds.add(scan.options.retest.sourceScanId);
+  for (const scan of scans)
     if (["running", "paused", "queued"].includes(scan.status))
       protectedIds.add(scan.id);
-    for (const analysis of store.pageAnalyses(scan.id)) {
-      if (analysis.context?.comparison)
-        protectedIds.add(analysis.context.comparison.scanId);
-    }
-  }
   return protectedIds;
 }
 export function retentionPreview(store: Store, keepPerProject: number) {
@@ -77,60 +77,70 @@ export function retentionPreview(store: Store, keepPerProject: number) {
   return {
     keepPerProject,
     protectedCount: protectedIds.size,
-    candidates: candidates
-      .slice(0, 20)
-      .map((s) => ({
-        id: s.id,
-        projectId: s.projectId,
-        createdAt: s.createdAt,
-        status: s.status,
-      })),
+    candidates: candidates.slice(0, 20).map((s) => ({
+      id: s.id,
+      projectId: s.projectId,
+      createdAt: s.createdAt,
+      status: s.status,
+    })),
     limited: candidates.length > 20,
     notice:
       "Nur Vorschlag, keine automatische Löschung. Aktive Checks, neuester vollständiger Check, Referenzen, verifizierende Nachtests und gespeicherte Vergleichs-/Zeitplanquellen bleiben geschützt.",
   };
 }
-export async function purgeTrash(store: Store, ids: string[]) {
-  const activePaths = new Set(
-    store
-      .scans(-1)
-      .flatMap((s) => s.result?.audit?.evidence.map((e) => e.path) ?? []),
-  );
-  const otherTrash = store
-    .trashSummaries()
-    .filter((t) => !ids.includes(t.id))
-    .flatMap(
-      (t) =>
-        store
-          .trashedScan(t.id)
-          ?.scan.result?.audit?.evidence.map((e) => e.path) ?? [],
-    );
-  for (const p of otherTrash) activePaths.add(p);
-  const records = ids.map((id) => {
-    const value = store.trashedScan(id);
-    if (!value) throw Error("Papierkorbeintrag fehlt.");
-    return value;
-  });
-  let deletedFiles = 0;
-  for (const record of records)
-    for (const e of record.scan.result?.audit?.evidence ?? []) {
-      if (activePaths.has(e.path)) continue;
-      const match = /^evidence\/([a-zA-Z0-9_-]+\.png)$/.exec(
-        e.path.replace(/\\/g, "/"),
-      );
-      if (!match) continue;
-      try {
-        const path = join(store.dataDir, "evidence", match[1]!);
-        const s = await lstat(path);
-        if (!s.isFile() || s.isSymbolicLink())
-          throw Error("Ungültige Nachweisdatei.");
-        await unlink(path);
-        deletedFiles++;
-      } catch (error) {
-        if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+function evidencePaths(scan: Scan): string[] {
+  return [
+    ...(scan.result?.audit?.evidence.map((e) => e.path) ?? []),
+    ...(scan.result?.screenshotPath ? [scan.result.screenshotPath] : []),
+  ];
+}
+export async function purgeTrash(
+  store: Store,
+  ids: string[],
+  checkpoint: OperationCheckpoint = () => {},
+) {
+  recoverOperations(store);
+  if (!ids.length || new Set(ids).size !== ids.length)
+    throw Error("Ungültige Papierkorbauswahl.");
+  const protectedIds = protectedScans(store);
+  if (ids.some((id) => protectedIds.has(id)))
+    throw Error("Referenzierte Checks bleiben geschützt.");
+  const activePaths = new Set(store.scans(-1).flatMap(evidencePaths));
+  for (const t of store.trashSummaries().filter((t) => !ids.includes(t.id)))
+    for (const path of evidencePaths(store.trashedScan(t.id)!.scan))
+      activePaths.add(path);
+  const files = new Set<string>();
+  for (const id of ids) {
+    const record = store.trashedScan(id);
+    if (!record) throw Error("Papierkorbeintrag fehlt.");
+    for (const path of evidencePaths(record.scan)) {
+      if (activePaths.has(path)) continue;
+      const match = /^evidence\/([a-zA-Z0-9_-]+\.png)$/.exec(path);
+      if (match) {
+        try {
+          const stat = await lstat(join(store.dataDir, "evidence", match[1]!));
+          if (!stat.isFile() || stat.isSymbolicLink())
+            throw Error("Ungültige Nachweisdatei.");
+        } catch (e) {
+          if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+        }
+        files.add(match[1]!);
       }
     }
-  for (const id of ids) store.removeTrash(id);
+  }
+  checkpoint("purge:prepared");
+  store.db.exec("BEGIN IMMEDIATE");
+  try {
+    journal(store, randomUUID(), { kind: "purge", files: [...files] });
+    for (const id of ids) store.removeTrash(id);
+    checkpoint("purge:transaction");
+    store.db.exec("COMMIT");
+  } catch (e) {
+    store.db.exec("ROLLBACK");
+    throw e;
+  }
+  checkpoint("purge:committed");
+  const deletedFiles = recoverOperations(store, checkpoint);
   return {
     deletedRecords: ids.length,
     deletedFiles,
@@ -138,19 +148,46 @@ export async function purgeTrash(store: Store, ids: string[]) {
       "Endgültig entfernt. Bereits vorhandene externe Backups werden nicht gelöscht.",
   };
 }
-export async function beforeUpdateBackup(store: Store) {
+export async function beforeUpdateBackup(
+  store: Store,
+  checkpoint: OperationCheckpoint = () => {},
+) {
+  recoverOperations(store);
+  const name = `before-update-${APP_VERSION}-${randomUUID()}.zip`,
+    id = randomUUID();
+  const op = {
+    kind: "backup" as const,
+    temporary: `${name}.partial`,
+    final: name,
+  };
+  journal(store, id, op);
+  checkpoint("backup:journaled");
   const bytes = await createBackup(store);
-  const name = `before-update-${APP_VERSION}-${randomUUID()}.zip`;
-  await writeFile(join(store.dataDir, "backups", name), bytes, {
-    flag: "wx",
-    mode: 0o600,
-  });
+  const path = join(store.dataDir, "backups", op.temporary);
+  await writeFile(path, bytes, { flag: "wx", mode: 0o600 });
+  syncFile(path);
+  syncFile(join(store.dataDir, "backups"));
+  checkpoint("backup:written");
+  // Validate the actual archive, manifest checksums and SQLite integrity before publication.
+  const written = await readFile(path);
+  if (!Buffer.from(bytes).equals(written))
+    throw Error("Sicherungsdatei wurde während der Prüfung verändert.");
+  const validationRoot = await mkdtemp(join(tmpdir(), "sitefenn-verify-"));
+  try {
+    await restoreBackup(written, join(validationRoot, "restored"));
+  } finally {
+    await rm(validationRoot, { recursive: true, force: true });
+  }
+  const sha256 = createHash("sha256").update(bytes).digest("hex");
+  journal(store, id, { ...op, sha256 });
+  checkpoint("backup:verified");
+  recoverOperations(store, checkpoint);
   return {
     name,
     bytes: bytes.byteLength,
-    sha256: createHash("sha256").update(bytes).digest("hex"),
+    sha256,
     notice:
-      "Vorsicherung erstellt. Update erfolgt manuell in einem neuen Programmordner, bestehender Datenpfad bleibt gleich. Keine automatische Programmausführung.",
+      "Vorsicherung geprüft und atomar veröffentlicht. Update manuell in einem neuen Programmordner; bestehender Datenpfad bleibt gleich.",
   };
 }
 export async function checkUpdate(request: typeof fetch = fetch) {

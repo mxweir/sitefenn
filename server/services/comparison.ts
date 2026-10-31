@@ -1,3 +1,4 @@
+import { validateReport } from "../../shared/report-contract.js";
 import type {
   AuditReport,
   Scan,
@@ -62,6 +63,8 @@ export function recordedIdentity(report: AuditReport): boolean {
 }
 export function sameExecution(a: AuditReport, b: AuditReport): boolean {
   return (
+    validateReport(a).valid &&
+    validateReport(b).valid &&
     recordedIdentity(a) &&
     recordedIdentity(b) &&
     canonical(a.provenance) === canonical(b.provenance) &&
@@ -72,6 +75,8 @@ export function sameExecution(a: AuditReport, b: AuditReport): boolean {
 }
 function compatible(a: AuditReport, b: AuditReport): boolean {
   return (
+    validateReport(a).valid &&
+    validateReport(b).valid &&
     recordedIdentity(a) &&
     recordedIdentity(b) &&
     canonical(a.provenance) === canonical(b.provenance) &&
@@ -126,7 +131,9 @@ export function compareScans(before: Scan, after: Scan): ScanComparison {
       /^performance-(lcp|cls|tbt)$/.test(finding.ruleId)
     ) {
       const metric = finding.ruleId.slice("performance-".length) as
-        "lcp" | "cls" | "tbt";
+        | "lcp"
+        | "cls"
+        | "tbt";
       return (
         b.rules.some(
           (rule) =>

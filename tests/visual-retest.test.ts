@@ -1,3 +1,4 @@
+import { validateReport } from "../shared/report-contract.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { PNG } from "pngjs";
@@ -177,6 +178,10 @@ test(
       assert.equal(
         comparison.entries.find((e) => e.beforeFindingId === title.id)?.state,
         "resolved",
+        JSON.stringify({
+          before: validateReport(before.result!.audit!),
+          after: validateReport(after.result!.audit!),
+        }),
       );
       assert.equal(
         comparison.entries.find((e) => e.beforeFindingId === omitted.id)?.state,

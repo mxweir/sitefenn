@@ -255,6 +255,7 @@ export interface AuditProvenance {
   arch: string;
 }
 export interface AuditReport {
+  contractVersion?: string;
   journeyRuns?: JourneyRun[];
   seo?: SeoContext;
   provenance?: AuditProvenance;

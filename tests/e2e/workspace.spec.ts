@@ -1,3 +1,4 @@
+import { readiness } from "../../shared/readiness.js";
 import { PNG } from "pngjs";
 import { test, expect } from "@playwright/test";
 import type { Page } from "@playwright/test";
@@ -175,6 +176,7 @@ const analysis: PageAnalysis = {
 
 async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
   const state = {
+    readiness: undefined as ReturnType<typeof readiness> | undefined,
     scans: structuredClone(initialScans),
     tasks: initialScans.length ? [structuredClone(task)] : [],
     options: null as unknown,
@@ -194,6 +196,7 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
       route.fulfill({ status, json: body });
     if (pathname === "/api/bootstrap")
       return json({
+        readiness: state.readiness,
         version: "1.0.0",
         projects: [project],
         scans: state.scans.map((item) => ({
@@ -1328,4 +1331,31 @@ test("2.0 project guidance navigates the repair flow without treating review as 
   await expect(
     page.getByRole("heading", { name: "Dein Prüfbericht", exact: true }),
   ).toBeVisible();
+});
+
+test("saved results remain readable during cleanup and readiness refreshes after worker exit", async ({
+  page,
+}) => {
+  const state = await mockWorkspace(page);
+  state.readiness = readiness(
+    { active: true, scanId: scan.id, resultsSaved: true, queued: false },
+    null,
+  );
+  await page.goto("/");
+  await expect(
+    page.getByRole("status").filter({ hasText: "Browser wird noch beendet" }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Befunde", exact: true }).click();
+  await expect(
+    page.getByText(finding.title, { exact: true }).first(),
+  ).toBeVisible();
+  state.readiness = readiness(
+    { active: false, resultsSaved: false, queued: false },
+    null,
+  );
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: "Bereit für die nächste Aktion" }),
+  ).toBeVisible({ timeout: 8000 });
 });

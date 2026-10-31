@@ -151,6 +151,15 @@ export async function restoreBackup(
           ).run(JSON.stringify(schedule), String(row.key));
         }
       }
+      // Maintenance journals refer to the source workspace, never replay them after restore.
+      if (
+        db
+          .prepare(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='maintenance_operations'",
+          )
+          .get()
+      )
+        db.exec("DELETE FROM maintenance_operations");
       if (
         db
           .prepare(

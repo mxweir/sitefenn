@@ -1,3 +1,7 @@
+import {
+  BASE_RULES,
+  REPORT_CONTRACT_VERSION,
+} from "../shared/report-contract.js";
 import { addElementContexts } from "./services/element-context.js";
 import {
   chromium,
@@ -99,7 +103,7 @@ export async function closeAuditResources() {
   activeChrome.clear();
   activeProxies.clear();
 }
-export const RULE_VERSION = "rules-2.0.0";
+export const RULE_VERSION = "rules-2.1.0";
 export const PROFILE_VERSION = "responsive-1.0.0";
 const digest = (text: string) =>
   createHash("sha256").update(text).digest("hex").slice(0, 24);
@@ -649,6 +653,7 @@ export async function runAudit(
         }
       : {}),
     provenance: await auditProvenance(),
+    contractVersion: REPORT_CONTRACT_VERSION,
     schemaVersion: 1,
     ruleVersion: RULE_VERSION,
     profileVersion: PROFILE_VERSION,
@@ -833,17 +838,7 @@ export async function runAudit(
       )
         continue;
       for (const [id, category] of [
-        ["horizontal-overflow", "layout"],
-        ["covered-control", "layout"],
-        ["document-title", "seo"],
-        ["meta-description", "seo"],
-        ["indexability", "seo"],
-        ["canonical-valid", "seo"],
-        ["structured-data-json", "seo"],
-        ["http-status", "runtime"],
-        ["script-errors", "runtime"],
-        ["resource-errors", "runtime"],
-        ["axe-automated", "accessibility"],
+        ...BASE_RULES.map(([id, category]) => [id, category] as const),
         ...(options.technicalSeo
           ? TECHNICAL_RULES.map((id) => [id, "seo"] as const)
           : []),
@@ -1943,17 +1938,7 @@ export async function runAudit(
               item.viewportId !== viewport.id,
           );
           for (const [id, category] of [
-            ["horizontal-overflow", "layout"],
-            ["covered-control", "layout"],
-            ["document-title", "seo"],
-            ["meta-description", "seo"],
-            ["indexability", "seo"],
-            ["canonical-valid", "seo"],
-            ["structured-data-json", "seo"],
-            ["http-status", "runtime"],
-            ["script-errors", "runtime"],
-            ["resource-errors", "runtime"],
-            ["axe-automated", "accessibility"],
+            ...BASE_RULES.map(([id, category]) => [id, category] as const),
             ...(options.technicalSeo
               ? TECHNICAL_RULES.map((id) => [id, "seo"] as const)
               : []),

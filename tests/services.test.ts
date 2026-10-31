@@ -1,3 +1,7 @@
+import {
+  expectedRules,
+  REPORT_CONTRACT_VERSION,
+} from "../shared/report-contract.js";
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type { AuditReport, Finding, Project, Scan } from "../shared/types.js";
@@ -27,7 +31,8 @@ const project: Project = {
   createdAt: "2026-01-01T00:00:00Z",
 };
 function report(): AuditReport {
-  return {
+  const result: AuditReport = {
+    contractVersion: REPORT_CONTRACT_VERSION,
     provenance: {
       appVersion: "1.1.0",
       engineSha256: "a".repeat(64),
@@ -39,8 +44,8 @@ function report(): AuditReport {
       arch: "fixture",
     },
     schemaVersion: 1,
-    ruleVersion: "rules-v1",
-    profileVersion: "profile-v1",
+    ruleVersion: "rules-2.1.0",
+    profileVersion: "responsive-1.0.0",
     browserVersion: "chromium-fixture",
     options: {
       pages: ["https://example.test/"],
@@ -64,18 +69,7 @@ function report(): AuditReport {
         durationMs: 10,
       },
     ],
-    rules: Object.keys(CATEGORY_WEIGHTS).map((category) => ({
-      id: `instance-${category}`,
-      ruleId: `rule-${category}`,
-      category: category as keyof typeof CATEGORY_WEIGHTS,
-      status: "pass",
-      weight: 1,
-      pageUrl: "https://example.test/",
-      viewportId: "desktop",
-      state: "initial",
-      detail: "Measured",
-      findingIds: [],
-    })),
+    rules: [],
     findings: [],
     evidence: [
       {
@@ -99,12 +93,35 @@ function report(): AuditReport {
     performance: [],
     warnings: [],
   };
+  const first = [
+    "covered-control",
+    "axe-automated",
+    "document-title",
+    "http-status",
+    "performance-lcp",
+  ];
+  result.rules = expectedRules(result)
+    .sort((a, b) => {
+      const rank = (r: typeof a) => {
+        const i = first.indexOf(r.ruleId);
+        return i < 0 ? 100 : i;
+      };
+      return rank(a) - rank(b);
+    })
+    .map((r, i) => ({
+      ...r,
+      id: `instance-${i}`,
+      status: "pass",
+      detail: "Measured",
+      findingIds: [],
+    }));
+  return result;
 }
 function finding(overrides: Partial<Finding> = {}): Finding {
   return {
     id: "f-1",
     fingerprint: "fp-1",
-    ruleId: "rule-layout",
+    ruleId: "covered-control",
     category: "layout",
     priority: "critical",
     title: "Blocked button",
@@ -146,23 +163,23 @@ test("score uses fixed weights and deterministic unknown bounds, never AI opinio
   assert.equal(calculateScore(a).lower, 100);
   assert.equal(calculateScore(a).final, true);
   a.rules[0]!.status = "not_run";
-  assert.equal(calculateScore(a).lower, 75);
+  assert.equal(calculateScore(a).lower, 87.5);
   assert.equal(calculateScore(a).upper, 100);
-  assert.equal(calculateScore(a).coverage, 75);
+  assert.equal(calculateScore(a).coverage, 87.5);
   assert.equal(calculateScore(a).final, false);
   a.rules[0]!.status = "fail";
   a.rules[0]!.findingIds = ["f-1"];
   a.findings = [finding()];
-  assert.equal(calculateScore(a).upper, 75);
+  assert.equal(calculateScore(a).upper, 87.5);
   assert.equal(calculateScore(a).criticalCount, 1);
   a.findings[0]!.evidenceStatus = "ai";
-  assert.equal(calculateScore(a).lower, 75);
+  assert.equal(calculateScore(a).lower, 87.5);
   assert.equal(calculateScore(a).upper, 100);
   assert.equal(calculateScore(a).criticalCount, 0);
   assert.deepEqual(calculateScore(a), calculateScore(structuredClone(a)));
 });
 
-test("missing categories are unknown, no rules means not assessable, bad N/A and duplicate instances reject", () => {
+test("missing categories are unknown, no rules means not assessable, bad N/A and duplicate instances remain unknown", () => {
   const a = report();
   a.rules = a.rules.filter((rule) => rule.category !== "performance");
   assert.equal(calculateScore(a).lower, 85);
@@ -173,10 +190,14 @@ test("missing categories are unknown, no rules means not assessable, bad N/A and
   a.rules = report().rules;
   a.rules[0]!.status = "not_applicable";
   a.rules[0]!.detail = "";
-  assert.throws(() => calculateScore(a), /applicability/);
+  assert.equal(calculateScore(a).final, false);
+  assert.ok(
+    calculateScore(a).warnings.some((w) => w.includes("applicability")),
+  );
   a.rules = report().rules;
   a.rules.push({ ...a.rules[0]! });
-  assert.throws(() => calculateScore(a), /Duplicate/);
+  assert.equal(calculateScore(a).final, false);
+  assert.ok(calculateScore(a).warnings.some((w) => w.includes("duplicate")));
 });
 
 test("comparison resolves only a matched explicit passing rule and completed state", () => {
@@ -188,7 +209,7 @@ test("comparison resolves only a matched explicit passing rule and completed sta
   const compared = compareScans(scan("a", a), scan("b", b));
   assert.equal(compared.comparable, true);
   assert.equal(compared.entries[0]?.state, "resolved");
-  assert.equal(compared.scoreDelta, 25);
+  assert.equal(compared.scoreDelta, 12.5);
   b.rules[0]!.status = "not_run";
   assert.equal(
     compareScans(scan("a", a), scan("b", b)).entries[0]?.state,
@@ -564,7 +585,7 @@ test("accepted-risk task status never changes the underlying score and selected 
   assert.deepEqual(exported.score, before);
   assert.deepEqual(exported.evidence, []);
   assert.equal(exported.tasks[0].status, "accepted");
-  assert.equal(exported.score.lower, 75);
+  assert.equal(exported.score.lower, 87.5);
   assert.doesNotMatch(buildMarkdownReport(project, s, tasks), /- \[x\]/);
 });
 

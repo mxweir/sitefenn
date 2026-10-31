@@ -13,15 +13,7 @@ import type {
 } from "../../shared/types.js";
 import { hasNoindex, rawSeoMeta } from "./seo-meta.js";
 import { permittedUrl, readScoped, type SeoPolicy } from "./seo-network.js";
-export const TECHNICAL_RULES = [
-  "seo-internal-links",
-  "seo-redirects",
-  "seo-canonical-target",
-  "seo-robots-context",
-  "seo-duplicate-title",
-  "seo-duplicate-description",
-  "seo-breadcrumb-profile",
-] as const;
+export { TECHNICAL_RULES } from "../../shared/report-contract.js";
 export interface SeoCheck {
   page: SeoSnapshot;
   id: string;

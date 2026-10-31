@@ -29,6 +29,18 @@ export class Runner {
   isBusy() {
     return !!this.active || this.store.queuedScans().length > 0;
   }
+  readiness() {
+    return {
+      active: !!this.active,
+      scanId: this.activeId,
+      resultsSaved:
+        !!this.activeId &&
+        !["running", "paused", "queued"].includes(
+          this.store.scan(this.activeId)?.status ?? "running",
+        ),
+      queued: this.store.queuedScans().length > 0,
+    };
+  }
   live(id: string) {
     return {
       frame: this.frames.get(id) ?? null,

@@ -1,3 +1,4 @@
+import type { Readiness } from "../shared/readiness.js";
 import ProjectFlow from "./ProjectFlow.js";
 import JourneyReport from "./JourneyReport.js";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -48,6 +49,7 @@ import Settings from "./Settings.js";
 import PageAnalysis from "./PageAnalysis.js";
 
 interface Bootstrap {
+  readiness?: Readiness;
   version: string;
   projects: Project[];
   scans: Scan[];
@@ -135,7 +137,9 @@ export default function App() {
     window.scrollTo({ top: 0, behavior: "instant" });
     document.getElementById("main")?.focus({ preventScroll: true });
   }, [screen, tab]);
-  const running = data.scans.some(active);
+  const running =
+    data.scans.some(active) ||
+    (!!data.readiness && !data.readiness.resourcesFree);
   useEffect(() => {
     if (!running) return;
     const timer = window.setInterval(() => void refresh(), 2000);
@@ -356,6 +360,15 @@ export default function App() {
           </span>
         </header>
         <main id="main" tabIndex={-1}>
+          {data.readiness && (
+            <div
+              className={`readiness-status ${data.readiness.resourcesFree ? "ready" : "working"}`}
+              role="status"
+            >
+              <span className="online-dot" />
+              {data.readiness.message}
+            </div>
+          )}
           {error && (
             <Notice error>
               <span>{error}</span>{" "}

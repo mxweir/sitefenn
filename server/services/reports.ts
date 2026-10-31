@@ -1,3 +1,4 @@
+import { validateReport } from "../../shared/report-contract.js";
 import { createHash } from "node:crypto";
 import type {
   AuditReport,
@@ -310,6 +311,10 @@ export function buildJsonReport(
         startedAt: report.startedAt,
         finishedAt: report.finishedAt,
       },
+      reportContract: (() => {
+        const { version, valid, issues } = validateReport(report);
+        return { version, valid, issues };
+      })(),
       score: calculateScore(report),
       ...(report.seo
         ? {

@@ -2,6 +2,7 @@ import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
+import { recoverOperations } from "./operations.js";
 import type { PageAnalysis, VisualReference } from "../shared/types.js";
 import type {
   Project,
@@ -25,7 +26,7 @@ export class Store {
       mkdirSync(join(dataDir, directory), { recursive: true, mode: 0o700 });
     this.db = new DatabaseSync(join(dataDir, "hub.sqlite"));
     this.db.exec(
-      "PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;",
+      "PRAGMA journal_mode=WAL; PRAGMA synchronous=FULL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;",
     );
     const schema = Number(
       this.db.prepare("PRAGMA user_version").get()?.user_version || 0,
@@ -91,7 +92,8 @@ export class Store {
       if (!columns.has("progress"))
         this.db.exec("ALTER TABLE scans ADD COLUMN progress TEXT");
       this.db
-        .exec(`CREATE TABLE IF NOT EXISTS scan_trash (id TEXT PRIMARY KEY, trashedAt TEXT NOT NULL, payload TEXT NOT NULL);
+        .exec(`CREATE TABLE IF NOT EXISTS maintenance_operations (id TEXT PRIMARY KEY, payload TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS scan_trash (id TEXT PRIMARY KEY, trashedAt TEXT NOT NULL, payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS workspace_preferences (key TEXT PRIMARY KEY,payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK(id=1), payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS tasks (id TEXT PRIMARY KEY, scanId TEXT NOT NULL REFERENCES scans(id), projectId TEXT NOT NULL REFERENCES projects(id), payload TEXT NOT NULL);
@@ -102,6 +104,7 @@ export class Store {
         CREATE INDEX IF NOT EXISTS tasks_scan ON tasks(scanId);
         PRAGMA user_version=2;`);
       this.db.exec("COMMIT");
+      recoverOperations(this);
       this.db
         .prepare(
           "UPDATE scans SET status='interrupted', finishedAt=?, error=? WHERE status IN ('running','paused') OR (status='queued' AND options IS NULL)",
@@ -142,6 +145,35 @@ export class Store {
       throw error;
     }
   }
+  pendingOperations(): number {
+    return Number(
+      this.db
+        .prepare("SELECT count(*) AS count FROM maintenance_operations")
+        .get()!.count,
+    );
+  }
+  // Safety queries deliberately bypass every UI pagination limit, including archived references.
+  referencedScanIds(): Set<string> {
+    const rows = this.db
+      .prepare(
+        `
+      SELECT json_extract(payload,'$.verifiedByScanId') AS id FROM tasks
+      UNION SELECT json_extract(payload,'$.scanId') FROM visual_references
+      UNION SELECT json_extract(payload,'$.sourceScanId') FROM workspace_preferences WHERE key LIKE 'schedule:%'
+      UNION SELECT json_extract(options,'$.retest.sourceScanId') FROM scans WHERE options IS NOT NULL
+      UNION SELECT json_extract(payload,'$.context.comparison.scanId') FROM ai_plans
+      UNION SELECT json_extract(payload,'$.scan.options.retest.sourceScanId') FROM scan_trash
+      UNION SELECT json_extract(t.value,'$.payload') ->> '$.verifiedByScanId' FROM scan_trash, json_each(scan_trash.payload,'$.tasks') t
+      UNION SELECT json_extract(t.value,'$.payload') ->> '$.context.comparison.scanId' FROM scan_trash, json_each(scan_trash.payload,'$.plans') t
+    `,
+      )
+      .all();
+    return new Set(
+      rows
+        .map((r) => r.id)
+        .filter((id): id is string => typeof id === "string" && !!id),
+    );
+  }
   trashSummaries(): {
     id: string;
     projectId: string;
@@ -154,9 +186,7 @@ export class Store {
       )
       .all() as never;
   }
-  trashedScan(
-    id: string,
-  ):
+  trashedScan(id: string):
     | {
         scan: Scan;
         tasks: {
@@ -174,22 +204,33 @@ export class Store {
     return row ? JSON.parse(String(row.payload)) : undefined;
   }
   trashScan(id: string) {
-    const scan = this.scan(id);
-    if (!scan) throw Error("Check fehlt.");
-    const tasks = this.db.prepare("SELECT * FROM tasks WHERE scanId=?").all(id),
-      plans = this.db.prepare("SELECT * FROM ai_plans WHERE scanId=?").all(id);
+    this.trashScans([id]);
+  }
+  trashScans(ids: string[]) {
     this.db.exec("BEGIN IMMEDIATE");
     try {
-      this.db
-        .prepare("INSERT INTO scan_trash(id,trashedAt,payload) VALUES (?,?,?)")
-        .run(
-          id,
-          new Date().toISOString(),
-          JSON.stringify({ scan, tasks, plans }),
-        );
-      this.db.prepare("DELETE FROM tasks WHERE scanId=?").run(id);
-      this.db.prepare("DELETE FROM ai_plans WHERE scanId=?").run(id);
-      this.db.prepare("DELETE FROM scans WHERE id=?").run(id);
+      for (const id of ids) {
+        const scan = this.scan(id);
+        if (!scan) throw Error("Check fehlt.");
+        const tasks = this.db
+            .prepare("SELECT * FROM tasks WHERE scanId=?")
+            .all(id),
+          plans = this.db
+            .prepare("SELECT * FROM ai_plans WHERE scanId=?")
+            .all(id);
+        this.db
+          .prepare(
+            "INSERT INTO scan_trash(id,trashedAt,payload) VALUES (?,?,?)",
+          )
+          .run(
+            id,
+            new Date().toISOString(),
+            JSON.stringify({ scan, tasks, plans }),
+          );
+        this.db.prepare("DELETE FROM tasks WHERE scanId=?").run(id);
+        this.db.prepare("DELETE FROM ai_plans WHERE scanId=?").run(id);
+        this.db.prepare("DELETE FROM scans WHERE id=?").run(id);
+      }
       this.db.exec("COMMIT");
     } catch (error) {
       this.db.exec("ROLLBACK");

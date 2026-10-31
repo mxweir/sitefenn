@@ -1,3 +1,4 @@
+import { validateReport } from "../shared/report-contract.js";
 import DeveloperHandoff from "./DeveloperHandoff.js";
 import WorkPriority from "./WorkPriority.js";
 import { useEffect, useState } from "react";
@@ -64,6 +65,7 @@ export function Report({
   const [open, setOpen] = useState<string | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
   const report = scan?.result?.audit;
+  const contract = report ? validateReport(report) : undefined;
   useEffect(() => {
     setCategory("all");
     setPriority("all");
@@ -165,6 +167,35 @@ export function Report({
         {report?.ruleVersion ?? "legacy"} · Chromium{" "}
         {report?.browserVersion ?? "nicht dokumentiert"}
       </p>
+      {contract && (
+        <details className="plan-note report-contract">
+          <summary>
+            Messvertrag {contract.valid ? "gültig" : "unvollständig / ungültig"}{" "}
+            · {contract.expected.length} erwartete Regelinstanzen
+          </summary>
+          <p>
+            {contract.version}: Regelinventar, Gewichtung, Seitenzustände und
+            Verweise geprüft. Das bestätigt keine Fehlerfreiheit. Nicht
+            ausgeführte Regeln bleiben unbekannt.
+          </p>
+          {!contract.valid && (
+            <Notice error>
+              Betroffene Messbereiche bleiben unbekannt. Keine Freigabe oder
+              Fix-Verifizierung mit diesem Bericht.
+            </Notice>
+          )}
+          <ul>
+            {contract.issues.slice(0, 20).map((issue, i) => (
+              <li key={i}>
+                {issue.code}: {issue.detail}
+              </li>
+            ))}
+          </ul>
+          {contract.issues.length > 20 && (
+            <p>Weitere {contract.issues.length - 20} Probleme im Export.</p>
+          )}
+        </details>
+      )}
       <details className="plan-note">
         <summary>Ausführungsidentität dieses Berichts</summary>
         {report?.provenance ? (

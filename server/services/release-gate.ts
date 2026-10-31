@@ -1,3 +1,4 @@
+import { validateReport } from "../../shared/report-contract.js";
 import type { Scan, Category, Priority } from "../../shared/types.js";
 import { compareScans } from "./comparison.js";
 export interface GatePolicy {
@@ -14,6 +15,8 @@ export function releaseGate(after: Scan, before?: Scan, policy = DEFAULT_GATE) {
   if (after.status !== "completed" || !report)
     unknown.push("Aktueller Check nicht vollständig abgeschlossen.");
   if (report) {
+    const contract = validateReport(report);
+    unknown.push(...contract.issues.map((i) => `${i.code}: ${i.detail}`));
     if (
       report.pages.some(
         (p) =>
@@ -97,7 +100,7 @@ export function releaseGate(after: Scan, before?: Scan, policy = DEFAULT_GATE) {
       ? "regression"
       : "pass";
   return {
-    version: "release-gate-1.8",
+    version: "release-gate-2.1",
     status,
     exitCode: status === "pass" ? 0 : status === "regression" ? 1 : 2,
     policy,

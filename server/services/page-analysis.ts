@@ -1,3 +1,6 @@
+import { analysisReview } from "../../shared/analysis-review.js";
+import { pageFacts } from "../../shared/report-contract.js";
+import { validateReport } from "../../shared/report-contract.js";
 import { randomUUID } from "node:crypto";
 import type {
   AuditReport,
@@ -48,6 +51,15 @@ export function preparePage(
   const pages = report.pages.filter((item) => item.pageUrl === pageUrl);
   const header = {
     pageUrl,
+    reportContract: (() => {
+      const { version, valid, issues } = validateReport(report);
+      return {
+        version,
+        valid,
+        issues: issues.slice(0, 20),
+        issueCount: issues.length,
+      };
+    })(),
     measurement: {
       startedAt: report.startedAt,
       finishedAt: report.finishedAt,
@@ -1011,6 +1023,8 @@ export function pageAnalysisMarkdown(
   url.hash = "";
   url.username = "";
   url.password = "";
+  const facts = pageFacts(report, job.pageUrl);
+  const review = analysisReview(job, report);
   const lines = [
     `# Seitenanalyse — ${md(url.href)}`,
     `Scan: ${md(job.scanId)} · Auswertung: ${md(job.id)} · Status: ${job.status}`,
@@ -1027,7 +1041,14 @@ export function pageAnalysisMarkdown(
           ...(job.context.omissions ?? []).map(md),
         ]
       : []),
-    `## Ungeprüfte Zusammenfassung`,
+    `## Messfakten aus dem gespeicherten Bericht`,
+    `Messvertrag: ${facts.valid ? "gültig" : "ungültig/unvollständig"} · ${md(facts.contractVersion)}`,
+    `Verarbeitung: ${review.processing} · Sachliche KI-Faktenprüfung: nicht durchgeführt · Menschliche Freigabe: nicht erfasst`,
+    `Geräte: ${facts.viewports.map((v) => `${md(v.id)} (${v.width} × ${v.height})`).join(", ")}`,
+    `${facts.findings.length} Befunde; ${facts.rules.filter((r) => r.status === "not_run").length} nicht ausgeführte Regeln.`,
+    ...facts.issues.slice(0, 20).map((i) => `- ${md(i.code)}: ${md(i.detail)}`),
+    "",
+    `## Ungeprüfte KI-Interpretation · keine Faktenbestätigung`,
     md(job.summary || "Keine vollständige Zusammenfassung verfügbar."),
     "",
     `Kontext: ${job.parts.filter((part) => part.status === "completed").length}/${job.parts.length} Teile verarbeitet. ${job.omitted.length} Datensätze ausgelassen. ${job.unexplainedFindingIds.length} Befunde ohne gültige Erklärung.`,

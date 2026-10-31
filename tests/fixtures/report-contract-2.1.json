@@ -1,0 +1,13 @@
+{
+  "version": "report-contract-eval-2.1",
+  "purpose": "Separate internal contract-evaluation seed; never imported by prompts or production validators. Synthetic labels by the implementation agent, not independent human evaluation or held-out model accuracy.",
+  "cases": [
+    { "id": "remove-one-layout-instance", "mutation": "missing-rule", "expected": "invalid" },
+    { "id": "remove-seo-category", "mutation": "missing-category", "expected": "invalid" },
+    { "id": "remove-planned-page", "mutation": "missing-page", "expected": "invalid" },
+    { "id": "foreign-finding-reference", "mutation": "foreign-finding", "expected": "invalid" },
+    { "id": "foreign-evidence-reference", "mutation": "foreign-evidence", "expected": "invalid" },
+    { "id": "inflate-rule-budget", "mutation": "weight", "expected": "invalid" },
+    { "id": "duplicate-semantic-instance", "mutation": "duplicate", "expected": "invalid" }
+  ]
+}

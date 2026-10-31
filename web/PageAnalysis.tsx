@@ -1,3 +1,4 @@
+import { pageFacts } from "../shared/report-contract.js";
 import { useEffect, useState } from "react";
 import {
   Copy,
@@ -26,7 +27,7 @@ type Summary = Pick<
 const labels: Record<Analysis["status"], string> = {
   queued: "Wartet",
   running: "Lokales Modell arbeitet",
-  completed: "Alle Teile verarbeitet · ungeprüft",
+  completed: "Alle Teile verarbeitet · Faktenprüfung offen",
   partial: "Teilweise ausgewertet",
   failed: "Auswertung fehlgeschlagen",
   cancelled: "Abgebrochen",
@@ -595,9 +596,51 @@ export default function PageAnalysis({
                   Bericht bleibt vollständig nutzbar.
                 </p>
               )}
+              {report && (
+                <section className="panel canonical-observation">
+                  <p className="small-label">
+                    MESSFAKTEN · AUS DEM GESPEICHERTEN BERICHT
+                  </p>
+                  <h3>Belegter Stand dieser Seite</h3>
+                  <p>
+                    {pageFacts(report, url).findings.length} Befunde ·{" "}
+                    {
+                      pageFacts(report, url).rules.filter(
+                        (r) => r.status === "not_run",
+                      ).length
+                    }{" "}
+                    nicht ausgeführte Regeln.
+                  </p>
+                  {!pageFacts(report, url).valid && (
+                    <Notice error>
+                      Messvertrag unvollständig oder ungültig. Keine Freigabe;
+                      Bericht erneut prüfen.
+                    </Notice>
+                  )}
+                  <p>
+                    Geräte:{" "}
+                    {pageFacts(report, url)
+                      .viewports.map(
+                        (v) => `${v.id} (${v.width} × ${v.height})`,
+                      )
+                      .join(", ")}
+                  </p>
+                  <p className="hint">
+                    Sachliche KI-Faktenprüfung: nicht durchgeführt · Menschliche
+                    Freigabe: nicht erfasst.
+                  </p>
+                  <p className="hint">
+                    Technische Fundstellen, Messwerte und Prüfergebnisse stehen
+                    im Originalbericht. KI-Texte sind Lösungsvorschläge und
+                    bestätigen keine Fakten oder Reparaturen.
+                  </p>
+                </section>
+              )}
               {current.summary && (
                 <section className="panel">
-                  <p className="small-label">UNGEPRÜFTE KI-ZUSAMMENFASSUNG</p>
+                  <p className="small-label">
+                    KI-INTERPRETATION · KEINE FAKTENBESTÄTIGUNG
+                  </p>
                   <h3>Was bedeutet das für diese Seite?</h3>
                   <p>{current.summary}</p>
                   {speechAvailable && settings.speechEnabled && (

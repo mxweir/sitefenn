@@ -1,6 +1,6 @@
 # SiteFenn — Verbesserungsplan bis 3.0
 
-Stand: **31. Oktober 2026**. Status: **Vorschlag nach Review des veröffentlichten 2.0-Codes**, noch keine Implementierung oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
+Stand: **31. Oktober 2026**. Status: **2.1 implementiert und lokal geprüft; 2.2–3.0 bleiben Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
 
 Grundlage: drei spezialisierte Agentenreviews für Architektur/Betrieb/Security, Produkt/UX/Frontend und KI/QA/SEO, anschließend gemeinsame Priorisierung. Das ist ein tatsächlicher Code-/Artefaktreview durch Softwareagenten, **keine externe Fachpersonen- oder Nutzerstudie**. Für diese Planung wurden keine neuen Modellläufe, Funktionstests oder Kundenscans ausgeführt.
 
@@ -48,6 +48,8 @@ Jede Version soll einen benutzbaren vertikalen Ablauf liefern. Die Nummern sind 
 | **3.0** | Nachgewiesener stabiler Gesamtworkflow | Ein belastbares lokales Produkt mit klar ausgewiesenen experimentellen Erweiterungen. | Freigabemeilenstein |
 
 ### 2.1 — Vertrauen zuerst
+
+**Umgesetzt:** vollständige SQL-Referenzen, transaktionales Archivieren, Wartungsjournal/Wiederanlauf, geprüfte atomare Vorsicherung, zentraler Bereitschaftsstatus und gemeinsamer Messvertrag. Siehe [2.1-Abnahme und Grenzen](docs/RELEASE-2.1.md). Das getrennte Evaluationsset ist ein interner synthetischer Start; unabhängige Beschriftung und semantische Modellprüfung stehen weiter aus.
 
 **Verantwortung:** Backend/Architektur und QA; KI/Frontend für den gemeinsamen Faktenvertrag.
 

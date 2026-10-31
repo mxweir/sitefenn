@@ -2,6 +2,27 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 2.1.0 — 2026-10-31
+
+### Trust the saved evidence
+
+- Replaced limited display queries in retention protection with a complete reference graph, including verifier IDs and references in reversible trash. Batch archiving is atomic.
+- Added a durable purge/backup journal with idempotent restart recovery. Pre-update backups are flushed, read back, restored/validated and atomically published; unverified partial archives never become final ZIPs. Pending maintenance blocks new expensive work and can be resumed in System & Setup.
+- Added a shared expected-rule/report contract across score, CLI gate, comparison, explanation, UI and JSON export. Missing rule/category/state records, duplicate instances, forged budgets and invalid references remain unknown/inconclusive. Legacy reports stay readable; unrecognized contracts require a fresh check for trusted grading.
+- Added shared resource readiness and a visible cleanup state after results are saved. Canonical page facts are rendered from report fields; processing completion is explicitly separate from semantic AI fact checking and human approval.
+- New identities: `rules-2.1.0`, `report-contract-2.1`, `audit-score-v2.1`, `release-gate-2.1`. Historical reports and strict execution compatibility are preserved; new additive journal table, same workspace path/schema version 2.
+
+142 Node tests and 21 browser tests passed locally, including >3,000-reference protection, fault injection, two actual SIGKILL/reopen cases and the existing real Chromium repair/CLI/backup workflows. Separate internal synthetic contract-evaluation seed; no independent AI accuracy certification. [Full verification, update/recovery semantics and remaining limits](docs/RELEASE-2.1.md).
+
+![Actual 2.1 measurement contract](docs/screenshots/2.1-report-contract.jpg)
+
+<details>
+<summary>Actual mobile view</summary>
+
+![Actual 2.1 mobile measurement contract](docs/screenshots/2.1-mobile-contract.jpg)
+
+</details>
+
 ## 2.0.0 — 2026-10-30
 
 ### Close the loop: inspect → hand off → verify

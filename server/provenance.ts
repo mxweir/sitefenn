@@ -25,6 +25,7 @@ export function auditProvenance(): Promise<AuditProvenance> {
       "services/journey-options",
       "services/element-context",
       "../shared/journeys",
+      "../shared/report-contract",
     ];
     const sources = await Promise.all(
       names.map((name) =>
