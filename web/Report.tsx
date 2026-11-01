@@ -165,6 +165,17 @@ export function Report({
         <div>
           <p className="eyebrow">NACHVOLLZIEHBAR STATT PAUSCHAL</p>
           <h2>Dein Prüfbericht</h2>
+          <p className="hint">
+            {scan.labels?.name || "Gespeicherter Check"} ·{" "}
+            {scan.options?.retest ? "Teilnachtest" : "Vollcheck"} ·{" "}
+            {scan.labels?.profileName || "Standardprofile"} · {scan.createdAt} ·{" "}
+            {report?.options.pages.length ?? scan.options?.pages.length ?? "?"}{" "}
+            URLs /{" "}
+            {report?.options.viewports.length ??
+              scan.options?.viewports.length ??
+              "?"}{" "}
+            Geräteprofile
+          </p>
         </div>
         <div className="action-group">
           <button

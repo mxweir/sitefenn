@@ -40,11 +40,12 @@ export function summaryPayload(result: ScanResult | null) {
   });
 }
 const columns =
-  "s.id,s.projectId,s.status,s.createdAt,s.finishedAt,s.error,s.options,s.progress,s.summary";
+  "s.id,s.projectId,s.status,s.createdAt,s.finishedAt,s.error,s.options,s.progress,s.summary,s.annotation";
 function decode(row: Record<string, unknown>): ScanSummary {
-  const { summary, options, progress, ...plain } = row;
+  const { summary, options, progress, annotation, ...plain } = row;
   return {
     ...plain,
+    ...(annotation ? { labels: JSON.parse(String(annotation)) } : {}),
     result: null,
     ...(summary ? JSON.parse(String(summary)) : {}),
     ...(options ? { options: JSON.parse(String(options)) } : {}),
@@ -147,9 +148,9 @@ export function scanPage(
   }
   if (p.q) {
     where.push(
-      "(instr(lower(coalesce(json_extract(s.summary,'$.result.title'),'')),lower(?))>0 OR instr(lower(s.id),lower(?))>0 OR instr(lower(coalesce(json_extract(s.summary,'$.result.url'),'')),lower(?))>0)",
+      "(instr(lower(coalesce(json_extract(s.summary,'$.result.title'),'')),lower(?))>0 OR instr(lower(s.id),lower(?))>0 OR instr(lower(coalesce(json_extract(s.summary,'$.result.url'),'')),lower(?))>0 OR instr(lower(coalesce(s.annotation,'')),lower(?))>0)",
     );
-    args.push(p.q, p.q, p.q);
+    args.push(p.q, p.q, p.q, p.q);
   }
   const total = Number(
     store.db

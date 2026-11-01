@@ -32,7 +32,46 @@ export function auditProvenance(): Promise<AuditProvenance> {
         readFile(new URL(`./${name}${extension}`, import.meta.url), "utf8"),
       ),
     );
+    const hashModules = async (names: string[]) =>
+      sha256(
+        (
+          await Promise.all(
+            names.map((name) =>
+              readFile(
+                new URL(`./${name}${extension}`, import.meta.url),
+                "utf8",
+              ),
+            ),
+          )
+        ).join("\n--module--\n"),
+      );
     return {
+      measurement: {
+        version: "measurement-identity-2.4",
+        captureSha256: await hashModules([
+          ...names,
+          "scan-worker",
+          "../shared/viewports",
+        ]),
+        normalizationSha256: await hashModules([
+          "options",
+          "app",
+          "services/journey-options",
+          "../shared/journeys",
+          "../shared/viewports",
+        ]),
+        verificationSha256: await hashModules([
+          "runner",
+          "services/reports",
+          "services/comparison",
+          "services/measurement-identity",
+          "services/problem-identity",
+          "../shared/canonical",
+          "services/scoring",
+          "services/release-gate",
+          "../shared/report-contract",
+        ]),
+      },
       seoVersions: {
         saxes: require("saxes/package.json").version,
         robotsParser: require("robots-parser/package.json").version,

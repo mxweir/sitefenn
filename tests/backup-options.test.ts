@@ -201,7 +201,7 @@ test("schema-1 migration preserves legacy records and creates a readable pre-mig
     store = new Store(directory);
     assert.equal(
       store.db.prepare("PRAGMA user_version").get()?.user_version,
-      2,
+      3,
     );
     assert.equal(store.project("legacy-project")?.name, "Legacy project");
     assert.equal(store.scan("legacy-scan")?.status, "interrupted");
@@ -212,7 +212,7 @@ test("schema-1 migration preserves legacy records and creates a readable pre-mig
         .some((row) => row.name === "options"),
     );
     const backups = (await readdir(join(directory, "backups"))).filter((name) =>
-      name.startsWith("before-schema-2-"),
+      name.startsWith("before-schema-3-from-1-"),
     );
     assert.equal(backups.length, 1);
     const backup = new DatabaseSync(join(directory, "backups", backups[0]!), {
@@ -268,7 +268,7 @@ test("portable restore accepts an original schema-1 database without a runtime_l
     assert.equal(restored.project("legacy-project")?.name, "Legacy project");
     assert.equal(
       restored.db.prepare("PRAGMA user_version").get()?.user_version,
-      2,
+      3,
     );
   } finally {
     restored?.close();

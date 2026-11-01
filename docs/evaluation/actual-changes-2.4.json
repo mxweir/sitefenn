@@ -1,0 +1,78 @@
+{
+  "kind": "actual-owned-browser-acceptance-2.4",
+  "measurementIdentity": {
+    "version": "measurement-identity-2.4",
+    "captureSha256": "dcdf7631c9e772282c3065c42dc3f1ee7f2b9f56668be1a2415b23964a51624e",
+    "normalizationSha256": "fa2ddde1d83b68c0d9c6d6cb19f2bede689f4481486898a58ec4c481dd287718",
+    "verificationSha256": "cbd4084838681573ba6561d05b08d863fed57555323384a173fc35cd55f949cb"
+  },
+  "scope": {
+    "pages": 1,
+    "profiles": [
+      {
+        "id": "mobile",
+        "width": 390,
+        "height": 844,
+        "isMobile": true,
+        "hasTouch": true,
+        "deviceScaleFactor": 1
+      }
+    ]
+  },
+  "steps": [
+    {
+      "step": 1,
+      "findings": 4
+    },
+    {
+      "step": 2,
+      "findings": 0
+    },
+    {
+      "step": 3,
+      "findings": 0
+    },
+    {
+      "step": 4,
+      "findings": 4
+    }
+  ],
+  "fixStates": [
+    "resolved",
+    "not-retested",
+    "not-retested",
+    "resolved"
+  ],
+  "recurrentStates": [
+    "recurrent",
+    "history-uncertain",
+    "history-uncertain",
+    "recurrent"
+  ],
+  "comparisonLevels": [
+    "exact",
+    "exact"
+  ],
+  "scoreDeltas": [
+    null,
+    null
+  ],
+  "meaning": "Actual owned local fixture, browser measurements and persisted service data; no customer sites, model inference or independent human qualification.",
+  "uiAcceptance": {
+    "operator": "implementation agent, not independent human approval",
+    "adoptedReferenceName": "Mobile QA · November",
+    "baselineEvents": 1,
+    "sourceCheckCount": 2,
+    "loadedAfterActualRestart": true,
+    "activeReferenceSelectedFromAnotherCheck": true,
+    "schemaVersion": 3,
+    "namedRuns": 4,
+    "originalSnapshotsSha256": [
+      "7d72b1badbf737c62928a6b795d0bea413e5c523e39fae9bf51a08ee48510276",
+      "f993eadb5f463d1aa179c82ec8ed192f509c38fde0a5a2185014104bce9dc976",
+      "4d95209efe802e39ad40b23fb0693e1c702071a62dfb127bc419e92a5f4cecb6",
+      "6ee5a24546c2ed60c4a20f3e3c5501c4f08bc9fa2c2a7101ff008844760ecd22"
+    ],
+    "snapshotMeaning": "Hashes captured after UI acceptance; source reports are not relabelled or rewritten by metadata/reference actions."
+  }
+}

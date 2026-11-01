@@ -1,3 +1,9 @@
+import { changeEvidence } from "./services/change-evidence.js";
+import {
+  compareHistory,
+  baselinePreview,
+  adoptBaseline,
+} from "./services/baselines.js";
 import { analysisFacts } from "../shared/analysis-facts.js";
 import { FEEDBACK_CLASSES } from "../shared/proposal-review.js";
 import {
@@ -833,12 +839,114 @@ export async function createApp(options: {
       )
         throw bad("Zwei unterschiedliche Prüfungen auswählen.");
       try {
-        return compareScans(
+        return compareHistory(
+          store,
           requireScan(request.query.before),
           requireScan(request.query.after),
         );
       } catch (error) {
         throw bad((error as Error).message);
+      }
+    },
+  );
+  app.get<{
+    Querystring: { before?: string; after?: string; problemId?: string };
+  }>("/api/compare/evidence", async (request) => {
+    if (
+      !request.query.before ||
+      !request.query.after ||
+      !request.query.problemId
+    )
+      throw bad("Vergleich und Problem-ID erforderlich.");
+    try {
+      const before = requireScan(request.query.before),
+        after = requireScan(request.query.after);
+      return changeEvidence(
+        before,
+        after,
+        request.query.problemId,
+        compareHistory(store, before, after),
+      );
+    } catch (e) {
+      throw bad((e as Error).message);
+    }
+  });
+  app.patch<{ Params: { id: string } }>(
+    "/api/scans/:id/labels",
+    async (request) => {
+      requireScan(request.params.id);
+      const body = object(request.body);
+      if (
+        Object.keys(body).sort().join(",") !== "name,profileName" ||
+        typeof body.name !== "string" ||
+        typeof body.profileName !== "string" ||
+        body.name.length > 100 ||
+        body.profileName.length > 100
+      )
+        throw bad(
+          "Name und Profilbezeichnung mit höchstens 100 Zeichen angeben.",
+        );
+      return {
+        scan: store.annotateScan(request.params.id, {
+          name: body.name.trim(),
+          profileName: body.profileName.trim(),
+        }),
+      };
+    },
+  );
+  app.get<{ Params: { id: string } }>(
+    "/api/projects/:id/baselines",
+    async (request) => {
+      requireProject(request.params.id);
+      return { baselines: store.baselines(request.params.id) };
+    },
+  );
+  app.post<{ Params: { id: string } }>(
+    "/api/projects/:id/baseline-preview",
+    async (request) => {
+      requireProject(request.params.id);
+      const body = object(request.body);
+      if (
+        Object.keys(body).sort().join(",") !== "candidateId,controlId" ||
+        typeof body.candidateId !== "string" ||
+        typeof body.controlId !== "string"
+      )
+        throw bad("Zwei Kontrollmessungen wählen.");
+      try {
+        return baselinePreview(
+          store,
+          request.params.id,
+          body.candidateId,
+          body.controlId,
+        );
+      } catch (e) {
+        throw bad((e as Error).message);
+      }
+    },
+  );
+  app.post<{ Params: { id: string } }>(
+    "/api/projects/:id/baselines",
+    async (request) => {
+      requireProject(request.params.id);
+      const body = object(request.body);
+      if (
+        Object.keys(body).sort().join(",") !==
+          "candidateId,confirmed,controlId,name,note,snapshotHash" ||
+        typeof body.candidateId !== "string" ||
+        typeof body.controlId !== "string" ||
+        typeof body.snapshotHash !== "string"
+      )
+        throw bad("Geprüfte Referenzvorschau erforderlich.");
+      try {
+        return {
+          baseline: adoptBaseline(
+            store,
+            request.params.id,
+            body as unknown as Parameters<typeof adoptBaseline>[2],
+          ),
+        };
+      } catch (e) {
+        throw bad((e as Error).message, 409);
       }
     },
   );
@@ -1402,6 +1510,7 @@ export async function createApp(options: {
         )
         .send({
           version: "sitefenn-profile-1",
+          name: scan.labels?.profileName || undefined,
           projectId: project.id,
           url: projectUrl(project.id),
           environment: project.environment,

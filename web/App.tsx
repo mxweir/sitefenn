@@ -667,6 +667,9 @@ export default function App() {
                             >
                               {scans.map((scan) => (
                                 <option key={scan.id} value={scan.id}>
+                                  {scan.labels?.name
+                                    ? `${scan.labels.name} · `
+                                    : ""}
                                   {stamp(scan.createdAt)} ·{" "}
                                   {scan.options?.retest
                                     ? "Teilnachtest · "
@@ -925,6 +928,9 @@ export default function App() {
                                             {statusLabel(scan.status)}
                                           </strong>
                                           <small>
+                                            {scan.labels?.name
+                                              ? `${scan.labels.name} · `
+                                              : ""}
                                             {stamp(scan.createdAt)} ·{" "}
                                             {scan.options?.retest
                                               ? "Teilnachtest · "
@@ -1071,6 +1077,7 @@ export default function App() {
                             key={project.id}
                             scans={scans}
                             projectId={project.id}
+                            onChange={refresh}
                           />
                         )}
                         {tab === "search" && (

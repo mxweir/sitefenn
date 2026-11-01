@@ -1,3 +1,5 @@
+import { problemId } from "./services/problem-identity.js";
+import type { BaselineChange } from "../shared/baseline.js";
 import type {
   ProposalReview,
   AnalysisFeedback,
@@ -36,7 +38,7 @@ export class Store {
     const schema = Number(
       this.db.prepare("PRAGMA user_version").get()?.user_version || 0,
     );
-    if (schema > 2) {
+    if (schema > 3) {
       this.db.close();
       throw new Error(
         "Database is newer than this app. Refusing to modify it.",
@@ -72,11 +74,15 @@ export class Store {
       throw error;
     }
     try {
-      if (schema === 1)
+      if (schema === 1 || schema === 2)
         this.db
           .prepare("VACUUM INTO ?")
           .run(
-            join(dataDir, "backups", `before-schema-2-${Date.now()}.sqlite`),
+            join(
+              dataDir,
+              "backups",
+              `before-schema-3-from-${schema}-${Date.now()}.sqlite`,
+            ),
           );
       this.db.exec("BEGIN IMMEDIATE");
       this.db.exec(`CREATE TABLE IF NOT EXISTS projects (
@@ -92,6 +98,8 @@ export class Store {
           .all()
           .map((row) => row.name),
       );
+      if (!columns.has("annotation"))
+        this.db.exec("ALTER TABLE scans ADD COLUMN annotation TEXT");
       if (!columns.has("options"))
         this.db.exec("ALTER TABLE scans ADD COLUMN options TEXT");
       if (!columns.has("summary"))
@@ -107,6 +115,10 @@ export class Store {
         CREATE TABLE IF NOT EXISTS search_datasets (id TEXT PRIMARY KEY, projectId TEXT NOT NULL REFERENCES projects(id), payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS ai_plans (id TEXT PRIMARY KEY, scanId TEXT NOT NULL REFERENCES scans(id), payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS visual_references (id TEXT PRIMARY KEY, projectId TEXT NOT NULL REFERENCES projects(id), payload TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS problem_occurrences (scanId TEXT NOT NULL REFERENCES scans(id) ON DELETE CASCADE,findingId TEXT NOT NULL,problemId TEXT NOT NULL,projectId TEXT NOT NULL,PRIMARY KEY(scanId,findingId));
+        CREATE INDEX IF NOT EXISTS problems_history ON problem_occurrences(projectId,problemId,scanId);
+        CREATE TABLE IF NOT EXISTS baseline_changes (id TEXT PRIMARY KEY,projectId TEXT NOT NULL REFERENCES projects(id),payload TEXT NOT NULL);
+        CREATE INDEX IF NOT EXISTS baselines_project ON baseline_changes(projectId);
         CREATE TABLE IF NOT EXISTS analysis_reviews (id TEXT PRIMARY KEY,analysisId TEXT NOT NULL,scanId TEXT NOT NULL REFERENCES scans(id) ON DELETE CASCADE,payload TEXT NOT NULL);
         CREATE TABLE IF NOT EXISTS analysis_feedback (id TEXT PRIMARY KEY,analysisId TEXT NOT NULL,scanId TEXT NOT NULL REFERENCES scans(id) ON DELETE CASCADE,payload TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS analysis_reviews_job ON analysis_reviews(analysisId);
@@ -114,7 +126,7 @@ export class Store {
         CREATE INDEX IF NOT EXISTS scans_project ON scans(projectId,createdAt);
         CREATE INDEX IF NOT EXISTS tasks_scan ON tasks(scanId);
         CREATE INDEX IF NOT EXISTS tasks_project ON tasks(projectId);
-        PRAGMA user_version=2;`);
+        PRAGMA user_version=3;`);
       this.db.exec("COMMIT");
       recoverOperations(this);
       this.db.exec("BEGIN IMMEDIATE");
@@ -138,6 +150,20 @@ export class Store {
       } catch (e) {
         this.db.exec("ROLLBACK");
         throw e;
+      }
+      if (!this.preference("migration:problems-2.4")) {
+        this.db.exec("BEGIN IMMEDIATE");
+        try {
+          for (const row of this.db
+            .prepare("SELECT id FROM scans WHERE result IS NOT NULL")
+            .iterate())
+            this.indexOccurrences(String(row.id));
+          this.savePreference("migration:problems-2.4", true);
+          this.db.exec("COMMIT");
+        } catch (e) {
+          this.db.exec("ROLLBACK");
+          throw e;
+        }
       }
       this.db
         .prepare(
@@ -192,6 +218,8 @@ export class Store {
       .prepare(
         `
       SELECT json_extract(payload,'$.verifiedByScanId') AS id FROM tasks
+      UNION SELECT json_extract(payload,'$.candidateId') FROM baseline_changes
+      UNION SELECT json_extract(payload,'$.controlId') FROM baseline_changes
       UNION SELECT json_extract(payload,'$.scanId') FROM visual_references
       UNION SELECT json_extract(payload,'$.sourceScanId') FROM workspace_preferences WHERE key LIKE 'schedule:%'
       UNION SELECT json_extract(options,'$.retest.sourceScanId') FROM scans WHERE options IS NOT NULL
@@ -319,6 +347,10 @@ export class Store {
       this.db
         .prepare("UPDATE scans SET summary=? WHERE id=?")
         .run(summaryPayload(s.result), s.id);
+      this.db
+        .prepare("UPDATE scans SET annotation=? WHERE id=?")
+        .run(s.labels ? JSON.stringify(s.labels) : null, s.id);
+      this.indexOccurrences(s.id);
       for (const t of value.tasks)
         this.db
           .prepare(
@@ -401,9 +433,10 @@ export class Store {
     return project;
   }
   private decodeScan(row: Record<string, unknown>): Scan {
-    const { summary: _summary, ...fields } = row;
+    const { summary: _summary, annotation, ...fields } = row;
     return {
       ...fields,
+      ...(annotation ? { labels: JSON.parse(String(annotation)) } : {}),
       result: row.result ? JSON.parse(String(row.result)) : null,
       options: row.options ? JSON.parse(String(row.options)) : undefined,
       progress: row.progress ? JSON.parse(String(row.progress)) : undefined,
@@ -466,27 +499,115 @@ export class Store {
       .prepare("UPDATE scans SET progress=? WHERE id=?")
       .run(JSON.stringify(progress), id);
   }
-  checkpoint(id: string, result: ScanResult) {
+  private indexOccurrences(scanId: string) {
     this.db
-      .prepare("UPDATE scans SET result=?,summary=? WHERE id=?")
-      .run(JSON.stringify(result), summaryPayload(result), id);
+      .prepare("DELETE FROM problem_occurrences WHERE scanId=?")
+      .run(scanId);
+    const row = this.db
+      .prepare("SELECT projectId,result FROM scans WHERE id=?")
+      .get(scanId);
+    if (!row?.result) return;
+    let report;
+    try {
+      report = JSON.parse(String(row.result)).audit;
+    } catch {
+      return;
+    }
+    if (!Array.isArray(report?.findings)) return;
+    const insert = this.db.prepare(
+      "INSERT OR IGNORE INTO problem_occurrences VALUES (?,?,?,?)",
+    );
+    for (const f of report.findings) {
+      try {
+        insert.run(
+          scanId,
+          f.id,
+          problemId(String(row.projectId), f),
+          row.projectId!,
+        );
+      } catch (e) {
+        if (e instanceof TypeError) continue;
+        throw e;
+      }
+    }
+  }
+  priorOccurrence(
+    projectId: string,
+    issueId: string,
+    beforeId: string,
+  ): { scanId: string; findingId: string } | undefined {
+    return this.db
+      .prepare(
+        `SELECT o.scanId,o.findingId FROM problem_occurrences o JOIN scans s ON s.id=o.scanId JOIN scans b ON b.id=? WHERE o.projectId=? AND o.problemId=? AND s.status='completed' AND (s.createdAt<b.createdAt OR (s.createdAt=b.createdAt AND s.rowid<b.rowid)) ORDER BY s.createdAt DESC,s.rowid DESC LIMIT 1`,
+      )
+      .get(beforeId, projectId, issueId) as
+      | { scanId: string; findingId: string }
+      | undefined;
+  }
+  annotateScan(id: string, labels: { name: string; profileName: string }) {
+    if (!this.scan(id)) throw Error("Check fehlt.");
+    this.db
+      .prepare("UPDATE scans SET annotation=? WHERE id=?")
+      .run(JSON.stringify(labels), id);
+    return this.scan(id)!;
+  }
+  baselines(projectId: string): BaselineChange[] {
+    return this.db
+      .prepare(
+        "SELECT payload FROM baseline_changes WHERE projectId=? ORDER BY rowid DESC LIMIT 200",
+      )
+      .all(projectId)
+      .map((r) => JSON.parse(String(r.payload)));
+  }
+  saveBaseline(value: BaselineChange) {
+    if (this.baselines(value.projectId).length >= 200)
+      throw Error(
+        "Maximal 200 Referenzwechsel pro Projekt; Historie vor weiterem Wechsel sichern.",
+      );
+    this.db
+      .prepare("INSERT INTO baseline_changes VALUES (?,?,?)")
+      .run(value.id, value.projectId, JSON.stringify(value));
+    return value;
+  }
+  private writeResult(
+    id: string,
+    result: ScanResult,
+    status?: "completed" | "cancelled",
+  ) {
+    this.db.exec("SAVEPOINT result_write");
+    try {
+      if (status)
+        this.db
+          .prepare(
+            "UPDATE scans SET status=?,result=?,summary=?,finishedAt=?,error=NULL WHERE id=?",
+          )
+          .run(
+            status,
+            JSON.stringify(result),
+            summaryPayload(result),
+            new Date().toISOString(),
+            id,
+          );
+      else
+        this.db
+          .prepare("UPDATE scans SET result=?,summary=? WHERE id=?")
+          .run(JSON.stringify(result), summaryPayload(result), id);
+      this.indexOccurrences(id);
+      this.db.exec("RELEASE result_write");
+    } catch (e) {
+      this.db.exec("ROLLBACK TO result_write; RELEASE result_write");
+      throw e;
+    }
+  }
+  checkpoint(id: string, result: ScanResult) {
+    this.writeResult(id, result);
   }
   finish(
     id: string,
     result: ScanResult,
     status: "completed" | "cancelled" = "completed",
   ) {
-    this.db
-      .prepare(
-        "UPDATE scans SET status=?,result=?,summary=?,finishedAt=?,error=NULL WHERE id=?",
-      )
-      .run(
-        status,
-        JSON.stringify(result),
-        summaryPayload(result),
-        new Date().toISOString(),
-        id,
-      );
+    this.writeResult(id, result, status);
   }
   fail(id: string, error: string, status: "failed" | "cancelled" = "failed") {
     this.db

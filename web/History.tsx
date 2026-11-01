@@ -142,9 +142,15 @@ export default function History({
             onClick={() => onSelect(scan)}
           >
             <div>
-              <strong>{scan.result?.title || statusLabel(scan.status)}</strong>
+              <strong>
+                {scan.labels?.name ||
+                  scan.result?.title ||
+                  statusLabel(scan.status)}
+              </strong>
               <small>
-                {stamp(scan.createdAt)} · {statusLabel(scan.status)} ·{" "}
+                {new Date(scan.createdAt).toLocaleString("de-DE")} ·{" "}
+                {scan.labels?.profileName || "Standardprofile"} ·{" "}
+                {statusLabel(scan.status)} ·{" "}
                 {scan.options?.retest
                   ? "Teilnachtest"
                   : "Vollständiger Prüfumfang"}{" "}

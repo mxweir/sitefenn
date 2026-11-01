@@ -299,6 +299,7 @@ export function buildJsonReport(
         status: scan.status,
         createdAt: scan.createdAt,
         finishedAt: scan.finishedAt,
+        labels: scan.labels ?? null,
         ...(scan.options?.retest
           ? { scopeKind: "targeted-retest", retest: scan.options.retest }
           : {}),
@@ -417,6 +418,7 @@ export function buildMarkdownReport(
     "",
     `Project: ${text(urlLabel(project.url))}`,
     `Scan: ${text(scan.id)} · ${text(scan.status)}`,
+    `Run: ${text(scan.labels?.name ?? "Unnamed")} · Profile label: ${text(scan.labels?.profileName ?? "Standard profiles")} · ${text(scan.createdAt)} · ${scan.options?.retest ? "targeted retest" : "full check"}`,
     `Rules: ${text(report.ruleVersion)} · Profile: ${text(report.profileVersion)} · Browser: ${text(report.browserVersion)}`,
     `Toolchain: ${report.provenance ? text(JSON.stringify(report.provenance)) : "Legacy report: execution identity was not recorded."}`,
     `Recorded: ${text(report.startedAt)} → ${text(report.finishedAt)}`,

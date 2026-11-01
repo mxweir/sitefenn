@@ -8,15 +8,16 @@ import type {
 } from "../../shared/types.js";
 import { calculateScore } from "./scoring.js";
 
-export function canonical(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
-  if (value && typeof value === "object")
-    return `{${Object.entries(value)
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([key, item]) => `${JSON.stringify(key)}:${canonical(item)}`)
-      .join(",")}}`;
-  return JSON.stringify(value) ?? "null";
-}
+import { canonical } from "../../shared/canonical.js";
+export { canonical } from "../../shared/canonical.js";
+import {
+  sameExecution,
+  comparisonLevel,
+  recordedIdentity,
+} from "./measurement-identity.js";
+export { sameExecution, recordedIdentity } from "./measurement-identity.js";
+import { journeyDefinition } from "../../shared/journeys.js";
+import { locationKey, problemId } from "./problem-identity.js";
 function normalizedUrl(value: string): string {
   const url = new URL(value);
   url.hash = "";
@@ -45,44 +46,9 @@ function samePageViewport(
     a.viewportId === b.viewportId
   );
 }
-export function recordedIdentity(report: AuditReport): boolean {
-  const value = report.provenance;
-  return (
-    !!value &&
-    /^[a-f0-9]{64}$/.test(value.engineSha256) &&
-    [
-      value.appVersion,
-      value.playwrightVersion,
-      value.axeVersion,
-      value.lighthouseVersion,
-      value.nodeVersion,
-      value.platform,
-      value.arch,
-    ].every((item) => typeof item === "string" && !!item.trim())
-  );
-}
-export function sameExecution(a: AuditReport, b: AuditReport): boolean {
-  return (
-    validateReport(a).valid &&
-    validateReport(b).valid &&
-    recordedIdentity(a) &&
-    recordedIdentity(b) &&
-    canonical(a.provenance) === canonical(b.provenance) &&
-    a.ruleVersion === b.ruleVersion &&
-    a.profileVersion === b.profileVersion &&
-    a.browserVersion === b.browserVersion
-  );
-}
 function compatible(a: AuditReport, b: AuditReport): boolean {
   return (
-    validateReport(a).valid &&
-    validateReport(b).valid &&
-    recordedIdentity(a) &&
-    recordedIdentity(b) &&
-    canonical(a.provenance) === canonical(b.provenance) &&
-    a.ruleVersion === b.ruleVersion &&
-    a.profileVersion === b.profileVersion &&
-    a.browserVersion === b.browserVersion &&
+    sameExecution(a, b) &&
     canonical(a.options) === canonical(b.options) &&
     canonical(a.pages.map(scopeKey).sort()) ===
       canonical(b.pages.map(scopeKey).sort()) &&
@@ -92,6 +58,7 @@ function compatible(a: AuditReport, b: AuditReport): boolean {
 }
 
 export function compareScans(before: Scan, after: Scan): ScanComparison {
+  if (before.id === after.id) throw Error("Two distinct scans required.");
   const a = before.result?.audit,
     b = after.result?.audit;
   if (!a || !b)
@@ -99,7 +66,10 @@ export function compareScans(before: Scan, after: Scan): ScanComparison {
   if (before.projectId !== after.projectId)
     throw new Error("Only scans of the same project may be compared.");
   const terminal =
-    before.status === "completed" && after.status === "completed";
+    before.status === "completed" &&
+    after.status === "completed" &&
+    Date.parse(a.startedAt) <= Date.parse(b.startedAt) &&
+    Date.parse(before.createdAt) <= Date.parse(after.createdAt);
   const partial = !!b.options.retest;
   const comparable = terminal && !partial && compatible(a, b);
   const verificationComparable =
@@ -108,6 +78,18 @@ export function compareScans(before: Scan, after: Scan): ScanComparison {
       partial &&
       b.options.retest?.sourceScanId === before.id &&
       sameExecution(a, b) &&
+      b.options.pages.every((url) => a.options.pages.includes(url)) &&
+      b.options.performanceRuns === a.options.performanceRuns &&
+      !!b.options.technicalSeo === !!a.options.technicalSeo &&
+      (!b.options.performance || a.options.performance) &&
+      (b.options.journeys ?? []).every((j) =>
+        a.options.journeys?.some(
+          (old) =>
+            canonical(journeyDefinition(old)) ===
+              canonical(journeyDefinition(j)) &&
+            j.viewportIds.every((id) => old.viewportIds.includes(id)),
+        ),
+      ) &&
       b.options.viewports.every((profile) =>
         a.options.viewports.some(
           (old) => canonical(old) === canonical(profile),
@@ -115,12 +97,24 @@ export function compareScans(before: Scan, after: Scan): ScanComparison {
       ));
   const beforeScore = calculateScore(a),
     afterScore = calculateScore(b);
+  const grouped = (findings: Finding[]) => {
+    const m = new Map<string, Finding[]>();
+    for (const f of findings)
+      m.set(locationKey(f), [...(m.get(locationKey(f)) ?? []), f]);
+    return m;
+  };
+  const beforeGroups = grouped(a.findings),
+    afterGroups = grouped(b.findings);
   const beforeByFingerprint = new Map(
-    a.findings.map((finding) => [finding.fingerprint, finding]),
+    [...beforeGroups].map(([key, values]) => [key, values[0]!]),
   );
   const afterByFingerprint = new Map(
-    b.findings.map((finding) => [finding.fingerprint, finding]),
+    [...afterGroups].map(([key, values]) => [key, values[0]!]),
   );
+  const level = terminal ? comparisonLevel(a, b) : "incompatible";
+  const effectiveLevel =
+    level === "exact" && !verificationComparable ? "diagnostic" : level;
+
   const keys = [
     ...new Set([...beforeByFingerprint.keys(), ...afterByFingerprint.keys()]),
   ].sort();
@@ -243,21 +237,36 @@ export function compareScans(before: Scan, after: Scan): ScanComparison {
     );
   };
   return {
+    level: effectiveLevel,
+    identityReasons: [
+      ...(!sameExecution(a, b)
+        ? [
+            "Mess-/Normalisierungs-/Verifizierungsidentität oder Toolchain abweichend bzw. historisch unvollständig.",
+          ]
+        : []),
+      ...(!compatible(a, b)
+        ? [
+            "Umfang/Optionen/Zustände unterscheiden sich; kein vollständiges Score-Delta.",
+          ]
+        : []),
+    ],
     beforeId: before.id,
     afterId: after.id,
     comparable,
     partial,
     verificationComparable,
-    reason: partial
-      ? "Gezielter Teilnachtest: nur die angegebenen Fundstellen können verifiziert werden. Kein Projekt-Score-Delta; ausgelassene Seiten bleiben ungeprüft." +
-        (!verificationComparable
-          ? " Die Engine-/Profilidentität passt nicht zum Ausgangscheck; keine Behebung wird verifiziert."
-          : "")
-      : comparable
-        ? "Gleiche Regeln, Profile, Browser-Version, Optionen, geplante Regelinstanzen und Seitenzustände."
-        : !recordedIdentity(a) || !recordedIdentity(b)
-          ? "Historische Ausführungsidentität fehlt. Bitte neue Checks mit derselben Engine starten; kein belastbares Score-Delta und keine verifizierte Behebung."
-          : "Prüfumfang, Engine-Identität oder Ausführungsprofil haben sich geändert. Kein Score-Delta; fehlende oder nicht vergleichbare Belege bestätigen keine Behebung.",
+    reason: !terminal
+      ? "Checks sind nicht abgeschlossen oder die zeitliche Reihenfolge ist umgekehrt/unklar; keine Behebung oder Score-Differenz ableiten."
+      : partial
+        ? "Gezielter Teilnachtest: nur die angegebenen Fundstellen können verifiziert werden. Kein Projekt-Score-Delta; ausgelassene Seiten bleiben ungeprüft." +
+          (!verificationComparable
+            ? " Die Engine-/Profilidentität passt nicht zum Ausgangscheck; keine Behebung wird verifiziert."
+            : "")
+        : comparable
+          ? "Gleiche Regeln, Profile, Browser-Version, Optionen, geplante Regelinstanzen und Seitenzustände."
+          : !recordedIdentity(a) || !recordedIdentity(b)
+            ? "Historische Ausführungsidentität fehlt. Bitte neue Checks mit derselben Engine starten; kein belastbares Score-Delta und keine verifizierte Behebung."
+            : "Prüfumfang, Engine-Identität oder Ausführungsprofil haben sich geändert. Kein Score-Delta; fehlende oder nicht vergleichbare Belege bestätigen keine Behebung.",
     scoreDelta:
       comparable &&
       beforeScore.final &&
@@ -275,20 +284,61 @@ export function compareScans(before: Scan, after: Scan): ScanComparison {
         !previous ||
         !partial ||
         (!!previous && b.options.retest!.findingIds.includes(previous.id));
-      const state = !verificationComparable
-        ? "not-comparable"
-        : !inRetest
-          ? "not-retested"
-          : previous && current
-            ? "persistent"
-            : !previous
-              ? "new"
-              : previous.evidenceStatus === "measured" &&
-                  isVerifiedPass(previous)
-                ? "resolved"
-                : "not-retested";
+      const ambiguous =
+        (beforeGroups.get(fingerprint)?.length ?? 0) > 1 ||
+        (afterGroups.get(fingerprint)?.length ?? 0) > 1 ||
+        (!previous &&
+          a.findings.some(
+            (f) => locationKey(f, false) === locationKey(current!, false),
+          )) ||
+        (!current &&
+          b.findings.some(
+            (f) => locationKey(f, false) === locationKey(previous!, false),
+          ));
+      const state =
+        effectiveLevel === "incompatible" || !verificationComparable
+          ? "not-comparable"
+          : ambiguous
+            ? "mapping-review"
+            : !inRetest
+              ? "not-retested"
+              : previous && current
+                ? "persistent"
+                : !previous
+                  ? "new"
+                  : previous.evidenceStatus === "measured" &&
+                      isVerifiedPass(previous)
+                    ? "resolved"
+                    : "not-retested";
       return {
-        fingerprint,
+        location: (({ ruleId, pageUrl, viewportId, state, selector }) => ({
+          ruleId,
+          pageUrl,
+          viewportId,
+          state,
+          selector,
+        }))((current ?? previous)!),
+        fingerprint: (current ?? previous)!.fingerprint,
+        problemId: problemId(before.projectId, (current ?? previous)!),
+        match: ambiguous ? "needs-review" : "exact-location",
+        beforeFindingIds:
+          beforeGroups.get(fingerprint)?.map((f) => f.id) ??
+          (ambiguous && current
+            ? a.findings
+                .filter(
+                  (f) => locationKey(f, false) === locationKey(current, false),
+                )
+                .map((f) => f.id)
+            : []),
+        afterFindingIds:
+          afterGroups.get(fingerprint)?.map((f) => f.id) ??
+          (ambiguous && previous
+            ? b.findings
+                .filter(
+                  (f) => locationKey(f, false) === locationKey(previous, false),
+                )
+                .map((f) => f.id)
+            : []),
         title: (current ?? previous)!.title,
         state,
         beforeFindingId: previous?.id,

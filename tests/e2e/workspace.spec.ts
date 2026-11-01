@@ -201,6 +201,8 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
     analyses: [] as PageAnalysis[],
     reviews: [] as any[],
     feedback: [] as any[],
+    comparison: null as any,
+    baselineHistory: [] as any[],
     analysisRequest: null as unknown,
     references: [] as VisualReference[],
     diffRequest: null as unknown,
@@ -435,23 +437,88 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
         contentType: "text/markdown",
         body: "# Maßnahmenplan\n\n- [ ] Seitentitel ergänzen\n  - Beleg: finding-ui\n  - Abnahme: title vorhanden.",
       });
-    if (pathname === "/api/compare")
+    if (pathname === `/api/projects/${project.id}/baselines`) {
+      if (request.method() === "GET")
+        return json({ baselines: state.baselineHistory });
+      const body = request.postDataJSON();
+      const baseline = {
+        ...body,
+        id: `baseline-${state.baselineHistory.length}`,
+        createdAt: scan.createdAt,
+        projectId: project.id,
+        meaning: "Keine rückwirkende Kompatibilität oder Behebung.",
+      };
+      state.baselineHistory.unshift(baseline);
+      return json({ baseline });
+    }
+    if (pathname === `/api/projects/${project.id}/baseline-preview`) {
+      const body = request.postDataJSON();
       return json({
-        beforeId: "scan-old",
-        afterId: scan.id,
-        comparable: false,
-        reason: "Die Seitenmengen unterscheiden sich.",
-        scoreDelta: null,
-        beforeScore: score,
-        afterScore: score,
-        entries: [
-          {
-            fingerprint: "title-mobile",
-            title: finding.title,
-            state: "not-retested",
-          },
-        ],
+        eligible: true,
+        reasons: [],
+        snapshotHash: "snapshot",
+        previous: state.baselineHistory[0] ?? null,
+        candidateId: body.candidateId,
+        controlId: body.controlId,
+        meaning: "Alte Berichte bleiben unverändert.",
+        comparison: state.comparison,
       });
+    }
+    if (/^\/api\/scans\/[^/]+\/labels$/.test(pathname)) {
+      const item = state.scans.find((s) => s.id === pathname.split("/")[3])!;
+      item.labels = request.postDataJSON();
+      return json({ scan: item });
+    }
+    if (pathname === "/api/compare/evidence")
+      return json({
+        level: "exact",
+        state: "recurrent",
+        observation: {
+          pageUrl: project.url,
+          viewportId: "mobile",
+          state: "initial",
+          selector: "h1",
+          ruleId: "document-title",
+        },
+        before: {
+          scanId: "scan-old",
+          createdAt: scan.createdAt,
+          observations: [finding],
+          rules: [],
+          performance: [],
+          evidence: [],
+          pages: [],
+        },
+        after: {
+          scanId: scan.id,
+          createdAt: scan.createdAt,
+          observations: [finding],
+          rules: [],
+          performance: [],
+          evidence: [],
+          pages: [],
+        },
+        meaning: "Originalmessungen; keine Ursachenidentität.",
+      });
+    if (pathname === "/api/compare")
+      return json(
+        state.comparison ?? {
+          beforeId: "scan-old",
+          afterId: scan.id,
+          comparable: false,
+          reason: "Die Seitenmengen unterscheiden sich.",
+          scoreDelta: null,
+          beforeScore: score,
+          afterScore: score,
+          entries: [
+            {
+              fingerprint: "title-mobile",
+              title: finding.title,
+              state: "not-retested",
+            },
+          ],
+        },
+      );
     if (pathname === "/api/models")
       return json({ available: true, models: ["local-test:8b"] });
     if (pathname === "/api/settings") {
@@ -830,6 +897,9 @@ test("visual comparison offers wipe, explicit masks and a saved reference withou
   const state = await mockWorkspace(page, [after, before]);
   await page.goto("/");
   await openContext(page, "Vergleich");
+  await page
+    .getByText("Bildvergleich und visuelle Referenzen", { exact: true })
+    .click();
   await page
     .getByRole("button", { name: "Bildpaare laden", exact: true })
     .click();
@@ -1807,3 +1877,158 @@ for (const width of [320, 390, 768, 1280]) {
     expect(state.tasks[0].status).toBe("open");
   });
 }
+
+test("2.4 change view distinguishes recurrence and uncertain mapping and links original evidence", async ({
+  page,
+}) => {
+  const state = await mockWorkspace(page, [
+    scan,
+    { ...scan, id: "scan-old", createdAt: "2026-10-20T10:00:00Z" },
+  ]);
+  state.comparison = {
+    beforeId: "scan-old",
+    afterId: scan.id,
+    comparable: true,
+    verificationComparable: true,
+    level: "exact",
+    reason: "Gleiche Messidentität.",
+    scoreDelta: 0,
+    beforeScore: score,
+    afterScore: score,
+    entries: [
+      {
+        fingerprint: "first",
+        problemId: "location-one",
+        title: "Wiederkehrender Titel",
+        state: "recurrent",
+        match: "exact-location",
+        beforeFindingId: finding.id,
+        afterFindingId: finding.id,
+        historyScanId: "scan-old",
+      },
+      {
+        fingerprint: "second",
+        problemId: "location-two",
+        title: "Selektor geändert",
+        state: "mapping-review",
+        match: "needs-review",
+      },
+    ],
+  };
+  await page.goto("/");
+  await openContext(page, "Vergleich");
+  await page
+    .getByRole("button", { name: "Tests vergleichen", exact: true })
+    .click();
+  await expect(
+    page.getByText("Wieder aufgetreten", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Zuordnung prüfen · keine automatische Verknüpfung", {
+      exact: true,
+    }),
+  ).toBeVisible();
+  const proof = page.getByText("Vorher-/Nachher-Nachweise öffnen", {
+    exact: true,
+  });
+  await proof.first().click();
+  await expect(
+    page.getByRole("link", { name: "Originalbericht öffnen" }),
+  ).toHaveCount(2);
+  await expect(
+    page.getByRole("link", { name: "Früheres Auftreten öffnen" }),
+  ).toHaveAttribute("href", /scan=scan-old/);
+  await page.locator("#after-scan").selectOption("scan-old");
+  await expect(
+    page.getByRole("heading", { name: "Entwicklung der Befunde", exact: true }),
+  ).toHaveCount(0);
+});
+test("2.4 reference preview requires explicit confirmation and any edit revokes it", async ({
+  page,
+}) => {
+  const state = await mockWorkspace(page, [
+    scan,
+    { ...scan, id: "scan-old", createdAt: "2026-10-20T10:00:00Z" },
+  ]);
+  await page.goto("/");
+  await openContext(page, "Vergleich");
+  await page
+    .getByText("Referenzstand bewusst wechseln", { exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Referenzwechsel prüfen", exact: true })
+    .click();
+  await page.getByLabel("Referenzname", { exact: true }).fill("Release QA");
+  const adopt = page.getByRole("button", {
+    name: "Geprüften Referenzstand übernehmen",
+    exact: true,
+  });
+  await expect(adopt).toBeDisabled();
+  await page.getByLabel(/Ich habe die Kontrollmessungen/).check();
+  await expect(adopt).toBeEnabled();
+  await page
+    .getByLabel("Grund für den Referenzwechsel", { exact: true })
+    .fill("Kontrollpaar geprüft.");
+  await expect(adopt).toBeDisabled();
+  await page.getByLabel(/Ich habe die Kontrollmessungen/).check();
+  await adopt.click();
+  await expect.poll(() => state.baselineHistory.length).toBe(1);
+  await expect(
+    page.getByText("Release QA", { exact: true }).first(),
+  ).toBeVisible();
+  expect(state.baselineHistory[0].confirmed).toBe(true);
+  await page
+    .getByRole("button", {
+      name: "Aktive Referenz als Ausgangscheck wählen",
+      exact: true,
+    })
+    .click();
+  await expect(page.locator("#before-scan")).toHaveValue(scan.id);
+});
+for (const width of [320, 390, 768, 1280])
+  test(`2.4 named scopes and baseline controls remain usable at ${width}px`, async ({
+    page,
+  }) => {
+    const state = await mockWorkspace(page, [
+      scan,
+      { ...scan, id: "scan-old", createdAt: "2026-10-20T10:00:00Z" },
+    ]);
+    await page.setViewportSize({ width, height: 900 });
+    await page.goto("/");
+    await openContext(page, "Vergleich");
+    await page
+      .getByText("Lauf und Profil benennen", { exact: true })
+      .first()
+      .click();
+    const first = state.scans[1]!;
+    await page
+      .getByLabel(`Laufname ${first.id}`, { exact: true })
+      .fill("Kontrollmessung A");
+    await page
+      .getByLabel(`Profilname ${first.id}`, { exact: true })
+      .fill("Mobile QA");
+    await page
+      .getByRole("button", { name: "Bezeichnungen speichern", exact: true })
+      .click();
+    await expect.poll(() => first.labels?.name).toBe("Kontrollmessung A");
+    await page
+      .getByText("Referenzstand bewusst wechseln", { exact: true })
+      .click();
+    await page
+      .getByRole("button", { name: "Referenzwechsel prüfen", exact: true })
+      .click();
+    await page
+      .getByLabel("Referenzname", { exact: true })
+      .fill("Mobile Referenz");
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await expect(
+      page.getByRole("button", {
+        name: "Geprüften Referenzstand übernehmen",
+        exact: true,
+      }),
+    ).toBeDisabled();
+  });

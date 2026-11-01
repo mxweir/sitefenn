@@ -2,6 +2,29 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 2.4.0 — 2026-11-01
+
+### Understand what changed
+
+- Added persistent project/location problem IDs separate from individual findings, with a transactional SQL occurrence index and conservative recurrence evidence. Selector changes, duplicate candidates and unverified intermediate history stay explicit.
+- Added exact/diagnostic/incompatible comparison levels. New capture/normalization/verification provenance permits frontend/application-version-only changes when measurement identity remains equal. Historical records keep the strict legacy policy; weaker comparisons never verify repairs or produce score deltas.
+- Added on-demand before/after original rule/document/capture evidence, exact finding links, named runs/profile labels and a primary change view with optional visual comparison. Changing the pair clears the old result.
+- Added deliberate two-control reference preview/adoption, explicit confirmation, stale-preview protection, immutable reference chains and direct active-reference selection. All reference source IDs participate in retention protection.
+- Upgraded SQLite to schema 3 with a pre-migration database backup; original reports, labels, problem links and reference history survive restart/trash/portable restore. SiteFenn 2.3 refuses the updated schema.
+
+**162 Node tests and 37 browser tests** passed locally, plus actual four-check browser/service acceptance, types/build, lifecycle, output guards and portable verification. The real fixture confirms recurrence for two observations while preserving unknown scroll history for two others. [Full verification and update limits](docs/RELEASE-2.4.md).
+
+![Actual 2.4 change history](docs/screenshots/2.4-change-history.jpg)
+
+<details>
+<summary>Actual original proof, reference history and mobile evidence</summary>
+
+![Actual 2.4 before/after measurements](docs/screenshots/2.4-before-after-evidence.jpg)
+![Actual 2.4 saved reference history](docs/screenshots/2.4-reference-history.jpg)
+![Actual 2.4 mobile evidence](docs/screenshots/2.4-mobile-evidence.jpg)
+
+</details>
+
 ## 2.3.0 — 2026-10-31
 
 ### Measured facts, reviewed proposals

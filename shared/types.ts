@@ -23,6 +23,7 @@ export interface ScanResult {
   audit?: AuditReport;
 }
 export interface Scan {
+  labels?: { name: string; profileName: string };
   id: string;
   projectId: string;
   status:
@@ -58,24 +59,7 @@ export interface ViewportProfile {
   hasTouch?: boolean;
   deviceScaleFactor?: number;
 }
-export const VIEWPORTS: ViewportProfile[] = [
-  { id: "desktop", width: 1440, height: 900, deviceScaleFactor: 1 },
-  {
-    id: "tablet",
-    width: 768,
-    height: 1024,
-    hasTouch: true,
-    deviceScaleFactor: 1,
-  },
-  {
-    id: "mobile",
-    width: 390,
-    height: 844,
-    isMobile: true,
-    hasTouch: true,
-    deviceScaleFactor: 1,
-  },
-];
+export { VIEWPORTS } from "./viewports.js";
 export interface RetestScope {
   samples?: {
     pageUrl: string;
@@ -244,6 +228,12 @@ export interface PerformanceSample {
   spread?: number;
 }
 export interface AuditProvenance {
+  measurement?: {
+    version: "measurement-identity-2.4";
+    captureSha256: string;
+    normalizationSha256: string;
+    verificationSha256: string;
+  };
   seoVersions?: { saxes: string; robotsParser: string; parse5: string };
   appVersion: string;
   engineSha256: string;
@@ -360,13 +350,32 @@ export interface AuditTask {
   verifiedByScanId?: string;
 }
 export interface ComparisonEntry {
+  location?: Pick<
+    Finding,
+    "ruleId" | "pageUrl" | "viewportId" | "state" | "selector"
+  >;
   fingerprint: string;
   title: string;
-  state: "new" | "persistent" | "resolved" | "not-retested" | "not-comparable";
+  state:
+    | "new"
+    | "persistent"
+    | "resolved"
+    | "not-retested"
+    | "not-comparable"
+    | "recurrent"
+    | "mapping-review"
+    | "history-uncertain";
+  problemId?: string;
+  match?: "exact-location" | "needs-review";
+  beforeFindingIds?: string[];
+  afterFindingIds?: string[];
+  historyScanId?: string;
   beforeFindingId?: string;
   afterFindingId?: string;
 }
 export interface ScanComparison {
+  level?: "exact" | "diagnostic" | "incompatible";
+  identityReasons?: string[];
   partial?: boolean;
   verificationComparable?: boolean;
   beforeId: string;

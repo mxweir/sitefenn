@@ -42,7 +42,8 @@ export default function ProjectFlow({
           <p>{next}</p>
         </div>
         <span className="pill">
-          {verifiedCount} durch Nachtest verifizierte Aufgaben im Projekt
+          Historisch: {verifiedCount} durch Nachtest verifizierte Aufgaben im
+          Projekt. Kein aktueller Gesundheitsstatus.
         </span>
       </div>
       <ol className="flow-steps">

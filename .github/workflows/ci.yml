@@ -38,6 +38,8 @@ jobs:
         run: npm run check
       - name: Tests
         run: npm test
+      - name: Actual change-history fixture
+        run: npm run test:changes
       - name: Build
         run: npm run build
       - name: Portable Web/CLI package and explicit setup smoke

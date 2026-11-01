@@ -33,7 +33,7 @@ export async function dependencies(): Promise<Dependency[]> {
       id: "storage",
       label: "SQLite",
       status: "ready",
-      detail: "Lokale Datenbank verbunden · Schema 2 · Migration mit Sicherung",
+      detail: "Lokale Datenbank verbunden · Schema 3 · Migration mit Sicherung",
     },
     {
       id: "browser",

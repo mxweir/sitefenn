@@ -1,3 +1,6 @@
+import ChangeEvidence from "./ChangeEvidence.js";
+import BaselinePanel from "./BaselinePanel.js";
+import ScanDetails, { scanLabel } from "./ScanDetails.js";
 import { useScanOptions } from "./use-scan-options.js";
 import { useEffect, useState } from "react";
 import { ArrowLeftRight, LoaderCircle } from "lucide-react";
@@ -9,6 +12,9 @@ import VisualCompare from "./VisualCompare.js";
 
 const labels: Record<string, string> = {
   new: "Neu",
+  recurrent: "Wieder aufgetreten",
+  "history-uncertain": "Erneut beobachtet · Zwischenhistorie ungeklärt",
+  "mapping-review": "Zuordnung prüfen · keine automatische Verknüpfung",
   persistent: "Weiterhin vorhanden",
   resolved: "Verifiziert behoben",
   "not-retested": "Nicht erneut geprüft",
@@ -17,13 +23,21 @@ const labels: Record<string, string> = {
 export default function Compare({
   scans: initialScans,
   projectId,
+  onChange,
 }: {
   scans: Scan[];
   projectId: string;
+  onChange?: () => Promise<void>;
 }) {
   const options = useScanOptions(projectId, initialScans);
   const scans = options.scans;
-  const completed = scans.filter((s) => s.status === "completed" && s.result);
+  const [referenceScan, setReferenceScan] = useState<Scan | null>(null);
+  const completed = [
+    ...scans,
+    ...(referenceScan && !scans.some((s) => s.id === referenceScan.id)
+      ? [referenceScan]
+      : []),
+  ].filter((s) => s.status === "completed" && s.result);
   const [before, setBefore] = useState(
     completed[0]?.options?.retest?.sourceScanId ??
       completed.slice(1).find((scan) => !scan.options?.retest)?.id ??
@@ -72,7 +86,10 @@ export default function Compare({
       <>
         {pagination}
         {completed.length > 0 && (
-          <VisualCompare scans={scans} projectId={projectId} />
+          <details className="panel">
+            <summary>Bildvergleich und visuelle Referenzen</summary>
+            <VisualCompare scans={scans} projectId={projectId} />
+          </details>
         )}
         <Empty
           icon={<ArrowLeftRight size={34} />}
@@ -88,7 +105,6 @@ export default function Compare({
   return (
     <>
       {pagination}
-      <VisualCompare scans={scans} projectId={projectId} />
       <div className="panel workspace-form">
         <div className="panel-head">
           <div>
@@ -103,12 +119,16 @@ export default function Compare({
             <select
               id="before-scan"
               value={before}
-              onChange={(e) => setBefore(e.target.value)}
+              disabled={busy}
+              onChange={(e) => {
+                setBefore(e.target.value);
+                setResult(null);
+              }}
             >
               <option value="">Scan auswählen</option>
               {completed.map((scan) => (
                 <option key={scan.id} value={scan.id}>
-                  {stamp(scan.createdAt)} · {scan.id.slice(0, 8)}
+                  {scanLabel(scan)}
                 </option>
               ))}
             </select>
@@ -118,12 +138,16 @@ export default function Compare({
             <select
               id="after-scan"
               value={after}
-              onChange={(e) => setAfter(e.target.value)}
+              disabled={busy}
+              onChange={(e) => {
+                setAfter(e.target.value);
+                setResult(null);
+              }}
             >
               <option value="">Scan auswählen</option>
               {completed.map((scan) => (
                 <option key={scan.id} value={scan.id}>
-                  {stamp(scan.createdAt)} · {scan.id.slice(0, 8)}
+                  {scanLabel(scan)}
                 </option>
               ))}
             </select>
@@ -158,17 +182,52 @@ export default function Compare({
         </button>
         {error && <Notice error>{error}</Notice>}
       </div>
+      <div className="comparison-grid">
+        {[before, after]
+          .filter((id, i, all) => id && all.indexOf(id) === i)
+          .map((id) => {
+            const scan = completed.find((s) => s.id === id);
+            return scan ? (
+              <ScanDetails key={id} scan={scan} onChange={onChange} />
+            ) : null;
+          })}
+      </div>
+      <BaselinePanel
+        projectId={projectId}
+        beforeId={before}
+        afterId={after}
+        onSelect={async (id) => {
+          const selected = (
+            await api<{ scan: Scan }>(`/api/scans/${encodeURIComponent(id)}`)
+          ).scan;
+          if (
+            selected.projectId !== projectId ||
+            selected.status !== "completed"
+          )
+            throw Error(
+              "Referenz ist nicht als abgeschlossener Check dieses Projekts verfügbar.",
+            );
+          setReferenceScan(selected);
+          setBefore(id);
+          setResult(null);
+        }}
+      />
       {result && (
         <>
           <div className="plan-note">
             <strong>
               {result.partial
                 ? "Gezielter Teilnachtest"
-                : result.comparable
-                  ? "Vergleichbare Messprofile"
-                  : "Nur eingeschränkt vergleichbar"}
+                : result.level === "incompatible"
+                  ? "Inkompatible Messstände"
+                  : result.comparable
+                    ? "Exakt verifizierbarer Vergleich"
+                    : "Nur eingeschränkt vergleichbar"}
             </strong>
             <p>{result.reason}</p>
+            {result.identityReasons?.map((r) => (
+              <p key={r}>{r}</p>
+            ))}
             <p>
               {result.scoreDelta === null
                 ? "Kein belastbares Score-Delta verfügbar."
@@ -186,13 +245,50 @@ export default function Compare({
             </div>
             <div className="comparison-grid">
               {result.entries.map((entry) => (
-                <article className="compare-item" key={entry.fingerprint}>
+                <article
+                  className="compare-item"
+                  key={entry.problemId ?? entry.fingerprint}
+                >
                   <span
                     className={`pill ${entry.state === "resolved" ? "confirmed" : entry.state === "new" ? "important" : "info"}`}
                   >
                     {labels[entry.state]}
                   </span>
                   <strong>{entry.title}</strong>
+                  {entry.location && (
+                    <p>
+                      {entry.location.viewportId} · {entry.location.state} ·{" "}
+                      <code>
+                        {entry.location.selector ?? entry.location.ruleId}
+                      </code>
+                      <br />
+                      {entry.location.pageUrl}
+                    </p>
+                  )}
+                  {entry.problemId && (
+                    <>
+                      <p className="hint">
+                        Standortproblem {entry.problemId.slice(0, 12)} ·{" "}
+                        {entry.match === "needs-review"
+                          ? "Zuordnung unklar"
+                          : "gleiche Regel/URL/Gerät/Zustand/Selektor"}
+                        . Keine Ursachenidentität behauptet.
+                      </p>
+                      <ChangeEvidence
+                        entry={entry}
+                        beforeId={result.beforeId}
+                        afterId={result.afterId}
+                        projectId={projectId}
+                      />
+                    </>
+                  )}
+                  {entry.historyScanId && (
+                    <a
+                      href={`/?project=${encodeURIComponent(projectId)}&scan=${encodeURIComponent(entry.historyScanId)}&view=report`}
+                    >
+                      Früheres Auftreten öffnen
+                    </a>
+                  )}
                 </article>
               ))}
             </div>
@@ -205,6 +301,10 @@ export default function Compare({
           </section>
         </>
       )}
+      <details className="panel">
+        <summary>Bildvergleich und visuelle Referenzen</summary>
+        <VisualCompare scans={scans} projectId={projectId} />
+      </details>
     </>
   );
 }

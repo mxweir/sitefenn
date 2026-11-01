@@ -129,7 +129,7 @@ export async function restoreBackup(
       const version = Number(
         db.prepare("PRAGMA user_version").get()?.user_version,
       );
-      if (!Number.isInteger(version) || version < 1 || version > 2)
+      if (!Number.isInteger(version) || version < 1 || version > 3)
         throw new Error("Nicht unterstützte Datenbankversion.");
       if (
         db
