@@ -3396,3 +3396,21 @@ h1 {
 }
 .setup-checklist .dependency-icon { flex-shrink: 0; }
 .setup-checklist .plan-note { overflow-wrap: anywhere; }
+
+.language-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 6px 16px;
+  font-size: 12px;
+  background: var(--cream);
+}
+.language-bar select {
+  padding: 4px 8px;
+}
+
+@media (max-width: 570px) {
+  .language-bar { padding-inline: 0; }
+  .topbar .breadcrumb { display: none; }
+}

@@ -1,7 +1,8 @@
+import { useTranslation } from "./language.js";
 import { useEffect, useRef, useState } from "react";
 import type { Scan } from "../shared/types.js";
 import type { CursorPage, ScanSummary } from "../shared/workspace.js";
-import { api, active, message, stamp, statusLabel } from "./api.js";
+import { api, active, message, useAuditLabels } from "./api.js";
 import { Notice } from "./ui.js";
 import { useProjectDraft } from "./workspace-state.js";
 export default function History({
@@ -13,6 +14,8 @@ export default function History({
   initial: Scan[];
   onSelect: (scan: Scan) => void;
 }) {
+  const t = useTranslation();
+  const { statusLabel, stamp } = useAuditLabels();
   const [filters, setFilters] = useProjectDraft(projectId, "history", {
     q: "",
     status: "all",
@@ -82,7 +85,7 @@ export default function History({
     <section className="panel history-workspace">
       <p className="eyebrow">ALLE GESPEICHERTEN CHECKS DIESES PROJEKTS</p>
       <div className="panel-head">
-        <h2>Prüfverlauf</h2>
+        <h2>{t("Prüfverlauf", "Check history")}</h2>
         <button
           className="button secondary"
           disabled={busy}
@@ -102,7 +105,10 @@ export default function History({
             type="search"
             value={filters.q}
             maxLength={120}
-            placeholder="Titel, URL oder Check-ID"
+            placeholder={t(
+              "Titel, URL oder Check-ID",
+              "Title, URL, or check ID",
+            )}
             onChange={(e) => setFilters({ ...filters, q: e.target.value })}
           />
         </label>
@@ -112,7 +118,7 @@ export default function History({
             value={filters.status}
             onChange={(e) => setFilters({ ...filters, status: e.target.value })}
           >
-            <option value="all">Alle Prüfungen</option>
+            <option value="all">{t("Alle Prüfungen", "All checks")}</option>
             {[
               "completed",
               "failed",
@@ -172,7 +178,7 @@ export default function History({
           disabled={busy}
           onClick={() => void more()}
         >
-          Weitere Checks laden
+          {t("Weitere Checks laden", "Load more checks")}
         </button>
       )}
     </section>

@@ -6,6 +6,7 @@ import {
   mkdir,
   rm,
   rename,
+  readdir,
   symlink,
 } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -61,6 +62,7 @@ async function launch({
   data = dataRoot,
   setup = false,
   previous = false,
+  expectedVersion = previous ? previousVersion : version,
 } = {}) {
   let logs = "";
   child = spawn(
@@ -78,7 +80,7 @@ async function launch({
     stream.on("data", (bytes) => {
       logs = (logs + bytes.toString()).slice(-10000);
     });
-  const expected = previous ? previousVersion : version;
+  const expected = expectedVersion;
   const until = Date.now() + (setup ? 180000 : 30000);
   for (; Date.now() < until; await delay(75)) {
     if (child.exitCode !== null || child.signalCode !== null)
@@ -357,10 +359,77 @@ try {
   assert.throws(() => process.kill(serverPid, 0), { code: "ESRCH" });
   await launch();
   await stop("SIGINT");
+  const original20 = await readFile(
+    process.argv[3] ?? ".local-data/packages/sitefenn-2.0.0-web-cli.zip",
+  );
+  assert.equal(
+    digest(original20),
+    "b82fbe8841cd580a09744ccc7ba3b8fef77c3fdbf03347bd7f152a6a64ed6c35",
+  );
+  const legacyApp = join(root, "legacy-2.0-app");
+  const legacyData = join(root, "legacy-2.0-workspace");
+  await extract(original20, legacyApp);
+  const legacyLock = JSON.parse(
+    await readFile(join(legacyApp, "package-lock.json"), "utf8"),
+  ).packages;
+  delete legacyLock[""];
+  assert.deepEqual(
+    legacyLock,
+    lockFiles[1],
+    "Reuse the identical 2.0 locked dependency tree",
+  );
+  await symlink(
+    join(appRoot, "node_modules"),
+    join(legacyApp, "node_modules"),
+    "junction",
+  );
+  await launch({
+    directory: legacyApp,
+    data: legacyData,
+    previous: true,
+    expectedVersion: "2.0.0",
+  });
+  const legacyDemo = await api("/api/demo", {});
+  const legacyScanPath = `/api/scans/${legacyDemo.scan.id}`;
+  let legacyReport;
+  for (let i = 0; i < 300; i++) {
+    const { scan } = await api(legacyScanPath);
+    assert.ok(
+      !["failed", "cancelled", "interrupted"].includes(scan.status),
+      scan.error ?? scan.status,
+    );
+    if (scan.status === "completed") {
+      legacyReport = scan.result.audit;
+      break;
+    }
+    await delay(100);
+  }
+  assert.equal(legacyReport?.coverage.completed, 9);
+  const legacyImagePath = `${legacyScanPath}/evidence/${legacyReport.evidence[0].id}`;
+  const legacyImage = async () => {
+    const response = await fetch(base + legacyImagePath, {
+      headers: { cookie },
+      signal: AbortSignal.timeout(5000),
+    });
+    assert.equal(response.headers.get("content-type"), "image/png");
+    return digest(Buffer.from(await response.arrayBuffer()));
+  };
+  const legacyImageHash = await legacyImage();
+  await stop();
+  await launch({ data: legacyData });
+  assert.deepEqual((await api(legacyScanPath)).scan.result.audit, legacyReport);
+  assert.equal(await legacyImage(), legacyImageHash);
+  assert.ok(
+    (await readdir(join(legacyData, "backups"))).some((name) =>
+      /^before-schema-3-from-2-/.test(name),
+    ),
+  );
+  await stop();
   console.log(
     JSON.stringify({
       version,
       previousVersion,
+      original20SchemaMigrationPreservedReportAndEvidence: true,
       freshExtraction: true,
       portConflictWithForeignHttp: true,
       doctorChromiumSandbox: true,

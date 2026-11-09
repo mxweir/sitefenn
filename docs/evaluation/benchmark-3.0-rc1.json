@@ -1,0 +1,1080 @@
+{
+  "appVersion": "3.0.0-rc.1",
+  "createdAt": "2026-11-09T19:02:28.331Z",
+  "dataset": {
+    "version": "supplemental-layout-1.1-v3",
+    "sha256": "81790d8504263760ed3fe70085164f1dd5e0883151229113eb7c00219868cf49",
+    "cases": 20,
+    "labelsPerCase": 2,
+    "labelSource": "Synthetic implementation-agent labels. No independent human review or held-out accuracy claim."
+  },
+  "hardware": {
+    "platform": "darwin",
+    "arch": "arm64",
+    "cpu": "Apple M5 Pro",
+    "logicalCpus": 18,
+    "memoryGiB": 24
+  },
+  "method": {
+    "repeats": 1,
+    "viewports": [
+      {
+        "id": "desktop",
+        "width": 1440,
+        "height": 900,
+        "deviceScaleFactor": 1
+      },
+      {
+        "id": "tablet",
+        "width": 768,
+        "height": 1024,
+        "hasTouch": true,
+        "deviceScaleFactor": 1
+      },
+      {
+        "id": "mobile",
+        "width": 390,
+        "height": 844,
+        "isMobile": true,
+        "hasTouch": true,
+        "deviceScaleFactor": 1
+      }
+    ],
+    "performance": false,
+    "ai": false,
+    "rssSamplingMs": 200,
+    "memoryBoundary": "Worker and observed descendant processes. Sum of RSS can double-count shared pages; sampled maximum is not exact total physical peak. Hub, Ollama and parent excluded.",
+    "latencyBoundary": "Capture timestamp to worker IPC receipt, not UI paint or HTTP polling latency.",
+    "realSitesHaveGroundTruth": false
+  },
+  "evaluation": [
+    {
+      "ruleId": "covered-control",
+      "total": 60,
+      "truePositive": 15,
+      "trueNegative": 39,
+      "falsePositive": 0,
+      "falseNegative": 0,
+      "unknown": 6,
+      "expectedUnknown": 6,
+      "precision": 1,
+      "recall": 1
+    },
+    {
+      "ruleId": "horizontal-overflow",
+      "total": 60,
+      "truePositive": 6,
+      "trueNegative": 51,
+      "falsePositive": 0,
+      "falseNegative": 0,
+      "unknown": 3,
+      "expectedUnknown": 3,
+      "precision": 1,
+      "recall": 1
+    }
+  ],
+  "observations": [
+    {
+      "caseId": "scroll-only-blocker",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/scroll-only-blocker",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "scroll-only-blocker",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/scroll-only-blocker",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "scroll-only-blocker",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/scroll-only-blocker",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "scroll-only-blocker",
+      "ruleId": "covered-control",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/scroll-only-blocker",
+      "viewportId": "desktop",
+      "actual": "fail"
+    },
+    {
+      "caseId": "scroll-only-blocker",
+      "ruleId": "covered-control",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/scroll-only-blocker",
+      "viewportId": "tablet",
+      "actual": "fail"
+    },
+    {
+      "caseId": "scroll-only-blocker",
+      "ruleId": "covered-control",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/scroll-only-blocker",
+      "viewportId": "mobile",
+      "actual": "fail"
+    },
+    {
+      "caseId": "fluid-grid",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/fluid-grid",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "fluid-grid",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/fluid-grid",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "fluid-grid",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/fluid-grid",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "fluid-grid",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/fluid-grid",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "fluid-grid",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/fluid-grid",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "fluid-grid",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/fluid-grid",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "long-fixed-panel",
+      "ruleId": "horizontal-overflow",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/long-fixed-panel",
+      "viewportId": "desktop",
+      "actual": "fail"
+    },
+    {
+      "caseId": "long-fixed-panel",
+      "ruleId": "horizontal-overflow",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/long-fixed-panel",
+      "viewportId": "tablet",
+      "actual": "fail"
+    },
+    {
+      "caseId": "long-fixed-panel",
+      "ruleId": "horizontal-overflow",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/long-fixed-panel",
+      "viewportId": "mobile",
+      "actual": "fail"
+    },
+    {
+      "caseId": "long-fixed-panel",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/long-fixed-panel",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "long-fixed-panel",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/long-fixed-panel",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "long-fixed-panel",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/long-fixed-panel",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "nested-scroll-region",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/nested-scroll-region",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "nested-scroll-region",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/nested-scroll-region",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "nested-scroll-region",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/nested-scroll-region",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "nested-scroll-region",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/nested-scroll-region",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "nested-scroll-region",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/nested-scroll-region",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "nested-scroll-region",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/nested-scroll-region",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "translated-card",
+      "ruleId": "horizontal-overflow",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/translated-card",
+      "viewportId": "desktop",
+      "actual": "fail"
+    },
+    {
+      "caseId": "translated-card",
+      "ruleId": "horizontal-overflow",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/translated-card",
+      "viewportId": "tablet",
+      "actual": "fail"
+    },
+    {
+      "caseId": "translated-card",
+      "ruleId": "horizontal-overflow",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/translated-card",
+      "viewportId": "mobile",
+      "actual": "fail"
+    },
+    {
+      "caseId": "translated-card",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/translated-card",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "translated-card",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/translated-card",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "translated-card",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/translated-card",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "closed-offcanvas",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/closed-offcanvas",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "closed-offcanvas",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/closed-offcanvas",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "closed-offcanvas",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/closed-offcanvas",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "closed-offcanvas",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/closed-offcanvas",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "closed-offcanvas",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/closed-offcanvas",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "closed-offcanvas",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/closed-offcanvas",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "wrapped-label",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/wrapped-label",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "wrapped-label",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/wrapped-label",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "wrapped-label",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/wrapped-label",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "wrapped-label",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/wrapped-label",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "wrapped-label",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/wrapped-label",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "wrapped-label",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/wrapped-label",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "child-icon",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/child-icon",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "child-icon",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/child-icon",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "child-icon",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/child-icon",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "child-icon",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/child-icon",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "child-icon",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/child-icon",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "child-icon",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/child-icon",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "blocking-layer",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/blocking-layer",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "blocking-layer",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/blocking-layer",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "blocking-layer",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/blocking-layer",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "blocking-layer",
+      "ruleId": "covered-control",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/blocking-layer",
+      "viewportId": "desktop",
+      "actual": "fail"
+    },
+    {
+      "caseId": "blocking-layer",
+      "ruleId": "covered-control",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/blocking-layer",
+      "viewportId": "tablet",
+      "actual": "fail"
+    },
+    {
+      "caseId": "blocking-layer",
+      "ruleId": "covered-control",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/blocking-layer",
+      "viewportId": "mobile",
+      "actual": "fail"
+    },
+    {
+      "caseId": "transparent-blocking-layer",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/transparent-blocking-layer",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "transparent-blocking-layer",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/transparent-blocking-layer",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "transparent-blocking-layer",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/transparent-blocking-layer",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "transparent-blocking-layer",
+      "ruleId": "covered-control",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/transparent-blocking-layer",
+      "viewportId": "desktop",
+      "actual": "fail"
+    },
+    {
+      "caseId": "transparent-blocking-layer",
+      "ruleId": "covered-control",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/transparent-blocking-layer",
+      "viewportId": "tablet",
+      "actual": "fail"
+    },
+    {
+      "caseId": "transparent-blocking-layer",
+      "ruleId": "covered-control",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/transparent-blocking-layer",
+      "viewportId": "mobile",
+      "actual": "fail"
+    },
+    {
+      "caseId": "decorative-layer",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/decorative-layer",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "decorative-layer",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/decorative-layer",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "decorative-layer",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/decorative-layer",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "decorative-layer",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/decorative-layer",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "decorative-layer",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/decorative-layer",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "decorative-layer",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/decorative-layer",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "disabled-under-layer",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/disabled-under-layer",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "disabled-under-layer",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/disabled-under-layer",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "disabled-under-layer",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/disabled-under-layer",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "disabled-under-layer",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/disabled-under-layer",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "disabled-under-layer",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/disabled-under-layer",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "disabled-under-layer",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/disabled-under-layer",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "inert-background",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/inert-background",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "inert-background",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/inert-background",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "inert-background",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/inert-background",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "inert-background",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/inert-background",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "inert-background",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/inert-background",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "inert-background",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/inert-background",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "transparent-parent",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/transparent-parent",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "transparent-parent",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/transparent-parent",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "transparent-parent",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/transparent-parent",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "transparent-parent",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/transparent-parent",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "transparent-parent",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/transparent-parent",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "transparent-parent",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/transparent-parent",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "modal-background",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/modal-background",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "modal-background",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/modal-background",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "modal-background",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/modal-background",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "modal-background",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/modal-background",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "modal-background",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/modal-background",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "modal-background",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/modal-background",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "modal-internal-blocker",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/modal-internal-blocker",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "modal-internal-blocker",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/modal-internal-blocker",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "modal-internal-blocker",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/modal-internal-blocker",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "modal-internal-blocker",
+      "ruleId": "covered-control",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/modal-internal-blocker",
+      "viewportId": "desktop",
+      "actual": "fail"
+    },
+    {
+      "caseId": "modal-internal-blocker",
+      "ruleId": "covered-control",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/modal-internal-blocker",
+      "viewportId": "tablet",
+      "actual": "fail"
+    },
+    {
+      "caseId": "modal-internal-blocker",
+      "ruleId": "covered-control",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/modal-internal-blocker",
+      "viewportId": "mobile",
+      "actual": "fail"
+    },
+    {
+      "caseId": "hidden-modal",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/hidden-modal",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "hidden-modal",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/hidden-modal",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "hidden-modal",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/hidden-modal",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "hidden-modal",
+      "ruleId": "covered-control",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/hidden-modal",
+      "viewportId": "desktop",
+      "actual": "fail"
+    },
+    {
+      "caseId": "hidden-modal",
+      "ruleId": "covered-control",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/hidden-modal",
+      "viewportId": "tablet",
+      "actual": "fail"
+    },
+    {
+      "caseId": "hidden-modal",
+      "ruleId": "covered-control",
+      "expected": "fail",
+      "pageUrl": "http://127.0.0.1:54954/hidden-modal",
+      "viewportId": "mobile",
+      "actual": "fail"
+    },
+    {
+      "caseId": "partial-decoration",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/partial-decoration",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "partial-decoration",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/partial-decoration",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "partial-decoration",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/partial-decoration",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "partial-decoration",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/partial-decoration",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "partial-decoration",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/partial-decoration",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "partial-decoration",
+      "ruleId": "covered-control",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/partial-decoration",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "denied-redirect",
+      "ruleId": "horizontal-overflow",
+      "expected": "unknown",
+      "pageUrl": "http://127.0.0.1:54954/denied-redirect",
+      "viewportId": "desktop",
+      "actual": "unknown"
+    },
+    {
+      "caseId": "denied-redirect",
+      "ruleId": "horizontal-overflow",
+      "expected": "unknown",
+      "pageUrl": "http://127.0.0.1:54954/denied-redirect",
+      "viewportId": "tablet",
+      "actual": "unknown"
+    },
+    {
+      "caseId": "denied-redirect",
+      "ruleId": "horizontal-overflow",
+      "expected": "unknown",
+      "pageUrl": "http://127.0.0.1:54954/denied-redirect",
+      "viewportId": "mobile",
+      "actual": "unknown"
+    },
+    {
+      "caseId": "denied-redirect",
+      "ruleId": "covered-control",
+      "expected": "unknown",
+      "pageUrl": "http://127.0.0.1:54954/denied-redirect",
+      "viewportId": "desktop",
+      "actual": "unknown"
+    },
+    {
+      "caseId": "denied-redirect",
+      "ruleId": "covered-control",
+      "expected": "unknown",
+      "pageUrl": "http://127.0.0.1:54954/denied-redirect",
+      "viewportId": "tablet",
+      "actual": "unknown"
+    },
+    {
+      "caseId": "denied-redirect",
+      "ruleId": "covered-control",
+      "expected": "unknown",
+      "pageUrl": "http://127.0.0.1:54954/denied-redirect",
+      "viewportId": "mobile",
+      "actual": "unknown"
+    },
+    {
+      "caseId": "fixed-overlay-intent-unknown",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/fixed-overlay-intent-unknown",
+      "viewportId": "desktop",
+      "actual": "pass"
+    },
+    {
+      "caseId": "fixed-overlay-intent-unknown",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/fixed-overlay-intent-unknown",
+      "viewportId": "tablet",
+      "actual": "pass"
+    },
+    {
+      "caseId": "fixed-overlay-intent-unknown",
+      "ruleId": "horizontal-overflow",
+      "expected": "pass",
+      "pageUrl": "http://127.0.0.1:54954/fixed-overlay-intent-unknown",
+      "viewportId": "mobile",
+      "actual": "pass"
+    },
+    {
+      "caseId": "fixed-overlay-intent-unknown",
+      "ruleId": "covered-control",
+      "expected": "unknown",
+      "pageUrl": "http://127.0.0.1:54954/fixed-overlay-intent-unknown",
+      "viewportId": "desktop",
+      "actual": "unknown"
+    },
+    {
+      "caseId": "fixed-overlay-intent-unknown",
+      "ruleId": "covered-control",
+      "expected": "unknown",
+      "pageUrl": "http://127.0.0.1:54954/fixed-overlay-intent-unknown",
+      "viewportId": "tablet",
+      "actual": "unknown"
+    },
+    {
+      "caseId": "fixed-overlay-intent-unknown",
+      "ruleId": "covered-control",
+      "expected": "unknown",
+      "pageUrl": "http://127.0.0.1:54954/fixed-overlay-intent-unknown",
+      "viewportId": "mobile",
+      "actual": "unknown"
+    }
+  ],
+  "measurements": [
+    {
+      "kind": "synthetic",
+      "run": 1,
+      "durationMs": 14067,
+      "peakSummedProcessRssMiB": 660.046875,
+      "rssSamples": 69,
+      "frameCaptureToIpcP95Ms": 80,
+      "frameSamples": 66,
+      "provenance": {
+        "measurement": {
+          "version": "measurement-identity-2.4",
+          "captureSha256": "dcdf7631c9e772282c3065c42dc3f1ee7f2b9f56668be1a2415b23964a51624e",
+          "normalizationSha256": "2045dd4effed12fc5f9c9a0ac9d70e46052f3ea1843b10f1f9df72bbc3de4f93",
+          "verificationSha256": "92b5625bee019cfc88cf96063c9451fcbdcc8679c17292914a8e23244b5de8ae"
+        },
+        "seoVersions": {
+          "saxes": "6.0.0",
+          "robotsParser": "3.0.1",
+          "parse5": "8.0.0"
+        },
+        "appVersion": "3.0.0-rc.1",
+        "engineSha256": "6d8686ea1cfaad194ea6bcb93730f995d9ecb966ffb296f125245d2be4937e78",
+        "playwrightVersion": "1.64.1",
+        "axeVersion": "4.14.0",
+        "lighthouseVersion": "13.6.0",
+        "nodeVersion": "v24.19.0",
+        "platform": "darwin",
+        "arch": "arm64"
+      },
+      "browser": "156.0.8078.4",
+      "coverage": {
+        "planned": 60,
+        "completed": 57,
+        "skipped": [
+          "desktop: http://127.0.0.1:54954/denied-redirect: page.goto: net::ERR_BLOCKED_BY_CLIENT at http://127.0.0.1:54954/denied-redirect",
+          "tablet: http://127.0.0.1:54954/denied-redirect: page.goto: net::ERR_BLOCKED_BY_CLIENT at http://127.0.0.1:54954/denied-redirect",
+          "mobile: http://127.0.0.1:54954/denied-redirect: page.goto: net::ERR_BLOCKED_BY_CLIENT at http://127.0.0.1:54954/denied-redirect"
+        ]
+      }
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { useTranslation } from "./language.js";
 import { WorkspaceReadiness, useProjectDraft } from "./workspace-state.js";
 import { validateReport } from "../shared/report-contract.js";
 import DeveloperHandoff from "./DeveloperHandoff.js";
@@ -18,7 +19,7 @@ import type {
   ScoreSummary,
   TaskStatus,
 } from "../shared/types.js";
-import { api, categoryLabel, message, patch, post, stamp } from "./api.js";
+import { api, message, patch, post, stamp, useAuditLabels } from "./api.js";
 import { Dialog, Empty, Notice } from "./ui.js";
 import ScoreCard from "./ScoreCard.js";
 import { EvidenceView } from "./LiveScan.js";
@@ -55,6 +56,8 @@ export function Report({
   initialFindingId?: string;
   tasks?: AuditTask[];
 }) {
+  const t = useTranslation();
+  const { categoryLabel, stamp } = useAuditLabels();
   const [category, setCategory] = useProjectDraft(
     scan?.projectId ?? "none",
     "report:category",
@@ -123,7 +126,10 @@ export function Report({
     return (
       <Empty
         icon={<ScanLine size={32} />}
-        title="Ein Bericht braucht einen abgeschlossenen Check."
+        title={t(
+          "Ein Bericht braucht einen abgeschlossenen Check.",
+          "Complete a check to open its report.",
+        )}
       >
         <p>
           Aktive oder abgebrochene Prüfungen liefern noch keinen vollständigen
@@ -163,18 +169,25 @@ export function Report({
     <>
       <div className="toolbar report-toolbar">
         <div>
-          <p className="eyebrow">NACHVOLLZIEHBAR STATT PAUSCHAL</p>
-          <h2>Dein Prüfbericht</h2>
+          <p className="eyebrow">
+            {t("NACHVOLLZIEHBAR STATT PAUSCHAL", "AUDIT EVIDENCE")}
+          </p>
+          <h2>{t("Dein Prüfbericht", "Your audit report")}</h2>
           <p className="hint">
-            {scan.labels?.name || "Gespeicherter Check"} ·{" "}
-            {scan.options?.retest ? "Teilnachtest" : "Vollcheck"} ·{" "}
-            {scan.labels?.profileName || "Standardprofile"} · {scan.createdAt} ·{" "}
+            {scan.labels?.name || t("Gespeicherter Check", "Saved check")} ·{" "}
+            {scan.options?.retest
+              ? t("Teilnachtest", "Scoped retest")
+              : t("Vollcheck", "Full check")}{" "}
+            ·{" "}
+            {scan.labels?.profileName ||
+              t("Standardprofile", "Standard profiles")}{" "}
+            · {scan.createdAt} ·{" "}
             {report?.options.pages.length ?? scan.options?.pages.length ?? "?"}{" "}
             URLs /{" "}
             {report?.options.viewports.length ??
               scan.options?.viewports.length ??
               "?"}{" "}
-            Geräteprofile
+            {t("Geräteprofile", "Device profiles")}
           </p>
         </div>
         <div className="action-group">
@@ -185,14 +198,14 @@ export function Report({
             }
           >
             <Sparkles size={16} />
-            Mit Fenn besprechen
+            {t("Mit Fenn besprechen", "Discuss with Fenn")}
           </button>
           <button
             className="button primary"
             onClick={() => setExportOpen(true)}
           >
             <Download size={16} />
-            Bericht exportieren
+            {t("Bericht exportieren", "Export report")}
           </button>
         </div>
       </div>
@@ -205,15 +218,23 @@ export function Report({
       )}
       <p className="report-meta">
         Scan {scan.id.slice(0, 8)} · {stamp(scan.createdAt)} ·{" "}
-        {report?.pages.length ?? 1} Seiten-/Zustandsansichten · Regeln{" "}
+        {report?.pages.length ?? 1}{" "}
+        {t(
+          "Seiten-/Zustandsansichten · Regeln",
+          "page and state views · rules",
+        )}{" "}
         {report?.ruleVersion ?? "legacy"} · Chromium{" "}
         {report?.browserVersion ?? "nicht dokumentiert"}
       </p>
       {contract && (
         <details className="plan-note report-contract">
           <summary>
-            Messvertrag {contract.valid ? "gültig" : "unvollständig / ungültig"}{" "}
-            · {contract.expected.length} erwartete Regelinstanzen
+            {t("Messvertrag", "Measurement contract")}{" "}
+            {contract.valid
+              ? t("gültig", "valid")
+              : t("unvollständig / ungültig", "incomplete / invalid")}{" "}
+            · {contract.expected.length}{" "}
+            {t("erwartete Regelinstanzen", "expected rule checks")}
           </summary>
           <p>
             {contract.version}: Regelinventar, Gewichtung, Seitenzustände und
@@ -239,7 +260,12 @@ export function Report({
         </details>
       )}
       <details className="plan-note">
-        <summary>Ausführungsidentität dieses Berichts</summary>
+        <summary>
+          {t(
+            "Ausführungsidentität dieses Berichts",
+            "Report execution details",
+          )}
+        </summary>
         {report?.provenance ? (
           <dl>
             <dt>SiteFenn / Node</dt>
@@ -299,24 +325,28 @@ export function Report({
           />
         </div>
       )}
-      <section aria-label="Befunde">
+      <section aria-label={t("Befunde", "Findings")}>
         <div className="panel-head">
-          <h2>Basisbefunde</h2>
-          <span className="pill">{findings.length} Befunde</span>
+          <h2>{t("Basisbefunde", "Core findings")}</h2>
+          <span className="pill">
+            {findings.length} {t("Befunde", "Findings")}
+          </span>
         </div>
         <div className="filter-bar">
           <input
-            aria-label="Befunde durchsuchen"
-            placeholder="Befunde durchsuchen …"
+            aria-label={t("Befunde durchsuchen", "Search findings")}
+            placeholder={t("Befunde durchsuchen …", "Search findings…")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
           <select
-            aria-label="Kategorie filtern"
+            aria-label={t("Kategorie filtern", "Filter category")}
             value={category}
             onChange={(e) => setCategory(e.target.value)}
           >
-            <option value="all">Alle Kategorien</option>
+            <option value="all">
+              {t("Alle Kategorien", "All categories")}
+            </option>
             {categories.map((c) => (
               <option key={c} value={c}>
                 {categoryLabel(c)}
@@ -324,24 +354,26 @@ export function Report({
             ))}
           </select>
           <select
-            aria-label="Priorität filtern"
+            aria-label={t("Priorität filtern", "Filter priority")}
             value={priority}
             onChange={(e) => setPriority(e.target.value)}
           >
-            <option value="all">Alle Prioritäten</option>
+            <option value="all">
+              {t("Alle Prioritäten", "All priorities")}
+            </option>
             <option value="critical">Kritisch</option>
             <option value="important">Wichtig</option>
             <option value="nice-to-have">Nice to have</option>
           </select>
           <select
-            aria-label="Seite filtern"
+            aria-label={t("Seite filtern", "Filter page")}
             value={page}
             onChange={(e) => {
               setPage(e.target.value);
               setOpen(null);
             }}
           >
-            <option value="all">Alle Seiten</option>
+            <option value="all">{t("Alle Seiten", "All pages")}</option>
             {report?.options.pages.map((url) => (
               <option key={url} value={url}>
                 {url}
@@ -349,14 +381,14 @@ export function Report({
             ))}
           </select>
           <select
-            aria-label="Gerät filtern"
+            aria-label={t("Gerät filtern", "Filter device")}
             value={device}
             onChange={(e) => {
               setDevice(e.target.value);
               setOpen(null);
             }}
           >
-            <option value="all">Alle Geräte</option>
+            <option value="all">{t("Alle Geräte", "All devices")}</option>
             {report?.options.viewports.map((viewport) => (
               <option key={viewport.id} value={viewport.id}>
                 {viewport.id}
@@ -364,7 +396,7 @@ export function Report({
             ))}
           </select>
           <select
-            aria-label="Maßnahmenstatus filtern"
+            aria-label={t("Maßnahmenstatus filtern", "Filter repair status")}
             value={status}
             onChange={(e) => setStatus(e.target.value)}
           >
@@ -578,7 +610,9 @@ export function Report({
         <section className="panel report-measurements">
           <div className="panel-head">
             <div>
-              <h3>Messungen & Prüfabdeckung</h3>
+              <h3>
+                {t("Messungen & Prüfabdeckung", "Measurements & coverage")}
+              </h3>
               <p>
                 Fehlende Messungen sind unbekannt, nicht bestanden. Die Rohdaten
                 bleiben vom Maßnahmenplan getrennt.
@@ -735,6 +769,8 @@ export function Tasks({
   onChange: () => void | Promise<void>;
   onRetestStarted?: (scan: Scan) => void | Promise<void>;
 }) {
+  const t = useTranslation();
+  const { categoryLabel } = useAuditLabels();
   const readiness = useContext(WorkspaceReadiness);
   const [filter, setFilter] = useState("all");
   const [page, setPage] = useState("all");
@@ -748,7 +784,10 @@ export function Tasks({
     return (
       <Empty
         icon={<FileText size={30} />}
-        title="Dein Maßnahmenplan entsteht nach dem Check."
+        title={t(
+          "Dein Maßnahmenplan entsteht nach dem Check.",
+          "Your repair plan appears after a check.",
+        )}
       >
         <p>
           Aufgaben werden aus tatsächlichen Befunden abgeleitet, nicht aus
@@ -788,7 +827,7 @@ export function Tasks({
           <div className="panel-head">
             <div>
               <p className="eyebrow">VOM BEFUND ZUM NÄCHSTEN SCHRITT</p>
-              <h2>Dein Maßnahmenplan</h2>
+              <h2>{t("Dein Maßnahmenplan", "Your repair plan")}</h2>
               <p>
                 Ähnliche Beobachtungen werden gebündelt. Manuell abgehakt
                 bedeutet „zur Prüfung“, nicht automatisch behoben.
@@ -799,7 +838,7 @@ export function Tasks({
               onClick={() => setExportOpen(true)}
             >
               <Download size={16} />
-              Plan exportieren
+              {t("Plan exportieren", "Export plan")}
             </button>
           </div>
 
@@ -821,7 +860,7 @@ export function Tasks({
               value={page}
               onChange={(e) => setPage(e.target.value)}
             >
-              <option value="all">Alle Seiten</option>
+              <option value="all">{t("Alle Seiten", "All pages")}</option>
               {scan.result.audit?.options.pages.map((url) => (
                 <option key={url} value={url}>
                   {url}
@@ -833,7 +872,7 @@ export function Tasks({
               value={device}
               onChange={(e) => setDevice(e.target.value)}
             >
-              <option value="all">Alle Geräte</option>
+              <option value="all">{t("Alle Geräte", "All devices")}</option>
               {scan.result.audit?.options.viewports.map((viewport) => (
                 <option key={viewport.id} value={viewport.id}>
                   {viewport.id}
@@ -845,7 +884,9 @@ export function Tasks({
               value={category}
               onChange={(e) => setCategory(e.target.value)}
             >
-              <option value="all">Alle Kategorien</option>
+              <option value="all">
+                {t("Alle Kategorien", "All categories")}
+              </option>
               {[...new Set(tasks.map((task) => task.category))].map((item) => (
                 <option key={item} value={item}>
                   {categoryLabel(item)}
@@ -861,7 +902,9 @@ export function Tasks({
           <article key={task.id} className="task-card">
             <div className="task-card-head">
               {task.status === "verified" ? (
-                <span className="pill completed">Verifiziert behoben</span>
+                <span className="pill completed">
+                  {t("Verifiziert behoben", "Verified fixed")}
+                </span>
               ) : (
                 <button
                   className={`task-check ${task.status === "review" ? "checked" : ""}`}
@@ -879,7 +922,9 @@ export function Tasks({
                 </button>
               )}
               {compact && task.status !== "verified" && (
-                <span>Manuell zur Prüfung markieren</span>
+                <span>
+                  {t("Manuell zur Prüfung markieren", "Mark for manual review")}
+                </span>
               )}
               {!compact && (
                 <div>
@@ -906,7 +951,7 @@ export function Tasks({
                     onHandoff ? onHandoff() : setHandoffIds(task.findingIds)
                   }
                 >
-                  Entwickler-Arbeitspaket
+                  {t("Entwickler-Arbeitspaket", "Developer work package")}
                 </button>
                 <p>{task.summary}</p>
                 <p>
@@ -920,7 +965,9 @@ export function Tasks({
             )}
             {compact && (
               <details className="plan-note">
-                <summary>Maßnahme und Abnahmetest</summary>
+                <summary>
+                  {t("Maßnahme und Abnahmetest", "Repair and acceptance test")}
+                </summary>
                 <p>{task.recommendation}</p>
                 <p>{task.acceptance}</p>
               </details>
@@ -996,7 +1043,7 @@ export function Tasks({
                   }}
                 >
                   <ScanLine size={16} />
-                  Diese Maßnahme nachtesten
+                  {t("Diese Maßnahme nachtesten", "Retest this repair")}
                 </button>
               </div>
             )}
@@ -1036,7 +1083,12 @@ export function Tasks({
         ))}
       </div>
       {!visible.length && (
-        <Empty title="Keine Aufgaben in dieser Ansicht.">
+        <Empty
+          title={t(
+            "Keine Aufgaben in dieser Ansicht.",
+            "No tasks in this view.",
+          )}
+        >
           <p>
             Ein Filter oder der geprüfte Umfang kann die Liste einschränken.
           </p>
@@ -1047,7 +1099,7 @@ export function Tasks({
           className="button secondary"
           onClick={() => setExportOpen(true)}
         >
-          Plan exportieren
+          {t("Plan exportieren", "Export plan")}
         </button>
       )}
       {!compact && (
@@ -1071,6 +1123,7 @@ export function Tasks({
   );
 }
 function ExportDialog({ scan, onClose }: { scan: Scan; onClose: () => void }) {
+  const t = useTranslation();
   const readiness = useContext(WorkspaceReadiness);
   const zipBlocked = !!readiness && !readiness.allowed.startExclusive;
   const [preview, setPreview] = useState("");
@@ -1096,7 +1149,10 @@ function ExportDialog({ scan, onClose }: { scan: Scan; onClose: () => void }) {
     };
   }, [scan.id]);
   return (
-    <Dialog title="Ein klarer Plan zum Mitnehmen." onClose={onClose}>
+    <Dialog
+      title={t("Ein klarer Plan zum Mitnehmen.", "Export your plan")}
+      onClose={onClose}
+    >
       <div className="export-dialog">
         <p className="dialog-description">
           Bericht und Maßnahmenplan für dich oder eine andere KI. Prüfe die
@@ -1112,7 +1168,7 @@ function ExportDialog({ scan, onClose }: { scan: Scan; onClose: () => void }) {
           className="export-preview"
           role="region"
           tabIndex={0}
-          aria-label="Markdown Exportvorschau"
+          aria-label={t("Markdown Exportvorschau", "Markdown export preview")}
         >
           {preview || "Vorschau wird geladen …"}
         </pre>
@@ -1122,7 +1178,7 @@ function ExportDialog({ scan, onClose }: { scan: Scan; onClose: () => void }) {
             checked={includeEvidence}
             onChange={(event) => setIncludeEvidence(event.target.checked)}
           />
-          Screenshots ins ZIP aufnehmen
+          {t("Screenshots ins ZIP aufnehmen", "Include screenshots in the ZIP")}
         </label>
         <p className="export-warning">
           Standardmäßig enthält das ZIP nur Bericht und strukturierte Daten.

@@ -1,3 +1,4 @@
+import { useTranslation } from "./language.js";
 import type { Scan, AuditTask } from "../shared/types.js";
 export default function ProjectFlow({
   scan,
@@ -12,6 +13,7 @@ export default function ProjectFlow({
   onNavigate: (tab: "live" | "report" | "tasks" | "compare") => void;
   onConfigure: () => void;
 }) {
+  const t = useTranslation();
   const running =
       !!scan && ["queued", "running", "paused"].includes(scan.status),
     report = scan?.result,
@@ -33,12 +35,19 @@ export default function ProjectFlow({
     <section
       role="region"
       className="panel project-flow"
-      aria-label="Vom Check zum bestätigten Fix"
+      aria-label={t(
+        "Vom Check zum bestätigten Fix",
+        "From check to verified fix",
+      )}
     >
       <div className="panel-head">
         <div>
-          <p className="eyebrow">DEIN NÄCHSTER SINNVOLLER SCHRITT</p>
-          <h3>Vom Check zum bestätigten Fix.</h3>
+          <p className="eyebrow">
+            {t("DEIN NÄCHSTER SINNVOLLER SCHRITT", "YOUR NEXT STEP")}
+          </p>
+          <h3>
+            {t("Vom Check zum bestätigten Fix.", "From check to verified fix.")}
+          </h3>
           <p>{next}</p>
         </div>
         <span className="pill">
@@ -52,9 +61,14 @@ export default function ProjectFlow({
             className="button secondary"
             onClick={() => (running ? onNavigate("live") : onConfigure())}
           >
-            1 · Prüfen
+            {t("1 · Prüfen", "1 · Check")}
           </button>
-          <p>Ausgewählte Seiten und freigegebene Zustände beobachten.</p>
+          <p>
+            {t(
+              "Ausgewählte Seiten und freigegebene Zustände beobachten.",
+              "Observe selected pages and approved states.",
+            )}
+          </p>
         </li>
         <li>
           <button
@@ -62,38 +76,51 @@ export default function ProjectFlow({
             disabled={!report}
             onClick={() => onNavigate("report")}
           >
-            2 · Belegen
-          </button>
-          <p>Messung und Screenshot ansehen; KI bleibt optional.</p>
-        </li>
-        <li>
-          <button
-            className="button secondary"
-            disabled={!report}
-            onClick={() => onNavigate("tasks")}
-          >
-            3 · Bearbeiten
-          </button>
-          <p>Maßnahme oder gezieltes Entwickler-Arbeitspaket nutzen.</p>
-        </li>
-        <li>
-          <button
-            className="button secondary"
-            disabled={!report}
-            onClick={() => onNavigate("tasks")}
-          >
-            4 · Nachtesten
+            {t("2 · Belegen", "2 · Inspect")}
           </button>
           <p>
-            Kompatibles Messergebnis bestätigt den Fix; Abhaken allein genügt
-            nicht.
+            {t(
+              "Messung und Screenshot ansehen; KI bleibt optional.",
+              "Review the measurement and screenshot. AI is optional.",
+            )}
+          </p>
+        </li>
+        <li>
+          <button
+            className="button secondary"
+            disabled={!report}
+            onClick={() => onNavigate("tasks")}
+          >
+            {t("3 · Bearbeiten", "3 · Repair")}
+          </button>
+          <p>
+            {t(
+              "Maßnahme oder gezieltes Entwickler-Arbeitspaket nutzen.",
+              "Use the repair task or a focused developer work package.",
+            )}
+          </p>
+        </li>
+        <li>
+          <button
+            className="button secondary"
+            disabled={!report}
+            onClick={() => onNavigate("tasks")}
+          >
+            {t("4 · Nachtesten", "4 · Retest")}
+          </button>
+          <p>
+            {t(
+              "Kompatibles Messergebnis bestätigt den Fix; Abhaken allein genügt nicht.",
+              "A compatible measurement confirms the fix.",
+            )}
           </p>
         </li>
       </ol>
       <p className="hint">
-        Historische Befunde bleiben dokumentiert. Ein Teillauf ersetzt keinen
-        vollständigen Score, und fehlende Messungen werden nicht als bestanden
-        gezählt.
+        {t(
+          "Historische Befunde bleiben dokumentiert. Ein Teillauf ersetzt keinen vollständigen Score, und fehlende Messungen werden nicht als bestanden gezählt.",
+          "Historical findings stay visible. A scoped retest has no full score, and missing measurements remain unknown.",
+        )}
       </p>
     </section>
   );

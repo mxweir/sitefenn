@@ -1,3 +1,4 @@
+import { useTranslation } from "./language.js";
 import { useEffect, useId, useLayoutEffect, useRef } from "react";
 import type { ReactNode } from "react";
 import { CheckCircle2, CircleAlert, LoaderCircle, X } from "lucide-react";
@@ -104,6 +105,7 @@ export function Dialog({
   onClose: () => void;
   busy?: boolean;
 }) {
+  const t = useTranslation();
   const dialog = useRef<HTMLDivElement>(null);
   const titleId = useId();
   const busyRef = useRef(busy);
@@ -170,7 +172,7 @@ export function Dialog({
       >
         <button
           className="modal-close"
-          aria-label="Dialog schließen"
+          aria-label={t("Dialog schließen", "Close dialog")}
           onClick={onClose}
           disabled={busy}
         >

@@ -2,6 +2,17 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 3.0.0-rc.1 — 2026-11-09
+
+- Added German and English to the core interface, with a saved language choice and matching document language.
+- Verified a workspace migration from the actual 2.0.0 package. The saved report and screenshot checksum match after upgrade.
+- Repeated the 2.0 audit benchmark and measured Lighthouse, one local model request, and backup separately.
+
+[Release checks and open acceptance](docs/RELEASE-3.0.md).
+
+![SiteFenn in German](docs/screenshots/3.0-de.jpg)
+![SiteFenn in English](docs/screenshots/3.0-en.jpg)
+
 ## 2.9.0-rc.1 — 2026-11-09
 
 ### Pilot preparation and keyboard fixes

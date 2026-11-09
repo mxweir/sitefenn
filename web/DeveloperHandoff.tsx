@@ -1,3 +1,4 @@
+import { useTranslation } from "./language.js";
 import { useContext } from "react";
 import { WorkspaceReadiness } from "./workspace-state.js";
 import { useState, type ReactNode } from "react";
@@ -19,6 +20,7 @@ export default function DeveloperHandoff({
   const readiness = useContext(WorkspaceReadiness);
   const findings =
     scan.result?.audit?.findings.filter((f) => findingIds.includes(f.id)) ?? [];
+  const t = useTranslation();
   const [selected, setSelected] = useState(
       findings.slice(0, 20).map((f) => f.id),
     ),
@@ -43,7 +45,10 @@ export default function DeveloperHandoff({
   const Wrapper = inline ? InlineHandoff : Dialog;
   return (
     <Wrapper
-      title="Gezieltes Entwickler-Arbeitspaket"
+      title={t(
+        "Gezieltes Entwickler-Arbeitspaket",
+        "Focused developer work package",
+      )}
       onClose={onClose}
       busy={busy}
     >
@@ -79,14 +84,21 @@ export default function DeveloperHandoff({
           ))}
         </fieldset>
         <details>
-          <summary>Optional: Quellordner nur lesend prüfen</summary>
+          <summary>
+            {t(
+              "Optional: Quellordner nur lesend prüfen",
+              "Optional: inspect source folder read-only",
+            )}
+          </summary>
           <p className="hint">
             Git-Projektstamm, nicht ignorierte HTML/JSX/TSX/Vue/Svelte-Dateien.
             Keine Ausführung von Projektcode. Sensible Dateinamen, versteckte
             Pfade und Symlinks werden ausgeschlossen. Quelltext kann trotzdem
             Geheimnisse enthalten: Vorschau vor Export prüfen.
           </p>
-          <label htmlFor="source-root">Lokaler Git-Quellordner</label>
+          <label htmlFor="source-root">
+            {t("Lokaler Git-Quellordner", "Local Git source folder")}
+          </label>
           <input
             id="source-root"
             value={root}
@@ -135,7 +147,7 @@ export default function DeveloperHandoff({
               })
             }
           >
-            Quelltreffer lokal anzeigen
+            {t("Quelltreffer lokal anzeigen", "Show local source matches")}
           </button>
           {preview && (
             <>
@@ -215,7 +227,9 @@ export default function DeveloperHandoff({
             })
           }
         >
-          {busy ? "Prüfe …" : "Arbeitspaket als Vorschau erstellen"}
+          {busy
+            ? t("Prüfe …", "Checking…")
+            : t("Arbeitspaket als Vorschau erstellen", "Preview work package")}
         </button>
         {markdown && (
           <>
@@ -228,7 +242,7 @@ export default function DeveloperHandoff({
               className="export-preview"
               role="region"
               tabIndex={0}
-              aria-label="Arbeitspaket Vorschau"
+              aria-label={t("Arbeitspaket Vorschau", "Work package preview")}
             >
               {markdown}
             </pre>
@@ -237,7 +251,7 @@ export default function DeveloperHandoff({
               href={`data:text/markdown;charset=utf-8,${encodeURIComponent(markdown)}`}
               download="sitefenn-work-package.md"
             >
-              Markdown herunterladen
+              {t("Markdown herunterladen", "Download Markdown")}
             </a>
           </>
         )}
@@ -256,12 +270,13 @@ function InlineHandoff({
   onClose: () => void;
   busy?: boolean;
 }) {
+  const t = useTranslation();
   return (
     <section className="panel inline-handoff">
       <div className="panel-head">
         <h3>{title}</h3>
         <button className="text-button" onClick={onClose}>
-          Zum Nachweis
+          {t("Zum Nachweis", "Back to evidence")}
         </button>
       </div>
       {children}

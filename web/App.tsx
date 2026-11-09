@@ -1,3 +1,4 @@
+import { useTranslation, LanguageSwitch } from "./language.js";
 import FixLab from "./FixLab.js";
 import { WorkspaceReadiness, useWorkspaceRoute } from "./workspace-state.js";
 import type { WorkspaceTab } from "../shared/workspace-route.js";
@@ -41,7 +42,7 @@ import type {
   Scan,
   ScoreSummary,
 } from "../shared/types.js";
-import { active, api, message, post, stamp, statusLabel } from "./api.js";
+import { active, api, message, post, useAuditLabels } from "./api.js";
 import { Busy, FennMark, Notice } from "./ui.js";
 import ProjectModal from "./ProjectModal.js";
 import ScanConfig from "./ScanConfig.js";
@@ -82,19 +83,37 @@ const empty: Bootstrap = {
   tasks: [],
   scores: {},
 };
-const tabs = [
-  { id: "overview", label: "Übersicht", icon: LayoutDashboard },
-  { id: "live", label: "On-Screen-Check", icon: Radio },
-  { id: "report", label: "Befunde", icon: FileText },
-  { id: "seo", label: "SEO-Kontext", icon: Globe2 },
-  { id: "states", label: "Seitenzustände", icon: ScanLine },
-  { id: "analysis", label: "Seite erklären", icon: FileText },
-  { id: "tasks", label: "Maßnahmenplan", icon: CheckSquare2 },
-  { id: "compare", label: "Vergleich", icon: ArrowLeftRight },
-  { id: "search", label: "Sichtbarkeit", icon: Search },
-] as const;
-
 export default function App() {
+  const t = useTranslation();
+  const { statusLabel, stamp } = useAuditLabels();
+  const tabs = [
+    {
+      id: "overview",
+      label: t("Übersicht", "Overview"),
+      icon: LayoutDashboard,
+    },
+    { id: "live", label: "On-Screen-Check", icon: Radio },
+    { id: "report", label: t("Befunde", "Findings"), icon: FileText },
+    { id: "seo", label: t("SEO-Kontext", "SEO context"), icon: Globe2 },
+    { id: "states", label: t("Seitenzustände", "Page states"), icon: ScanLine },
+    {
+      id: "analysis",
+      label: t("Seite erklären", "Explain page"),
+      icon: FileText,
+    },
+    {
+      id: "tasks",
+      label: t("Maßnahmenplan", "Repair plan"),
+      icon: CheckSquare2,
+    },
+    { id: "compare", label: t("Vergleich", "Compare"), icon: ArrowLeftRight },
+    {
+      id: "search",
+      label: t("Sichtbarkeit", "Search visibility"),
+      icon: Search,
+    },
+  ] as const;
+
   const [searchPages, setSearchPages] = useState<{
     projectId: string;
     pages: string[];
@@ -289,13 +308,13 @@ export default function App() {
     <WorkspaceReadiness.Provider value={data.readiness}>
       <div className="app-shell">
         <a className="skip-link" href="#main">
-          Zum Inhalt springen
+          {t("Zum Inhalt springen", "Skip to content")}
         </a>
         <aside className="sidebar">
           <a
             className="brand"
             href="#"
-            aria-label="SiteFenn Startseite"
+            aria-label={t("SiteFenn Startseite", "SiteFenn home")}
             onClick={(e) => {
               e.preventDefault();
               setScreen("projects");
@@ -306,7 +325,10 @@ export default function App() {
               <FennMark />
             </span>
             <span className="brand-name">
-              SiteFenn<small>DEIN WEBSITE-BEGLEITER</small>
+              SiteFenn
+              <small>
+                {t("DEIN WEBSITE-BEGLEITER", "YOUR WEBSITE COMPANION")}
+              </small>
             </span>
           </a>
           <div className="workspace">
@@ -314,12 +336,15 @@ export default function App() {
               <FolderOpen size={18} />
             </span>
             <div>
-              Mein Workspace<small>Lokal auf diesem Gerät</small>
+              {t("Mein Workspace", "My workspace")}
+              <small>
+                {t("Lokal auf diesem Gerät", "Local on this device")}
+              </small>
             </div>
             <ShieldCheck size={16} />
           </div>
           <span className="nav-label">WORKSPACE</span>
-          <nav aria-label="Hauptnavigation">
+          <nav aria-label={t("Hauptnavigation", "Main navigation")}>
             <button
               className={`nav-item ${screen === "projects" && tab === "overview" ? "selected" : ""}`}
               onClick={() => {
@@ -340,7 +365,7 @@ export default function App() {
                   }}
                 >
                   <Activity size={18} />
-                  Prüfen
+                  {t("Prüfen", "Check")}
                 </button>
                 <button
                   className={`nav-item ${screen === "projects" && tab === "tasks" ? "selected" : ""}`}
@@ -350,7 +375,7 @@ export default function App() {
                   }}
                 >
                   <CheckSquare2 size={18} />
-                  Arbeiten
+                  {t("Arbeiten", "Repair")}
                 </button>
                 <button
                   className={`nav-item ${screen === "projects" && ["history", "compare", "search"].includes(tab) ? "selected" : ""}`}
@@ -360,7 +385,7 @@ export default function App() {
                   }}
                 >
                   <Search size={18} />
-                  Verlauf
+                  {t("Verlauf", "History")}
                 </button>
               </>
             )}
@@ -374,7 +399,9 @@ export default function App() {
             </button>
           </nav>
           <div className="sidebar-projects">
-            <span className="nav-label">DEINE PROJEKTE</span>
+            <span className="nav-label">
+              {t("DEINE PROJEKTE", "YOUR PROJECTS")}
+            </span>
             {data.projects.map((p) => (
               <button
                 className={`project-nav ${project?.id === p.id && screen === "projects" ? "current" : ""}`}
@@ -387,9 +414,9 @@ export default function App() {
             ))}
             {!data.projects.length && (
               <p className="sidebar-empty">
-                Ein klarer Blick beginnt
+                {t("Ein klarer Blick beginnt", "Start with")}
                 <br />
-                mit deiner ersten Website.
+                {t("mit deiner ersten Website.", "your first website.")}
               </p>
             )}
           </div>
@@ -397,7 +424,10 @@ export default function App() {
             <div className="local-note">
               <span className="online-dot" />
               <span>
-                Lokaler Workspace<small>Keine Cloud-KI erforderlich</small>
+                {t("Lokaler Workspace", "Local workspace")}
+                <small>
+                  {t("Keine Cloud-KI erforderlich", "No cloud AI needed")}
+                </small>
               </span>
             </div>
             <div className="version">
@@ -412,6 +442,7 @@ export default function App() {
               <ChevronRight size={13} />
               <span>{screen === "system" ? "System & Setup" : "Websites"}</span>
             </div>
+            <LanguageSwitch />
             <span className="local-badge">
               <span className="online-dot" />
               LOCAL-FIRST <span className="beta-tag">{data.version}</span>
@@ -424,13 +455,33 @@ export default function App() {
                 role="status"
               >
                 <span className="online-dot" />
-                {data.readiness.message}
+                {data.readiness.phase === "ready"
+                  ? t(
+                      "Bereit für die nächste Aktion",
+                      "Ready for the next action",
+                    )
+                  : data.readiness.phase === "cleaning-up"
+                    ? t(
+                        data.readiness.message,
+                        "Results saved · browser shutting down",
+                      )
+                    : data.readiness.phase === "queued"
+                      ? t(data.readiness.message, "Check queued")
+                      : data.readiness.phase === "operation"
+                        ? t(
+                            data.readiness.message,
+                            `Workspace busy · ${data.readiness.operation}`,
+                          )
+                        : t(
+                            data.readiness.message,
+                            "Check running · saving results",
+                          )}
                 {screen !== "system" && (
                   <button
                     className="button secondary"
                     onClick={() => setScreen("system")}
                   >
-                    Aufträge öffnen
+                    {t("Aufträge öffnen", "Open jobs")}
                   </button>
                 )}
               </div>
@@ -484,11 +535,23 @@ export default function App() {
                   tab === "overview" ? (
                     <section className="workspace-heading">
                       <div>
-                        <p className="eyebrow">DEIN WEBSITE-WORKSPACE</p>
-                        <h1>DEINE SITE. KLARER BLICK.</h1>
+                        <p className="eyebrow">
+                          {t(
+                            "DEIN WEBSITE-WORKSPACE",
+                            "YOUR WEBSITE WORKSPACE",
+                          )}
+                        </p>
+                        <h1>
+                          {t(
+                            "DEINE SITE. KLARER BLICK.",
+                            "YOUR SITE. A CLEAR VIEW.",
+                          )}
+                        </h1>
                         <p>
-                          Echte Belege. Konkrete nächste Schritte. Und ein
-                          Vergleich, der Veränderungen sichtbar macht.
+                          {t(
+                            "Echte Belege. Konkrete nächste Schritte. Und ein Vergleich, der Veränderungen sichtbar macht.",
+                            "Real evidence, clear next steps, and comparisons that show what changed.",
+                          )}
                         </p>
                       </div>
                       <div className="workspace-actions">
@@ -499,8 +562,8 @@ export default function App() {
                         >
                           <FlaskConical size={16} />
                           {busy === "demo"
-                            ? "Demo wird gestartet …"
-                            : "Demo laden"}
+                            ? t("Demo wird gestartet …", "Starting demo…")
+                            : t("Demo laden", "Load demo")}
                         </button>
                         <button
                           ref={addButton}
@@ -508,7 +571,7 @@ export default function App() {
                           onClick={() => setModal(true)}
                         >
                           <Plus size={17} />
-                          Website hinzufügen
+                          {t("Website hinzufügen", "Add website")}
                         </button>
                       </div>
                     </section>
@@ -517,18 +580,26 @@ export default function App() {
                   <section className="page-heading poster-heading">
                     <div className="hero-copy">
                       <p className="eyebrow">
-                        LOKAL. AUFMERKSAM. AUF DEINER SEITE.
+                        {t(
+                          "LOKAL. AUFMERKSAM. AUF DEINER SEITE.",
+                          "LOCAL WEBSITE AUDITS",
+                        )}
                       </p>
                       <h1>
-                        DEINE SITE.
+                        {t("DEINE SITE.", "YOUR SITE.")}
                         <br />
-                        <span>KLARER BLICK.</span>
+                        <span>{t("KLARER BLICK.", "A CLEAR VIEW.")}</span>
                       </h1>
                       <p className="subtitle">
-                        Weniger Rätselraten. Mehr Aha.
+                        {t(
+                          "Weniger Rätselraten. Mehr Aha.",
+                          "See what needs attention.",
+                        )}
                         <br />
-                        Prüfe deine Websites, verstehe Befunde und arbeite einen
-                        klaren Plan ab.
+                        {t(
+                          "Prüfe deine Websites, verstehe Befunde und arbeite einen klaren Plan ab.",
+                          "Audit your websites, understand findings, and work through a clear plan.",
+                        )}
                       </p>
                       <div className="hero-actions">
                         <button
@@ -537,15 +608,20 @@ export default function App() {
                           onClick={() => setModal(true)}
                         >
                           <Plus size={18} />
-                          Website hinzufügen
+                          {t("Website hinzufügen", "Add website")}
                         </button>
                         <span className="hero-caption">
-                          DEIN PRIVATER WEBSITE-WORKSPACE
+                          {t(
+                            "DEIN PRIVATER WEBSITE-WORKSPACE",
+                            "YOUR PRIVATE WEBSITE WORKSPACE",
+                          )}
                         </span>
                       </div>
                     </div>
                     <div className="hero-character">
-                      <span className="character-stamp">HI, ICH BIN FENN.</span>
+                      <span className="character-stamp">
+                        {t("HI, ICH BIN FENN.", "HI, I’M FENN.")}
+                      </span>
                       <img
                         src="/brand/fenn-flat-v2.png"
                         alt="Fenn, der aufmerksame Wüstenfuchs von SiteFenn"
@@ -554,21 +630,35 @@ export default function App() {
                         fetchPriority="high"
                       />
                       <span className="character-caption">
-                        KLEINER FUCHS. GENAUER BLICK.
+                        {t(
+                          "KLEINER FUCHS. GENAUER BLICK.",
+                          "A FOX WITH AN EYE FOR DETAIL.",
+                        )}
                       </span>
                     </div>
                   </section>
                 )}
                 {loading ? (
-                  <Busy label="Workspace wird geladen …" />
+                  <Busy
+                    label={t("Workspace wird geladen …", "Loading workspace…")}
+                  />
                 ) : !data.projects.length ? (
                   <section className="empty-card">
                     <Monitor size={40} />
-                    <p className="eyebrow">ERST MAL SICHER AUSPROBIEREN</p>
-                    <h2>Dein erster Check. Ohne Rätselraten.</h2>
+                    <p className="eyebrow">
+                      {t("ERST MAL SICHER AUSPROBIEREN", "TRY THE LOCAL DEMO")}
+                    </p>
+                    <h2>
+                      {t(
+                        "Dein erster Check. Ohne Rätselraten.",
+                        "Run your first check.",
+                      )}
+                    </h2>
                     <p>
-                      Unsere lokale Demo enthält absichtliche Fehler. Beobachte
-                      die Prüfung in drei Ansichten und entdecke den Bericht.
+                      {t(
+                        "Unsere lokale Demo enthält absichtliche Fehler. Beobachte die Prüfung in drei Ansichten und entdecke den Bericht.",
+                        "The local demo has deliberate issues. Watch the check in three viewports and explore the report.",
+                      )}
                     </p>
                     <div className="button-row">
                       <button
@@ -581,11 +671,14 @@ export default function App() {
                         ) : (
                           <FlaskConical size={17} />
                         )}
-                        Demo ausprobieren
+                        {t("Demo ausprobieren", "Try the demo")}
                       </button>
                     </div>
                     <small>
-                      Kein externes Ziel und kein KI-Modell erforderlich.
+                      {t(
+                        "Kein externes Ziel und kein KI-Modell erforderlich.",
+                        "Runs locally without an AI model.",
+                      )}
                     </small>
                   </section>
                 ) : (
@@ -593,7 +686,7 @@ export default function App() {
                     {tab === "overview" && (
                       <section
                         className="project-grid workspace-project-grid"
-                        aria-label="Deine Websites"
+                        aria-label={t("Deine Websites", "Your websites")}
                       >
                         {data.projects.map((p) => {
                           const latest = data.scans
@@ -656,7 +749,10 @@ export default function App() {
                       <section
                         ref={projectHeading}
                         className="workspace-project"
-                        aria-label="Ausgewähltes Projekt"
+                        aria-label={t(
+                          "Ausgewähltes Projekt",
+                          "Selected project",
+                        )}
                       >
                         <div className="project-context">
                           <span className="website-icon">
@@ -676,7 +772,10 @@ export default function App() {
                           </div>
                           {scans.length > 0 && (
                             <select
-                              aria-label="Prüfung auswählen"
+                              aria-label={t(
+                                "Prüfung auswählen",
+                                "Select check",
+                              )}
                               value={selectedScan?.id ?? ""}
                               onChange={(e) => {
                                 setScanId(e.target.value);
@@ -731,7 +830,10 @@ export default function App() {
                                 ) : (
                                   <Activity size={15} />
                                 )}
-                                Gleichen Check wiederholen
+                                {t(
+                                  "Gleichen Check wiederholen",
+                                  "Repeat the same check",
+                                )}
                               </button>
                             )}
                         </div>
@@ -766,22 +868,30 @@ export default function App() {
                         )}
                         <nav
                           className="workspace-tabs primary-tabs"
-                          aria-label="Projektbereiche"
+                          aria-label={t("Projektbereiche", "Project sections")}
                         >
                           {(
                             [
                               {
                                 id: "overview",
-                                label: "Übersicht",
+                                label: t("Übersicht", "Overview"),
                                 icon: LayoutDashboard,
                               },
-                              { id: "live", label: "Prüfen", icon: Radio },
+                              {
+                                id: "live",
+                                label: t("Prüfen", "Check"),
+                                icon: Radio,
+                              },
                               {
                                 id: "tasks",
-                                label: "Arbeiten",
+                                label: t("Arbeiten", "Repair"),
                                 icon: CheckSquare2,
                               },
-                              { id: "history", label: "Verlauf", icon: Clock3 },
+                              {
+                                id: "history",
+                                label: t("Verlauf", "History"),
+                                icon: Clock3,
+                              },
                             ] as const
                           ).map((item) => (
                             <button
@@ -807,7 +917,7 @@ export default function App() {
                         </nav>
                         <nav
                           className="workspace-subnav"
-                          aria-label="Kontextansichten"
+                          aria-label={t("Kontextansichten", "Related views")}
                         >
                           {tabs
                             .filter((item) =>
@@ -862,7 +972,10 @@ export default function App() {
                             />
                             <section
                               className="stats-grid"
-                              aria-label="Projektübersicht"
+                              aria-label={t(
+                                "Projektübersicht",
+                                "Project overview",
+                              )}
                             >
                               <Stat
                                 icon={<Globe2 size={18} />}
@@ -932,7 +1045,7 @@ export default function App() {
                                 <ScoreCard score={score} />
                                 <section className="panel">
                                   <div className="panel-head">
-                                    <h3>Prüfverlauf</h3>
+                                    <h3>{t("Prüfverlauf", "Check history")}</h3>
                                     <Clock3 size={18} />
                                   </div>
                                   <div className="hub-history">
@@ -1002,7 +1115,10 @@ export default function App() {
                                   className="button primary"
                                   onClick={() => setTab("report")}
                                 >
-                                  Zum vollständigen Bericht
+                                  {t(
+                                    "Zum vollständigen Bericht",
+                                    "Open the full report",
+                                  )}
                                   <ArrowRight size={16} />
                                 </button>
                               </div>
@@ -1133,12 +1249,20 @@ export default function App() {
                 )}
               </>
             )}
-            <aside className="fenn-dock" aria-label="Fenn Assistent">
+            <aside
+              className="fenn-dock"
+              aria-label={t("Fenn Assistent", "Fenn assistant")}
+            >
               <FennMark />
               <div>
-                <strong>Fenn bleibt an deiner Seite.</strong>
+                <strong>
+                  {t("Fenn bleibt an deiner Seite.", "Fenn can help.")}
+                </strong>
                 <p>
-                  Messfakten und ungeprüfte Lösungsvorschläge bleiben getrennt.
+                  {t(
+                    "Messfakten und ungeprüfte Lösungsvorschläge bleiben getrennt.",
+                    "Measurements and unverified suggestions are shown separately.",
+                  )}
                 </p>
               </div>
               <button
@@ -1146,13 +1270,13 @@ export default function App() {
                 disabled={!selectedScan?.result}
                 onClick={() => explain()}
               >
-                Fenn öffnen
+                {t("Fenn öffnen", "Open Fenn")}
               </button>
             </aside>
             <footer className="main-footer">
               <span>
                 <ShieldCheck size={13} />
-                Belege statt Bauchgefühl.
+                {t("Belege statt Bauchgefühl.", "Follow the evidence.")}
               </span>
               <span>SiteFenn · v{data.version} · lokaler Workspace</span>
             </footer>

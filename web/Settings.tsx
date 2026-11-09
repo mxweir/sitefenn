@@ -1,3 +1,4 @@
+import { useTranslation } from "./language.js";
 import { WorkspaceReadiness } from "./workspace-state.js";
 import type { Readiness } from "../shared/readiness.js";
 import Jobs from "./Jobs.js";
@@ -33,6 +34,7 @@ export default function Settings({
   onSaved: () => void | Promise<void>;
   onRefresh: () => void | Promise<void>;
 }) {
+  const t = useTranslation();
   const readiness = useContext(WorkspaceReadiness);
   const [models, setModels] = useState<string[]>([]);
   const [available, setAvailable] = useState(false);
@@ -67,8 +69,10 @@ export default function Settings({
     <>
       <section className="workspace-heading">
         <div>
-          <p className="eyebrow">LOKAL HEISST: DU HAST DIE KONTROLLE.</p>
-          <h1>Ein gesundes Setup.</h1>
+          <p className="eyebrow">
+            {t("LOKAL HEISST: DU HAST DIE KONTROLLE.", "LOCAL WORKSPACE")}
+          </p>
+          <h1>{t("Ein gesundes Setup.", "System health")}</h1>
           <p>
             Regelbasierte Prüfungen brauchen keine KI. Fenn nutzt nur ein von
             dir ausgewähltes lokales Modell.
@@ -76,19 +80,24 @@ export default function Settings({
         </div>
         <button className="button secondary" onClick={() => void onRefresh()}>
           <RefreshCw size={16} />
-          Status aktualisieren
+          {t("Status aktualisieren", "Refresh status")}
         </button>
       </section>
       <section
         className="panel setup-checklist"
-        aria-label="Start und Einrichtung"
+        aria-label={t("Start und Einrichtung", "Startup and setup")}
       >
         <div className="panel-head">
           <div>
-            <p className="eyebrow">LOKALER STARTCHECK</p>
-            <h2>Start und Einrichtung</h2>
+            <p className="eyebrow">
+              {t("LOKALER STARTCHECK", "LOCAL STARTUP CHECK")}
+            </p>
+            <h2>{t("Start und Einrichtung", "Startup and setup")}</h2>
             <p>
-              Node.js und Chromium bilden die Basis. Ein Modell ist optional.
+              {t(
+                "Node.js und Chromium bilden die Basis. Ein Modell ist optional.",
+                "Node.js and Chromium are required. A model is optional.",
+              )}
             </p>
           </div>
           <ShieldCheck size={23} />
@@ -110,9 +119,9 @@ export default function Settings({
                   <h3>{dep.label}</h3>
                   <span className={`dependency-state ${dep.status}`}>
                     {dep.status === "ready"
-                      ? "Bereit"
+                      ? t("Bereit", "Ready")
                       : dep.status === "missing"
-                        ? "Fehlt"
+                        ? t("Fehlt", "Missing")
                         : "Optional"}
                   </span>
                 </div>
@@ -127,7 +136,9 @@ export default function Settings({
           ))}
         </div>
         <details className="plan-note">
-          <summary>Starthilfe und Reparatur</summary>
+          <summary>
+            {t("Starthilfe und Reparatur", "Startup and repair help")}
+          </summary>
           <ol>
             <li>
               Bei fehlendem oder beschädigtem Build im SiteFenn-Ordner{" "}
@@ -151,10 +162,15 @@ export default function Settings({
       <div className="settings-grid">
         <section
           className="panel workspace-form"
-          aria-label="Prüfqualität und Referenzbasis"
+          aria-label={t(
+            "Prüfqualität und Referenzbasis",
+            "Check quality and baseline",
+          )}
         >
           <div className="panel-head">
-            <h2>Prüfqualität & Referenzbasis</h2>
+            <h2>
+              {t("Prüfqualität & Referenzbasis", "Check quality & baseline")}
+            </h2>
             <ShieldCheck size={23} />
           </div>
           <span className="pill confirmed">
@@ -198,7 +214,7 @@ export default function Settings({
         </section>
         <section className="panel workspace-form">
           <div className="panel-head">
-            <h2>Fenn & lokale KI</h2>
+            <h2>{t("Fenn & lokale KI", "Fenn & local AI")}</h2>
             <Sparkles size={23} />
           </div>
           <span className={`pill ${available ? "confirmed" : "candidate"}`}>
@@ -209,7 +225,9 @@ export default function Settings({
             quantisiertes Modell; Browser und Modellkontext benötigen zusätzlich
             Arbeitsspeicher.
           </p>
-          <label htmlFor="local-model">Installiertes Modell</label>
+          <label htmlFor="local-model">
+            {t("Installiertes Modell", "Installed model")}
+          </label>
           <select
             id="local-model"
             value={model}
@@ -281,7 +299,7 @@ export default function Settings({
               }
             }}
           >
-            Einstellungen speichern
+            {t("Einstellungen speichern", "Save settings")}
           </button>
           <p className="hint">
             KI-Erklärungen sind Empfehlungen. Website-Inhalte werden als nicht
@@ -290,7 +308,9 @@ export default function Settings({
         </section>
         <section className="panel">
           <div className="panel-head">
-            <h2>Deine Daten mitnehmen</h2>
+            <h2>
+              {t("Deine Daten mitnehmen", "Export and restore your data")}
+            </h2>
             <ShieldCheck size={22} />
           </div>
           <p className="hint">
@@ -327,7 +347,9 @@ export default function Settings({
             Benutzerkonto und die Hub-Dateien zugreifen kann, kann
             möglicherweise auch Berichte lesen.
           </p>
-          <h3 className="settings-subtitle">Grenzen bewusst kennen</h3>
+          <h3 className="settings-subtitle">
+            {t("Grenzen bewusst kennen", "Understand the limits")}
+          </h3>
           <p className="hint">
             Chromium-Emulation ersetzt keine echten Geräte. Automatische
             Accessibility-Prüfungen sind keine vollständige WCAG-Zertifizierung.

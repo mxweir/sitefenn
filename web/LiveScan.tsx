@@ -1,3 +1,4 @@
+import { useTranslation } from "./language.js";
 import { useEffect, useState } from "react";
 import {
   CircleAlert,
@@ -14,7 +15,7 @@ import type {
   Scan,
   ScanProgress,
 } from "../shared/types.js";
-import { active, api, message, post, stamp, statusLabel } from "./api.js";
+import { active, api, message, post, stamp, useAuditLabels } from "./api.js";
 import { Empty, Notice } from "./ui.js";
 
 type LiveState = {
@@ -29,6 +30,8 @@ export default function LiveScan({
   scan?: Scan;
   onChange: () => void | Promise<void>;
 }) {
+  const t = useTranslation();
+  const { statusLabel } = useAuditLabels();
   const [live, setLive] = useState<LiveState>({
     frame: null,
     progress: null,
@@ -68,7 +71,10 @@ export default function LiveScan({
     return (
       <Empty
         icon={<ScanLine size={35} />}
-        title="Noch kein Scan zum Beobachten."
+        title={t(
+          "Noch kein Scan zum Beobachten.",
+          "There is no check to watch yet.",
+        )}
       >
         <p>Starte in der Übersicht einen On-Screen-Check.</p>
       </Empty>
@@ -97,7 +103,11 @@ export default function LiveScan({
         <div className="panel-head">
           <div>
             <p className="eyebrow">BEOBACHTEN, NICHT FERNSTEUERN</p>
-            <h2>{isActive ? "On-Screen-Check" : "Gespeicherte Nachweise"}</h2>
+            <h2>
+              {isActive
+                ? "On-Screen-Check"
+                : t("Gespeicherte Nachweise", "Saved evidence")}
+            </h2>
           </div>
           <span className={`pill ${scan.status}`}>
             {statusLabel(scan.status)}
@@ -160,7 +170,9 @@ export default function LiveScan({
               ) : (
                 <Pause size={15} />
               )}{" "}
-              {scan.status === "paused" ? "Fortsetzen" : "Pausieren"}
+              {scan.status === "paused"
+                ? t("Fortsetzen", "Resume")
+                : t("Pausieren", "Pause")}
             </button>
             <button
               className="button secondary"
@@ -168,7 +180,7 @@ export default function LiveScan({
               onClick={() => void control("cancel")}
             >
               <Square size={14} />
-              Abbrechen
+              {t("Abbrechen", "Cancel")}
             </button>
           </div>
         )}
@@ -209,7 +221,7 @@ export default function LiveScan({
       </section>
       <aside className="panel">
         <div className="panel-head">
-          <h3>Was gerade passiert</h3>
+          <h3>{t("Was gerade passiert", "Current activity")}</h3>
           <ScanLine size={18} />
         </div>
         {progress && (

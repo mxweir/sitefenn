@@ -1,7 +1,10 @@
+import { useTranslation } from "./language.js";
 import type { ScoreSummary } from "../shared/types.js";
-import { categoryLabel } from "./api.js";
+import { useAuditLabels } from "./api.js";
 
 export default function ScoreCard({ score }: { score?: ScoreSummary }) {
+  const t = useTranslation();
+  const { categoryLabel } = useAuditLabels();
   if (!score)
     return (
       <div className="panel">
@@ -29,14 +32,17 @@ export default function ScoreCard({ score }: { score?: ScoreSummary }) {
         <div>
           <span className="eyebrow">
             {score.scope === "partial"
-              ? "TEILNACHTEST · KEIN PROJEKT-SCORE"
+              ? t("TEILNACHTEST · KEIN PROJEKT-SCORE", "SCOPED RETEST")
               : "AUDIT-SCORE"}{" "}
             · {score.version}
           </span>
           <h3>
             {score.final
-              ? "Für den geprüften Umfang"
-              : "Vorläufig · fehlende Prüfungen bleiben unbekannt"}
+              ? t("Für den geprüften Umfang", "For the checked scope")
+              : t(
+                  "Vorläufig · fehlende Prüfungen bleiben unbekannt",
+                  "Provisional · missing checks remain unknown",
+                )}
           </h3>
           <p>
             {coverage} % Prüfgewicht ausgewertet. Kein Google-Rang, keine
@@ -47,7 +53,7 @@ export default function ScoreCard({ score }: { score?: ScoreSummary }) {
       <div
         className="score-progress"
         role="progressbar"
-        aria-label="Prüfabdeckung"
+        aria-label={t("Prüfabdeckung", "Check coverage")}
         aria-valuenow={coverage}
         aria-valuemin={0}
         aria-valuemax={100}
@@ -90,7 +96,7 @@ export default function ScoreCard({ score }: { score?: ScoreSummary }) {
       )}
       {score.warnings.length > 0 && (
         <details className="plan-note">
-          <summary>Grenzen dieser Bewertung</summary>
+          <summary>{t("Grenzen dieser Bewertung", "Scoring limits")}</summary>
           {score.warnings.map((warning, index) => (
             <p key={index}>{warning}</p>
           ))}

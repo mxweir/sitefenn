@@ -1,3 +1,4 @@
+import { useTranslation } from "./language.js";
 import { useLayoutEffect, useRef, useState } from "react";
 import { Globe2, LoaderCircle, Plus } from "lucide-react";
 import type { Project } from "../shared/types.js";
@@ -11,6 +12,7 @@ export default function ProjectModal({
   onClose: () => void;
   onCreated: (project: Project) => void | Promise<void>;
 }) {
+  const t = useTranslation();
   const [name, setName] = useState("");
   const [url, setUrl] = useState("");
   const [environment, setEnvironment] = useState("production");
@@ -25,12 +27,19 @@ export default function ProjectModal({
     if (error && !saving) nameRef.current?.focus();
   }, [error, saving]);
   return (
-    <Dialog title="Deine Website hinzufügen." onClose={onClose} busy={saving}>
+    <Dialog
+      title={t("Deine Website hinzufügen.", "Add your website")}
+      onClose={onClose}
+      busy={saving}
+    >
       <span className="modal-project-icon">
         <Globe2 size={26} />
       </span>
       <p className="dialog-description">
-        Ein fester Platz für deine Prüfungen, Belege und nächsten Schritte.
+        {t(
+          "Ein fester Platz für deine Prüfungen, Belege und nächsten Schritte.",
+          "Keep your checks, evidence, and next steps together.",
+        )}
       </p>
       <form
         onSubmit={async (e) => {
@@ -52,7 +61,7 @@ export default function ProjectModal({
           }
         }}
       >
-        <label htmlFor="project-name">Projektname</label>
+        <label htmlFor="project-name">{t("Projektname", "Project name")}</label>
         <input
           id="project-name"
           ref={nameRef}
@@ -60,11 +69,11 @@ export default function ProjectModal({
           onChange={(e) => setName(e.target.value)}
           required
           maxLength={80}
-          placeholder="z. B. Mein Portfolio"
+          placeholder={t("z. B. Mein Portfolio", "e.g. My portfolio")}
           autoComplete="off"
           disabled={saving}
         />
-        <label htmlFor="project-url">Website-URL</label>
+        <label htmlFor="project-url">{t("Website-URL", "Website URL")}</label>
         <input
           id="project-url"
           type="url"
@@ -76,23 +85,25 @@ export default function ProjectModal({
           aria-describedby="url-hint"
         />
         <p id="url-hint" className="field-hint">
-          Eigene oder ausdrücklich freigegebene, vertrauenswürdige Websites über
-          HTTP/HTTPS. Öffentliche Ziele nur auf Port 80/443. „Lokale
-          Entwicklung“ erlaubt ausschließlich den ausdrücklich gewählten
-          Ursprung, keinen automatischen Scan privater Netze oder Zugriff auf
-          Cloud-Metadaten.
+          {t(
+            "Eigene oder ausdrücklich freigegebene, vertrauenswürdige Websites über HTTP/HTTPS. Öffentliche Ziele nur auf Port 80/443. „Lokale Entwicklung“ erlaubt ausschließlich den ausdrücklich gewählten Ursprung, keinen automatischen Scan privater Netze oder Zugriff auf Cloud-Metadaten.",
+            "Use trusted websites you own or have explicit permission to check over HTTP or HTTPS. Public targets use ports 80 and 443. Local development allows only the selected origin.",
+          )}
         </p>
-        <label htmlFor="environment">Umgebung</label>
+        <label htmlFor="environment">{t("Umgebung", "Environment")}</label>
         <select
           id="environment"
           value={environment}
           onChange={(e) => setEnvironment(e.target.value)}
           disabled={saving}
         >
-          <option value="production">Produktion</option>
+          <option value="production">{t("Produktion", "Production")}</option>
           <option value="staging">Staging</option>
           <option value="local">
-            Lokale Entwicklung · exakt diesen Ursprung freigeben
+            {t(
+              "Lokale Entwicklung · exakt diesen Ursprung freigeben",
+              "Local development · allow this exact origin",
+            )}
           </option>
         </select>
         <label className="consent-row">
@@ -104,8 +115,10 @@ export default function ProjectModal({
             disabled={saving}
           />
           <span>
-            Ich verwalte diese vertrauenswürdige Website oder bin ausdrücklich
-            berechtigt, sie automatisiert zu prüfen.
+            {t(
+              "Ich verwalte diese vertrauenswürdige Website oder bin ausdrücklich berechtigt, sie automatisiert zu prüfen.",
+              "I manage this trusted website or have explicit permission to run automated checks on it.",
+            )}
           </span>
         </label>
         {error && (
@@ -120,7 +133,7 @@ export default function ProjectModal({
             onClick={onClose}
             disabled={saving}
           >
-            Abbrechen
+            {t("Abbrechen", "Cancel")}
           </button>
           <button
             className="button primary"
@@ -132,7 +145,7 @@ export default function ProjectModal({
             ) : (
               <Plus size={16} />
             )}
-            Projekt erstellen
+            {t("Projekt erstellen", "Create project")}
           </button>
         </div>
       </form>

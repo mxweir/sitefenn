@@ -1,3 +1,4 @@
+import { useTranslation } from "./language.js";
 import { useEffect, useRef, useState } from "react";
 import type { AuditTask, Scan, HubSettings } from "../shared/types.js";
 import type { CursorPage } from "../shared/workspace.js";
@@ -36,6 +37,7 @@ export default function FixWorkspace({
   onChange: () => void | Promise<void>;
   onRetestStarted: (scan: Scan) => void | Promise<void>;
 }) {
+  const t = useTranslation();
   const [filters, setFilters] = useProjectDraft(
     scan?.projectId ?? "none",
     "work",
@@ -152,21 +154,47 @@ export default function FixWorkspace({
   };
   if (!scan?.result?.audit)
     return (
-      <Empty title="Dein Arbeitsbereich entsteht nach dem Check.">
-        <p>Wähle einen abgeschlossenen Check im Verlauf.</p>
+      <Empty
+        title={t(
+          "Dein Arbeitsbereich entsteht nach dem Check.",
+          "Your repair workspace appears after a check.",
+        )}
+      >
+        <p>
+          {t(
+            "Wähle einen abgeschlossenen Check im Verlauf.",
+            "Choose a completed check in History.",
+          )}
+        </p>
       </Empty>
     );
   return (
-    <section className="repair-workspace" aria-label="Fix-Arbeitsbereich">
+    <section
+      className="repair-workspace"
+      aria-label={t("Fix-Arbeitsbereich", "Repair workspace")}
+    >
       <div className="panel-head">
         <div>
           <p className="eyebrow">
-            BELEG VERSTEHEN. ÄNDERUNG ÜBERGEBEN. FIX PRÜFEN.
+            {t(
+              "BELEG VERSTEHEN. ÄNDERUNG ÜBERGEBEN. FIX PRÜFEN.",
+              "REVIEW EVIDENCE, HAND OFF, AND RETEST",
+            )}
           </p>
-          <h2>Dein Maßnahmenplan</h2>
-          <p>Aufgabe, Originalnachweis und nächste Aktion an einem Ort.</p>
+          <h2>{t("Dein Maßnahmenplan", "Your repair plan")}</h2>
+          <p>
+            {t(
+              "Aufgabe, Originalnachweis und nächste Aktion an einem Ort.",
+              "Tasks, original evidence, and next actions in one place.",
+            )}
+          </p>
         </div>
-        <span className="pill">Manuelle Prüfung ist keine Verifizierung</span>
+        <span className="pill">
+          {t(
+            "Manuelle Prüfung ist keine Verifizierung",
+            "Verification requires a measured retest",
+          )}
+        </span>
       </div>
       {error && <Notice error>{error}</Notice>}
       {notice && <p role="status">{notice}</p>}
@@ -184,14 +212,17 @@ export default function FixWorkspace({
         }}
       />
       <div className="fix-grid">
-        <aside className="panel fix-list" aria-label="Aufgaben auswählen">
+        <aside
+          className="panel fix-list"
+          aria-label={t("Aufgaben auswählen", "Select tasks")}
+        >
           <label>
-            Aufgaben durchsuchen
+            {t("Aufgaben durchsuchen", "Search tasks")}
             <input
               type="search"
               value={filters.q}
               maxLength={120}
-              placeholder="Titel oder Aufgaben-ID"
+              placeholder={t("Titel oder Aufgaben-ID", "Title or task ID")}
               onChange={(e) => setFilters({ ...filters, q: e.target.value })}
             />
           </label>
@@ -199,12 +230,12 @@ export default function FixWorkspace({
             Status
             <select
               value={filters.status}
-              aria-label="Aufgabenstatus filtern"
+              aria-label={t("Aufgabenstatus filtern", "Filter by task status")}
               onChange={(e) =>
                 setFilters({ ...filters, status: e.target.value })
               }
             >
-              <option value="all">Alle Aufgaben</option>
+              <option value="all">{t("Alle Aufgaben", "All tasks")}</option>
               {Object.entries(taskLabels).map(([id, label]) => (
                 <option key={id} value={id}>
                   {label}
@@ -220,7 +251,7 @@ export default function FixWorkspace({
                 setFilters({ ...filters, allScans: e.target.checked })
               }
             />
-            Alle Checks dieses Projekts
+            {t("Alle Checks dieses Projekts", "All checks in this project")}
           </label>
           <p role="status">
             {listing.items.length} von {listing.total} Aufgaben
@@ -271,7 +302,10 @@ export default function FixWorkspace({
             </button>
           )}
         </aside>
-        <div className="fix-detail" aria-label="Ausgewählte Aufgabe">
+        <div
+          className="fix-detail"
+          aria-label={t("Ausgewählte Aufgabe", "Selected task")}
+        >
           {selected && selected.scanId === scan.id ? (
             <>
               <div className="panel fix-context">
@@ -296,7 +330,7 @@ export default function FixWorkspace({
                         );
                     }}
                   >
-                    Aufgabenlink kopieren
+                    {t("Aufgabenlink kopieren", "Copy task link")}
                   </button>
                 </div>
                 <p className="hint">
@@ -305,9 +339,12 @@ export default function FixWorkspace({
                 </p>
                 {observations.length > 0 && (
                   <label>
-                    Fundstelle auswählen
+                    {t("Fundstelle auswählen", "Select observation")}
                     <select
-                      aria-label="Fundstelle auswählen"
+                      aria-label={t(
+                        "Fundstelle auswählen",
+                        "Select observation",
+                      )}
                       value={finding?.id ?? ""}
                       onChange={(e) =>
                         onSelect(selected, e.target.value, panel)
@@ -326,8 +363,8 @@ export default function FixWorkspace({
                   <div className="canonical-observation">
                     <p className="small-label">
                       {finding.evidenceStatus === "measured"
-                        ? "GEMESSENER BEFUND"
-                        : "PRÜFKANDIDAT"}{" "}
+                        ? t("GEMESSENER BEFUND", "MEASURED FINDING")
+                        : t("PRÜFKANDIDAT", "REVIEW CANDIDATE")}{" "}
                       · {finding.viewportId} · {finding.state}
                     </p>
                     <p className="external-url">{finding.pageUrl}</p>
@@ -339,7 +376,7 @@ export default function FixWorkspace({
                 )}
                 <nav
                   className="fix-detail-tabs"
-                  aria-label="Aufgabe bearbeiten"
+                  aria-label={t("Aufgabe bearbeiten", "Work on task")}
                 >
                   {(
                     [
@@ -371,13 +408,16 @@ export default function FixWorkspace({
               />
               {panel === "evidence" && (
                 <section className="panel fix-evidence">
-                  <h3>Originalnachweis</h3>
+                  <h3>{t("Originalnachweis", "Original evidence")}</h3>
                   {evidence ? (
                     <div
                       className="fix-capture-scroll"
                       tabIndex={0}
                       role="region"
-                      aria-label="Originalaufnahme scrollen"
+                      aria-label={t(
+                        "Originalaufnahme scrollen",
+                        "Scroll original capture",
+                      )}
                     >
                       <EvidenceView
                         evidence={evidence}
@@ -393,7 +433,12 @@ export default function FixWorkspace({
                   )}
                   {finding?.elementContext && (
                     <details>
-                      <summary>Gemessener Elementkontext</summary>
+                      <summary>
+                        {t(
+                          "Gemessener Elementkontext",
+                          "Measured element context",
+                        )}
+                      </summary>
                       <pre>
                         {JSON.stringify(finding.elementContext, null, 2)}
                       </pre>
@@ -434,7 +479,9 @@ export default function FixWorkspace({
           ) : (
             <section className="panel">
               <h3>
-                {taskId ? "Aufgabe nicht verfügbar" : "Eine Aufgabe auswählen"}
+                {taskId
+                  ? t("Aufgabe nicht verfügbar", "Task unavailable")
+                  : t("Eine Aufgabe auswählen", "Select a task")}
               </h3>
               <p>
                 Aufgaben eines anderen Checks öffnen den zugehörigen Bericht.

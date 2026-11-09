@@ -1,6 +1,6 @@
 # SiteFenn — Verbesserungsplan bis 3.0
 
-Stand: **9. November 2026**. Status: **2.1–2.8 als lokaler Web-/CLI-Umfang implementiert und geprüft; 2.9 hat einen Pilot-Release-Kandidaten mit offener externer Abnahme; 3.0 bleibt Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
+Stand: **9. November 2026**. Status: **2.1–2.8 als lokaler Web-/CLI-Umfang implementiert und geprüft; 2.9 hat einen Pilot-Release-Kandidaten mit offener externer Abnahme; 3.0 als Release-Kandidat mit offener externer Abnahme**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
 
 Grundlage: drei spezialisierte Agentenreviews für Architektur/Betrieb/Security, Produkt/UX/Frontend und KI/QA/SEO, anschließend gemeinsame Priorisierung. Das ist ein tatsächlicher Code-/Artefaktreview durch Softwareagenten, **keine externe Fachpersonen- oder Nutzerstudie**. Für diese Planung wurden keine neuen Modellläufe, Funktionstests oder Kundenscans ausgeführt.
 
@@ -206,6 +206,8 @@ Die reguläre 3.0-Freigabe umfasst den belastbaren lokalen Web-/CLI-Kern. Google
 - Ausgeliefertes Paket installieren, vorhandene 2.0-Daten übernehmen, Updatefehler und Restore prüfen. Keine angeblich unterstützte Plattform ohne tatsächlichen Lauf.
 
 **Zusätzliche Freigabe einer KI-Funktion:** Kritische Geräte-/Zahlen-/Selektorwidersprüche dürfen keine sachlich freigegebene Maßnahme passieren. Vorab vereinbarte Schwellen für Nützlichkeit, Abdeckung und sinnvolle Verweigerung prüfen; keine reine Regex-/JSON-Annahmequote als Antwortqualität verkaufen. Wenn diese Abnahme nicht gelingt, bleibt die Funktion ausdrücklich experimentell. Erst danach über neue Modelle, Vision oder kuratiertes Training entscheiden.
+
+**Prüfstand 3.0 RC:** Deutsche und englische Basisoberfläche, Paketprüfung mit 2.0-Migration, interne Ablaufprüfung und lokale Ressourcenmessungen sind dokumentiert. Der externe Pilot, der vollständige VoiceOver-Durchgang und die getrennte Befundevaluation bleiben für die stabile Entscheidung offen. [Prüfprotokoll](docs/RELEASE-3.0.md).
 
 ## Fullstack-Leitplanken
 

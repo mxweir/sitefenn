@@ -1,3 +1,4 @@
+import { useTranslation } from "./language.js";
 import type { CheckProfile } from "../shared/check-profile.js";
 import { useProjectDraft } from "./workspace-state.js";
 import JourneyBuilder from "./JourneyBuilder.js";
@@ -28,6 +29,7 @@ export default function ScanConfig({
   selectedLandingPages?: string[];
   onLandingPagesApplied?: () => void;
 }) {
+  const t = useTranslation();
   const [pages, setPages] = useState<string[]>([project.url]);
   const [discovered, setDiscovered] = useState<string[]>([project.url]);
   const [maxPages, setMaxPages] = useProjectDraft(
@@ -120,13 +122,13 @@ export default function ScanConfig({
     <div
       id="scan-config"
       tabIndex={-1}
-      aria-label="Prüfumfang konfigurieren"
+      aria-label={t("Prüfumfang konfigurieren", "Configure check scope")}
       className="panel workspace-form"
     >
       <div className="panel-head">
         <div>
           <p className="eyebrow">BEWUSST PRÜFEN, NICHT BLIND CRAWLEN</p>
-          <h2>Deinen Check konfigurieren</h2>
+          <h2>{t("Deinen Check konfigurieren", "Configure your check")}</h2>
           <p>
             Erst den Umfang festlegen. Dann wissen wir genau, worauf sich das
             Ergebnis bezieht.
@@ -136,7 +138,9 @@ export default function ScanConfig({
       </div>
       <div className="scope-row">
         <div>
-          <label htmlFor="max-pages">Maximale Seitenzahl</label>
+          <label htmlFor="max-pages">
+            {t("Maximale Seitenzahl", "Maximum pages")}
+          </label>
           <input
             id="max-pages"
             type="number"
@@ -158,7 +162,9 @@ export default function ScanConfig({
           />
         </div>
       </div>
-      <label htmlFor="excluded-paths">Ausgeschlossene Pfade</label>
+      <label htmlFor="excluded-paths">
+        {t("Ausgeschlossene Pfade", "Excluded paths")}
+      </label>
       <textarea
         id="excluded-paths"
         value={excluded}
@@ -199,7 +205,7 @@ export default function ScanConfig({
         ) : (
           <Compass size={16} />
         )}
-        Seiten entdecken
+        {t("Seiten entdecken", "Discover pages")}
       </button>
       <details className="sitemap-import">
         <summary>Seiten aus einer Sitemap auswählen</summary>
@@ -271,7 +277,7 @@ export default function ScanConfig({
       </details>
       <div className="section-divider" />
       <div className="panel-head">
-        <h3>Ausgewählte Seiten</h3>
+        <h3>{t("Ausgewählte Seiten", "Selected pages")}</h3>
         <span className="pill">
           {pages.length} / {maxPages}
         </span>
@@ -362,7 +368,9 @@ export default function ScanConfig({
           onChange={(e) => setPerformance(e.target.checked)}
         />
         <span>
-          <strong>Performance-Labormessung</strong>
+          <strong>
+            {t("Performance-Labormessung", "Performance lab measurement")}
+          </strong>
           <br />
           Separater Lighthouse-Lauf auf der Referenzseite. Kostet zusätzliche
           Zeit; keine echten Google-Nutzerdaten.
@@ -370,7 +378,9 @@ export default function ScanConfig({
       </label>
       {performance && (
         <>
-          <label htmlFor="perf-runs">Wiederholungen</label>
+          <label htmlFor="perf-runs">
+            {t("Wiederholungen", "Repetitions")}
+          </label>
           <select
             id="perf-runs"
             value={repetitions}
@@ -396,12 +406,19 @@ export default function ScanConfig({
         </Notice>
       )}
       <details className="plan-note profile-import">
-        <summary>Gespeichertes CLI-Prüfprofil verwenden</summary>
+        <summary>
+          {t(
+            "Gespeichertes CLI-Prüfprofil verwenden",
+            "Use a saved CLI profile",
+          )}
+        </summary>
         <p>
           Lade ein Profil aus diesem Projekt. Ziel, Umfeld und Port müssen
           übereinstimmen. Die aktuelle manuelle Auswahl bleibt erhalten.
         </p>
-        <label htmlFor="cli-profile-file">Prüfprofil als JSON</label>
+        <label htmlFor="cli-profile-file">
+          {t("Prüfprofil als JSON", "Check profile as JSON")}
+        </label>
         <input
           id="cli-profile-file"
           type="file"
@@ -450,7 +467,8 @@ export default function ScanConfig({
             </p>
             <p>
               {imported.options.pages.length} Seiten ·{" "}
-              {imported.options.viewports.length} Geräteprofile
+              {imported.options.viewports.length}{" "}
+              {t("Geräteprofile", "Device profiles")}
             </p>
             <ul>
               {imported.options.pages.map((page, index) => (
@@ -493,7 +511,7 @@ export default function ScanConfig({
                 }
               }}
             >
-              Check mit Profil starten
+              {t("Check mit Profil starten", "Start check with profile")}
             </button>
           </>
         )}
@@ -532,7 +550,7 @@ export default function ScanConfig({
           ) : (
             <ScanLine size={17} />
           )}
-          On-Screen-Check starten
+          {t("On-Screen-Check starten", "Start on-screen check")}
         </button>
         <span className="controls-caption">
           {pages.length} Seiten × {viewportIds.length} Ansichten ·{" "}

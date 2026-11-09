@@ -1,3 +1,4 @@
+import { useTranslation } from "./language.js";
 import ReleaseGate from "./ReleaseGate.js";
 import ChangeEvidence from "./ChangeEvidence.js";
 import BaselinePanel from "./BaselinePanel.js";
@@ -30,6 +31,7 @@ export default function Compare({
   projectId: string;
   onChange?: () => Promise<void>;
 }) {
+  const t = useTranslation();
   const options = useScanOptions(projectId, initialScans);
   const scans = options.scans;
   const [referenceScan, setReferenceScan] = useState<Scan | null>(null);
@@ -77,7 +79,7 @@ export default function Compare({
           disabled={options.busy}
           onClick={() => void options.more()}
         >
-          Ältere Vergleichschecks laden
+          {t("Ältere Vergleichschecks laden", "Load older checks")}
         </button>
       )}
     </>
@@ -91,7 +93,12 @@ export default function Compare({
         )}
         {completed.length > 0 && (
           <details className="panel">
-            <summary>Bildvergleich und visuelle Referenzen</summary>
+            <summary>
+              {t(
+                "Bildvergleich und visuelle Referenzen",
+                "Visual comparison and references",
+              )}
+            </summary>
             <VisualCompare scans={scans} projectId={projectId} />
           </details>
         )}
@@ -113,13 +120,13 @@ export default function Compare({
         <div className="panel-head">
           <div>
             <p className="eyebrow">GLEICHE BEDINGUNGEN, EHRLICHER VERGLEICH</p>
-            <h2>Was hat sich verändert?</h2>
+            <h2>{t("Was hat sich verändert?", "What changed?")}</h2>
           </div>
           <ArrowLeftRight size={24} />
         </div>
         <div className="scope-row">
           <div>
-            <label htmlFor="before-scan">Vorher</label>
+            <label htmlFor="before-scan">{t("Vorher", "Before")}</label>
             <select
               id="before-scan"
               value={before}
@@ -138,7 +145,7 @@ export default function Compare({
             </select>
           </div>
           <div>
-            <label htmlFor="after-scan">Nachher</label>
+            <label htmlFor="after-scan">{t("Nachher", "After")}</label>
             <select
               id="after-scan"
               value={after}
@@ -182,7 +189,7 @@ export default function Compare({
           ) : (
             <ArrowLeftRight size={16} />
           )}
-          Tests vergleichen
+          {t("Tests vergleichen", "Compare checks")}
         </button>
         {error && <Notice error>{error}</Notice>}
       </div>
@@ -317,7 +324,12 @@ export default function Compare({
         </>
       )}
       <details className="panel">
-        <summary>Bildvergleich und visuelle Referenzen</summary>
+        <summary>
+          {t(
+            "Bildvergleich und visuelle Referenzen",
+            "Visual comparison and references",
+          )}
+        </summary>
         <VisualCompare scans={scans} projectId={projectId} />
       </details>
     </>

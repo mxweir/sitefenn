@@ -2114,3 +2114,51 @@ test("2.8 setup exposes repair steps and optional AI at phone width", async ({
     ),
   ).toBe(true);
 });
+
+test("3.0 switches the core interface, screen reader language and navigation together", async ({
+  page,
+}) => {
+  await mockWorkspace(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/");
+  await page.getByLabel("Sprache", { exact: true }).selectOption("en");
+  await expect(page.locator("html")).toHaveAttribute("lang", "en");
+  await expect(
+    page.getByRole("navigation", { name: "Main navigation" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Add website", exact: true })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("dialog", { name: "Add your website" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("checkbox", { name: /explicit permission/ }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Close dialog" }).click();
+  await page.reload();
+  await expect(page.getByLabel("Language", { exact: true })).toHaveValue("en");
+  await page
+    .getByRole("navigation", { name: "Project sections" })
+    .getByRole("button", { name: "Check", exact: true })
+    .click();
+  await page
+    .getByRole("navigation", { name: "Related views" })
+    .getByRole("button", { name: "Findings", exact: true })
+    .click();
+  await expect(
+    page.getByRole("heading", { name: "Your audit report" }),
+  ).toBeVisible();
+  await expect(page.getByRole("region", { name: "Findings" })).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.getByLabel("Language", { exact: true }).selectOption("de");
+  await expect(page.locator("html")).toHaveAttribute("lang", "de");
+  await expect(
+    page.getByRole("heading", { name: "Dein Prüfbericht" }),
+  ).toBeVisible();
+});

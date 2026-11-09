@@ -1,3 +1,4 @@
+import { useLanguage } from "./language.js";
 export async function api<T>(url: string, init?: RequestInit): Promise<T> {
   const response = await fetch(url, {
     credentials: "same-origin",
@@ -28,9 +29,9 @@ export const message = (error: unknown) =>
   error instanceof Error
     ? error.message
     : "Die Aktion konnte nicht abgeschlossen werden.";
-export const stamp = (value?: string | null) =>
+export const stamp = (value?: string | null, locale = "de-DE") =>
   value
-    ? new Intl.DateTimeFormat("de-DE", {
+    ? new Intl.DateTimeFormat(locale, {
         day: "2-digit",
         month: "short",
         hour: "2-digit",
@@ -63,3 +64,39 @@ export const categoryLabel = (category: string) =>
     performance: "Performance",
     ux: "UX-Empfehlung",
   })[category] ?? category;
+
+const englishStatus: Record<string, string> = {
+  queued: "Queued",
+  running: "Running",
+  paused: "Paused",
+  completed: "Completed",
+  failed: "Failed",
+  interrupted: "Interrupted",
+  cancelled: "Cancelled",
+};
+const englishCategory: Record<string, string> = {
+  layout: "Responsive & layout",
+  responsive: "Responsive & layout",
+  accessibility: "Accessibility",
+  seo: "Technical SEO",
+  runtime: "Function & runtime",
+  technical: "Function & runtime",
+  functionality: "Function & runtime",
+  performance: "Performance",
+  ux: "UX recommendation",
+};
+export function useAuditLabels() {
+  const language = useLanguage();
+  return {
+    statusLabel:
+      language === "en"
+        ? (value: string) => englishStatus[value] ?? value
+        : statusLabel,
+    categoryLabel:
+      language === "en"
+        ? (value: string) => englishCategory[value] ?? value
+        : categoryLabel,
+    stamp: (value?: string | null) =>
+      stamp(value, language === "en" ? "en-GB" : "de-DE"),
+  };
+}
