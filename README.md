@@ -6,6 +6,8 @@
 
 **Inspect → understand → hand off → retest.** Manage authorized websites, watch bounded Chromium checks, inspect evidence and turn findings into a practical checklist. SiteFenn keeps measured facts, review candidates and optional local AI suggestions separate. The core workflow needs no model, cloud account or paid service.
 
+**2.9 pilot release candidate.** A runnable rehearsal fixture and a frozen three-task protocol are ready. The independent pilot and full VoiceOver acceptance are pending. Version 2.8 remains the stable release. [Pilot protocol](docs/PILOT-2.9.md) · [Release candidate report](docs/RELEASE-2.9.md).
+
 ![Actual SiteFenn 2.8 setup and repair checklist](docs/screenshots/2.8-startup.jpg)
 
 _The real local app shows runtime, browser and optional model status together._

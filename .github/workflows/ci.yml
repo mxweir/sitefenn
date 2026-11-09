@@ -48,9 +48,9 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release download v2.7.0 --repo mxweir/sitefenn --pattern sitefenn-2.7.0-web-cli.zip --dir "$RUNNER_TEMP"
+          gh release download v2.8.0 --repo mxweir/sitefenn --pattern sitefenn-2.8.0-web-cli.zip --dir "$RUNNER_TEMP"
           npm run package:portable
-          npm run test:portable -- "$RUNNER_TEMP/sitefenn-2.7.0-web-cli.zip"
+          npm run test:portable -- "$RUNNER_TEMP/sitefenn-2.8.0-web-cli.zip"
       - name: Service lifecycle and local OAuth protocol contract
         run: npm run test:readiness -- "$RUNNER_TEMP/sitefenn-readiness"
       - name: Browser end-to-end tests

@@ -164,6 +164,23 @@ test("update check normalizes a fixed release URL, rejects malformed/draft data 
     value.url,
     "https://github.com/mxweir/sitefenn/releases/tag/v99.0.0",
   );
+  const stable = await checkUpdate(async () =>
+    Response.json({
+      tag_name: `v${value.current.split("-")[0]}`,
+      draft: false,
+      prerelease: false,
+    }),
+  );
+  assert.equal(stable.available, value.current.includes("-"));
+  await assert.rejects(
+    checkUpdate(async () =>
+      Response.json({
+        tag_name: "v2.9.0-rc.1",
+        draft: false,
+        prerelease: true,
+      }),
+    ),
+  );
   await assert.rejects(
     checkUpdate(async () =>
       Response.json({ tag_name: "evil", draft: false, prerelease: false }),

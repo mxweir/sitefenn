@@ -859,14 +859,15 @@ export function Tasks({
       <div className="task-list">
         {visible.map((task) => (
           <article key={task.id} className="task-card">
-            {compact && (
-              <div className="task-card-head">
-                {" "}
+            <div className="task-card-head">
+              {task.status === "verified" ? (
+                <span className="pill completed">Verifiziert behoben</span>
+              ) : (
                 <button
-                  className={`task-check ${["review", "verified"].includes(task.status) ? "checked" : ""}`}
-                  disabled={!!busy || task.status === "verified"}
+                  className={`task-check ${task.status === "review" ? "checked" : ""}`}
+                  disabled={!!busy}
                   aria-label={`Zur Prüfung markieren: ${task.title}`}
-                  aria-pressed={["review", "verified"].includes(task.status)}
+                  aria-pressed={task.status === "review"}
                   onClick={() =>
                     void update(
                       task,
@@ -874,45 +875,31 @@ export function Tasks({
                     )
                   }
                 >
-                  {["review", "verified"].includes(task.status) ? "✓" : ""}
+                  {task.status === "review" ? "✓" : ""}
                 </button>
+              )}
+              {compact && task.status !== "verified" && (
                 <span>Manuell zur Prüfung markieren</span>
-              </div>
-            )}
-            {!compact && (
-              <>
-                <div className="task-card-head">
-                  <button
-                    className={`task-check ${["review", "verified"].includes(task.status) ? "checked" : ""}`}
-                    disabled={!!busy || task.status === "verified"}
-                    aria-label={`Zur Prüfung markieren: ${task.title}`}
-                    aria-pressed={["review", "verified"].includes(task.status)}
-                    onClick={() =>
-                      void update(
-                        task,
-                        task.status === "review" ? "open" : "review",
-                      )
-                    }
-                  >
-                    {["review", "verified"].includes(task.status) ? "✓" : ""}
-                  </button>
-                  <div>
-                    <h3>{task.title}</h3>
-                    <div className="chip-list">
-                      <span
-                        className={`pill ${task.priority === "nice-to-have" ? "nice" : task.priority}`}
-                      >
-                        {priorityLabel(task.priority)}
-                      </span>
-                      <span className="pill">
-                        {categoryLabel(task.category)}
-                      </span>
-                      <span className="pill">
-                        {task.findingIds.length} Fundstellen
-                      </span>
-                    </div>
+              )}
+              {!compact && (
+                <div>
+                  <h3>{task.title}</h3>
+                  <div className="chip-list">
+                    <span
+                      className={`pill ${task.priority === "nice-to-have" ? "nice" : task.priority}`}
+                    >
+                      {priorityLabel(task.priority)}
+                    </span>
+                    <span className="pill">{categoryLabel(task.category)}</span>
+                    <span className="pill">
+                      {task.findingIds.length} Fundstellen
+                    </span>
                   </div>
                 </div>
+              )}
+            </div>
+            {!compact && (
+              <>
                 <button
                   className="button secondary"
                   onClick={() =>
@@ -1037,9 +1024,12 @@ export function Tasks({
                   ))}
               </select>
               {task.verifiedByScanId && (
-                <span className="hint">
+                <a
+                  className="hint text-button"
+                  href={`?project=${encodeURIComponent(task.projectId)}&scan=${encodeURIComponent(task.verifiedByScanId)}&view=report`}
+                >
                   Bestätigt durch Nachtest {task.verifiedByScanId.slice(0, 8)}
-                </span>
+                </a>
               )}
             </div>
           </article>
@@ -1118,7 +1108,12 @@ function ExportDialog({ scan, onClose }: { scan: Scan; onClose: () => void }) {
           Befehlsausführung autorisieren.
         </p>
         {error && <Notice error>{error}</Notice>}
-        <pre className="export-preview" aria-label="Markdown Exportvorschau">
+        <pre
+          className="export-preview"
+          role="region"
+          tabIndex={0}
+          aria-label="Markdown Exportvorschau"
+        >
           {preview || "Vorschau wird geladen …"}
         </pre>
         <label className="checklist-field">

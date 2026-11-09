@@ -224,7 +224,12 @@ export default function DeveloperHandoff({
               Query/Fragment der URL fehlen im Export bewusst; der lokale
               Originalcheck bleibt maßgeblich.
             </p>
-            <pre className="export-preview" aria-label="Arbeitspaket Vorschau">
+            <pre
+              className="export-preview"
+              role="region"
+              tabIndex={0}
+              aria-label="Arbeitspaket Vorschau"
+            >
               {markdown}
             </pre>
             <a

@@ -213,12 +213,15 @@ export async function checkUpdate(request: typeof fetch = fetch) {
     throw Error("Keine überprüfbaren stabilen Release-Metadaten.");
   const version = data.tag_name.slice(1);
   const numbers = (v: string) => v.split(".").map(Number);
+  const [currentCore, currentPrerelease] = APP_VERSION.split("-");
   const a = numbers(version),
-    b = numbers(APP_VERSION);
-  const newer = a.some(
-    (n, i) =>
-      n !== b[i] && a.slice(0, i).every((v, j) => v === b[j]) && n > b[i]!,
-  );
+    b = numbers(currentCore!);
+  const newer =
+    (currentPrerelease !== undefined && currentCore === version) ||
+    a.some(
+      (n, i) =>
+        n !== b[i] && a.slice(0, i).every((v, j) => v === b[j]) && n > b[i]!,
+    );
   return {
     current: APP_VERSION,
     latest: version,

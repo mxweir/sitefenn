@@ -123,6 +123,7 @@ export default function FixWorkspace({
       : [];
   const finding =
     observations.find((f) => f.id === findingId) ?? observations[0];
+  const evidenceControl = useRef<HTMLButtonElement>(null);
   const evidence = report?.evidence.find((e) => e.id === finding?.evidenceId);
   const more = async () => {
     if (!scan || !listing.nextCursor) return;
@@ -349,6 +350,7 @@ export default function FixWorkspace({
                   ).map(([id, label]) => (
                     <button
                       key={id}
+                      ref={id === "evidence" ? evidenceControl : undefined}
                       className="button secondary"
                       aria-current={panel === id ? "page" : undefined}
                       onClick={() => onSelect(selected, finding?.id, id)}
@@ -417,7 +419,10 @@ export default function FixWorkspace({
                   inline
                   scan={scan}
                   findingIds={finding ? [finding.id] : selected.findingIds}
-                  onClose={() => onSelect(selected, finding?.id, "evidence")}
+                  onClose={() => {
+                    onSelect(selected, finding?.id, "evidence");
+                    evidenceControl.current?.focus();
+                  }}
                 />
               )}
               <TaskNote

@@ -1,6 +1,6 @@
 # SiteFenn — Verbesserungsplan bis 3.0
 
-Stand: **9. November 2026**. Status: **2.1–2.8 als lokaler Web-/CLI-Umfang implementiert und geprüft; 2.9–3.0 bleiben Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
+Stand: **9. November 2026**. Status: **2.1–2.8 als lokaler Web-/CLI-Umfang implementiert und geprüft; 2.9 hat einen Pilot-Release-Kandidaten mit offener externer Abnahme; 3.0 bleibt Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
 
 Grundlage: drei spezialisierte Agentenreviews für Architektur/Betrieb/Security, Produkt/UX/Frontend und KI/QA/SEO, anschließend gemeinsame Priorisierung. Das ist ein tatsächlicher Code-/Artefaktreview durch Softwareagenten, **keine externe Fachpersonen- oder Nutzerstudie**. Für diese Planung wurden keine neuen Modellläufe, Funktionstests oder Kundenscans ausgeführt.
 
@@ -187,6 +187,8 @@ A und B sind keine gegenseitigen Abhängigkeiten und müssen nicht gemeinsam in 
 - Fehler und nicht abgeschlossene Abnahmen in einem Release-Candidate-Bericht veröffentlichen; P0/P1-Blocker vor neuen Funktionen bearbeiten.
 
 **Abnahme:** Kritische Datenintegritätsfehler und falsche Fix-Verifizierung sind Releaseblocker. Die vorab vereinbarten Kernaufgaben und Zugänglichkeitschecks sind dokumentiert abgeschlossen. Ein verfehltes Ziel verschiebt die Freigabe oder erfordert eine ausdrücklich dokumentierte Umfangsentscheidung, kein stilles „trotzdem fertig“.
+
+**Prüfstand 2.9 RC:** Interne Browserprobe, Tastatur und nativer Safari-Zoom sind protokolliert. Fünf externe Teilnehmende, fünf bis acht freigegebene Pilotprojekte und der vollständige VoiceOver-Durchgang stehen aus. [Pilotprotokoll](docs/PILOT-2.9.md) · [RC-Bericht](docs/RELEASE-2.9.md).
 
 ### 3.0 — Freigabe des zusammenhängenden Produkts
 

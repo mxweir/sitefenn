@@ -20,9 +20,9 @@ import assert from "node:assert/strict";
 import { unzipSync } from "fflate";
 
 const exec = promisify(execFile);
-const previousVersion = "2.7.0";
+const previousVersion = "2.8.0";
 const previousDigest =
-  "6084a6f3846869f94b40fb89cbeeb625e349da38ca8c25d79f06cf90b02ec476";
+  "d89847577f246d122067c9d63cb33fff5103d5f3893113cabeb8bf24e4df8618";
 const version = JSON.parse(await readFile("package.json")).version;
 const root = await mkdtemp(join(tmpdir(), "sitefenn-portable-"));
 const appRoot = join(root, "app");

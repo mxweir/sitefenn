@@ -1102,7 +1102,10 @@ a {
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
-select:focus-visible {
+select:focus-visible,
+textarea:focus-visible,
+summary:focus-visible,
+.export-preview:focus-visible {
   outline: 3px solid var(--ink);
   outline-offset: 5px;
 }

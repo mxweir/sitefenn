@@ -2,6 +2,20 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 2.9.0-rc.1 — 2026-11-09
+
+### Pilot preparation and keyboard fixes
+
+- Added a reproducible local pilot fixture and a frozen task protocol with independent acceptance criteria.
+- Made Markdown previews keyboard-focusable and restored focus after closing the developer handoff.
+- Separated verified repair status from manual review and linked it to the saved confirming check.
+- Verified the internal repair workflow with actual Chromium and checked native Safari at 200% zoom. The independent pilot and complete VoiceOver run remain open.
+
+[Release candidate verification](docs/RELEASE-2.9.md).
+
+![Actual internal pilot handoff](docs/screenshots/2.9-pilot-handoff.jpg)
+![Actual internal pilot confirmed retest](docs/screenshots/2.9-pilot-retest.jpg)
+
 ## 2.8.0 — 2026-11-09
 
 ### Reliable local startup and recovery
