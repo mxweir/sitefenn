@@ -1,6 +1,6 @@
 # SiteFenn — Verbesserungsplan bis 3.0
 
-Stand: **1. November 2026**. Status: **2.1–2.4 implementiert und lokal geprüft; 2.5–3.0 bleiben Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
+Stand: **9. November 2026**. Status: **2.1–2.5 implementiert und lokal geprüft; 2.6–3.0 bleiben Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
 
 Grundlage: drei spezialisierte Agentenreviews für Architektur/Betrieb/Security, Produkt/UX/Frontend und KI/QA/SEO, anschließend gemeinsame Priorisierung. Das ist ein tatsächlicher Code-/Artefaktreview durch Softwareagenten, **keine externe Fachpersonen- oder Nutzerstudie**. Für diese Planung wurden keine neuen Modellläufe, Funktionstests oder Kundenscans ausgeführt.
 
@@ -122,6 +122,8 @@ Jede Version soll einen benutzbaren vertikalen Ablauf liefern. Die Nummern sind 
 - Größere Sicherungen in begrenzter Hintergrundarbeit mit Fortschritt, Abbruch und projektbezogener Auswahl. Speicher- und Bildgrenzen offen anzeigen; keine blockierende Vollkompression im UI-Prozess.
 
 **Abnahme:** Neustart, Abbruch, voller Datenträger und Workerfehler sind verständlich und wiederaufnehmbar. Ein kontrollierter 24-Stunden-Lauf prüft Zeitpläne und Ressourcen. Große Backups über dem bisherigen 250-MiB-/2.000-Bilder-Szenario werden mit definiertem Speicherbudget, Integritätsprüfung und Wiederherstellung geprüft. Schedules bleiben nach Restore bis zur erneuten Freigabe aus.
+
+**Prüfstand 2.5:** Neustart, Abbruch, begrenzte Streaming-Wiederherstellung und echter voller Testdatenträger geprüft. Der Zeitplan durchlief 24 simulierte Stunden. Ein Dauerlauf über 24 reale Stunden steht aus. [Release-Prüfung](docs/RELEASE-2.5.md).
 
 ### 2.6 — Im Entwicklungsprozess brauchbar
 

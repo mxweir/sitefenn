@@ -1081,6 +1081,8 @@ export function Tasks({
   );
 }
 function ExportDialog({ scan, onClose }: { scan: Scan; onClose: () => void }) {
+  const readiness = useContext(WorkspaceReadiness);
+  const zipBlocked = !!readiness && !readiness.allowed.startExclusive;
   const [preview, setPreview] = useState("");
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
@@ -1165,12 +1167,22 @@ function ExportDialog({ scan, onClose }: { scan: Scan; onClose: () => void }) {
             ausdrücklich Status 2.
           </p>
         </details>
+        {zipBlocked && (
+          <p className="hint">
+            ZIP wartet auf freie Ressourcen. {readiness?.message}
+          </p>
+        )}
         <div className="export-options">
           {["markdown", "json", "zip"].map((format) => (
             <a
               className="button secondary download-link"
               key={format}
-              href={`/api/scans/${scan.id}/export?format=${format}${format === "zip" && includeEvidence ? "&includeEvidence=true" : ""}`}
+              aria-disabled={(format === "zip" && zipBlocked) || undefined}
+              href={
+                format === "zip" && zipBlocked
+                  ? undefined
+                  : `/api/scans/${scan.id}/export?format=${format}${format === "zip" && includeEvidence ? "&includeEvidence=true" : ""}`
+              }
               download
             >
               <Download size={15} />

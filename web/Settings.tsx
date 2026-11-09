@@ -1,5 +1,8 @@
+import { WorkspaceReadiness } from "./workspace-state.js";
+import type { Readiness } from "../shared/readiness.js";
+import Jobs from "./Jobs.js";
 import Maintenance from "./Maintenance.js";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import {
   CheckCircle2,
   CircleAlert,
@@ -15,17 +18,22 @@ import { QUALITY_REFERENCE } from "../shared/quality.js";
 
 export default function Settings({
   dependencies,
+  projects,
+  onReadiness,
   settings,
   speechAvailable,
   onSaved,
   onRefresh,
 }: {
   dependencies: Dependency[];
+  projects: { id: string; name: string }[];
+  onReadiness: (readiness: Readiness) => void;
   settings: HubSettings;
   speechAvailable: boolean;
   onSaved: () => void | Promise<void>;
   onRefresh: () => void | Promise<void>;
 }) {
+  const readiness = useContext(WorkspaceReadiness);
   const [models, setModels] = useState<string[]>([]);
   const [available, setAvailable] = useState(false);
   const [model, setModel] = useState(settings.model);
@@ -71,6 +79,7 @@ export default function Settings({
           Status aktualisieren
         </button>
       </section>
+      <Jobs projects={projects} onReadiness={onReadiness} />
       <Maintenance onChanged={onSaved} />
       <div className="settings-grid">
         <section
@@ -224,7 +233,14 @@ export default function Settings({
           </p>
           <a
             className="button secondary download-link"
-            href="/api/data/backup"
+            href={
+              readiness && !readiness.allowed.startExclusive
+                ? undefined
+                : "/api/data/backup"
+            }
+            aria-disabled={
+              (readiness && !readiness.allowed.startExclusive) || undefined
+            }
             download
           >
             <Download size={16} />
@@ -233,7 +249,7 @@ export default function Settings({
           <p className="hint">
             Wiederherstellen:{" "}
             <code className="inline-code">
-              npm run restore -- /pfad/backup.zip /pfad/NEUER-workspace
+              npm run restore -- /pfad/backup.sitefenn /pfad/NEUER-workspace
             </code>
             . Das Ziel muss neu sein. Danach den alten Hub stoppen und mit{" "}
             <code className="inline-code">HUB_DATA_DIR</code> auf das neue

@@ -11,7 +11,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { DatabaseSync } from "node:sqlite";
-import { zipSync, unzipSync, strToU8, strFromU8 } from "fflate";
+import { zip, unzipSync, strToU8, strFromU8 } from "fflate";
 import type { Store } from "./store.js";
 
 const MAX_BYTES = 250 * 1024 * 1024;
@@ -57,7 +57,11 @@ export async function createBackup(store: Store): Promise<Uint8Array> {
       ),
     };
     files["backup-manifest.json"] = strToU8(JSON.stringify(manifest, null, 2));
-    return zipSync(files, { level: 1 });
+    return await new Promise<Uint8Array>((resolve, reject) =>
+      zip(files, { level: 1 }, (error, bytes) =>
+        error ? reject(error) : resolve(bytes),
+      ),
+    );
   } finally {
     await rm(folder, { recursive: true, force: true });
   }
@@ -122,57 +126,69 @@ export async function restoreBackup(
         flag: "wx",
         mode: 0o600,
       });
-    const db = new DatabaseSync(join(destination, "hub.sqlite"));
-    try {
-      if (db.prepare("PRAGMA integrity_check").get()?.integrity_check !== "ok")
-        throw new Error("Die wiederhergestellte Datenbank ist beschädigt.");
-      const version = Number(
-        db.prepare("PRAGMA user_version").get()?.user_version,
-      );
-      if (!Number.isInteger(version) || version < 1 || version > 3)
-        throw new Error("Nicht unterstützte Datenbankversion.");
-      if (
-        db
-          .prepare(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_preferences'",
-          )
-          .get()
-      ) {
-        for (const row of db
-          .prepare(
-            "SELECT key,payload FROM workspace_preferences WHERE key LIKE 'schedule:%'",
-          )
-          .all()) {
-          const schedule = JSON.parse(String(row.payload));
-          schedule.enabled = false;
-          schedule.lastState = "Nach Wiederherstellung erneut freigeben";
-          db.prepare(
-            "UPDATE workspace_preferences SET payload=? WHERE key=?",
-          ).run(JSON.stringify(schedule), String(row.key));
-        }
-      }
-      // Maintenance journals refer to the source workspace, never replay them after restore.
-      if (
-        db
-          .prepare(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='maintenance_operations'",
-          )
-          .get()
-      )
-        db.exec("DELETE FROM maintenance_operations");
-      if (
-        db
-          .prepare(
-            "SELECT name FROM sqlite_master WHERE type='table' AND name='runtime_lock'",
-          )
-          .get()
-      )
-        db.exec("DELETE FROM runtime_lock");
-    } finally {
-      db.close();
-    }
+    prepareRestoredDatabase(destination);
   } catch (error) {
     await rm(destination, { recursive: true, force: true });
     throw error;
+  }
+}
+
+export function prepareRestoredDatabase(destination: string) {
+  const db = new DatabaseSync(join(destination, "hub.sqlite"));
+  try {
+    if (db.prepare("PRAGMA integrity_check").get()?.integrity_check !== "ok")
+      throw new Error("Die wiederhergestellte Datenbank ist beschädigt.");
+    const version = Number(
+      db.prepare("PRAGMA user_version").get()?.user_version,
+    );
+    if (!Number.isInteger(version) || version < 1 || version > 3)
+      throw new Error("Nicht unterstützte Datenbankversion.");
+    if (
+      db
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_preferences'",
+        )
+        .get()
+    ) {
+      for (const row of db
+        .prepare(
+          "SELECT key,payload FROM workspace_preferences WHERE key LIKE 'schedule:%'",
+        )
+        .all()) {
+        const schedule = JSON.parse(String(row.payload));
+        schedule.enabled = false;
+        schedule.lastState = "Nach Wiederherstellung erneut freigeben";
+        db.prepare(
+          "UPDATE workspace_preferences SET payload=? WHERE key=?",
+        ).run(JSON.stringify(schedule), String(row.key));
+      }
+    }
+    // Maintenance journals refer to the source workspace, never replay them after restore.
+    if (
+      db
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='maintenance_operations'",
+        )
+        .get()
+    )
+      db.exec("DELETE FROM maintenance_operations");
+    if (
+      db
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='runtime_lock'",
+        )
+        .get()
+    )
+      db.exec("DELETE FROM runtime_lock");
+    if (
+      db
+        .prepare(
+          "SELECT name FROM sqlite_master WHERE type='table' AND name='workspace_jobs'",
+        )
+        .get()
+    )
+      db.exec("DELETE FROM workspace_jobs");
+  } finally {
+    db.close();
   }
 }

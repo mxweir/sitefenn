@@ -9,10 +9,13 @@ export interface Schedule {
   lastState: string;
   missed: number;
   lastScanId?: string;
+  catchUp?: "skip" | "once";
+  waitingSince?: string;
 }
 export class Scheduler {
   private timer?: ReturnType<typeof setInterval>;
   private ticking = false;
+  private lastTick?: number;
   constructor(
     private store: Store,
     private busy: () => boolean,
@@ -32,6 +35,7 @@ export class Scheduler {
     sourceScanId: string,
     intervalHours: unknown,
     enabled: unknown,
+    catchUp: unknown = "skip",
   ) {
     if (
       ![24, 168].includes(Number(intervalHours)) ||
@@ -39,6 +43,8 @@ export class Scheduler {
       typeof enabled !== "boolean"
     )
       throw Error("Intervall: 24 oder 168 Stunden.");
+    if (catchUp !== "skip" && catchUp !== "once")
+      throw Error("Nachholregel: überspringen oder einmal nachholen.");
     const scan = this.store.scan(sourceScanId);
     if (
       !scan ||
@@ -55,16 +61,24 @@ export class Scheduler {
       sourceScanId,
       intervalHours: intervalHours as 24 | 168,
       enabled,
+      catchUp,
       nextRunAt: new Date(this.now() + intervalHours * 3600000).toISOString(),
       lastState: enabled ? "Geplant · nur bei laufender App" : "Deaktiviert",
       missed: 0,
     };
+    this.lastTick ??= this.now();
     this.store.savePreference(`schedule:${projectId}`, value);
     return value;
   }
   startTimer() {
     if (!this.timer) {
-      this.timer = setInterval(() => this.tick(), 30000);
+      this.timer = setInterval(() => {
+        try {
+          this.tick();
+        } catch {
+          /* Retry on the next tick after storage recovers. */
+        }
+      }, 30000);
       this.timer.unref();
       this.tick();
     }
@@ -77,34 +91,54 @@ export class Scheduler {
     if (this.ticking) return;
     this.ticking = true;
     try {
+      const now = this.now();
+      const previous =
+        this.lastTick ??
+        Number(this.store.preference("scheduler:last-tick") ?? 0);
+      this.lastTick = now;
+      let started = false;
       for (const schedule of this.list()) {
-        if (!schedule.enabled || Date.parse(schedule.nextRunAt) > this.now())
-          continue;
-        const late = this.now() - Date.parse(schedule.nextRunAt);
-        if (!Number.isFinite(late) || late > 5 * 60000) {
-          schedule.missed += Number.isFinite(late)
-            ? Math.floor(late / (schedule.intervalHours * 3600000)) + 1
+        const due = Date.parse(schedule.nextRunAt);
+        if (!schedule.enabled || due > now) continue;
+        const interval = schedule.intervalHours * 3600000;
+        const downtime =
+          !Number.isFinite(due) ||
+          (!schedule.waitingSince &&
+            due >= previous &&
+            now - due > 5 * 60000 &&
+            now - previous > 5 * 60000);
+        if (downtime) {
+          schedule.missed += Number.isFinite(due)
+            ? Math.floor((now - due) / interval) + 1
             : 1;
-          schedule.lastState =
-            "Termin verpasst · kein automatischer Nachholstapel";
-          schedule.nextRunAt = new Date(
-            this.now() + schedule.intervalHours * 3600000,
-          ).toISOString();
-          this.store.savePreference(`schedule:${schedule.projectId}`, schedule);
-          continue;
+          if (schedule.catchUp !== "once") {
+            schedule.lastState =
+              "Termin während App-Pause verpasst · übersprungen";
+            schedule.nextRunAt = new Date(now + interval).toISOString();
+            this.store.savePreference(
+              `schedule:${schedule.projectId}`,
+              schedule,
+            );
+            continue;
+          }
+          schedule.waitingSince = new Date(now).toISOString();
         }
-        if (this.busy()) {
+        if (started || this.busy()) {
+          schedule.waitingSince ??= new Date(now).toISOString();
           schedule.lastState = "Wartet auf freie Ressourcen";
           this.store.savePreference(`schedule:${schedule.projectId}`, schedule);
           continue;
         }
         const scan = this.store.scan(schedule.sourceScanId);
         if (!scan?.options) {
+          delete schedule.waitingSince;
           schedule.enabled = false;
           schedule.lastState = "Profilquelle fehlt · erneut freigeben";
         } else {
           try {
             const next = this.start(schedule.projectId, scan.options);
+            started = true;
+            delete schedule.waitingSince;
             schedule.lastScanId = next.id;
             schedule.lastState = "Prüfung eingereiht";
             schedule.nextRunAt = new Date(
@@ -116,8 +150,8 @@ export class Scheduler {
           }
         }
         this.store.savePreference(`schedule:${schedule.projectId}`, schedule);
-        break;
       }
+      this.store.savePreference("scheduler:last-tick", now);
     } finally {
       this.ticking = false;
     }

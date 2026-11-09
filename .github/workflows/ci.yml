@@ -40,6 +40,8 @@ jobs:
         run: npm test
       - name: Actual change-history fixture
         run: npm run test:changes
+      - name: Streamed backup and restore above legacy limits
+        run: npm run test:large-backup
       - name: Build
         run: npm run build
       - name: Portable Web/CLI package and explicit setup smoke

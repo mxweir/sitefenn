@@ -6,13 +6,23 @@
 
 **Inspect → understand → hand off → retest.** Manage authorized websites, watch bounded Chromium checks, inspect evidence and turn findings into a practical checklist. SiteFenn keeps measured facts, review candidates and optional local AI suggestions separate. The core workflow needs no model, cloud account or paid service.
 
-![Actual SiteFenn 2.4 recurrence and change history](docs/screenshots/2.4-change-history.jpg)
+![Actual SiteFenn 2.5 job center with a completed background backup](docs/screenshots/2.5-jobs.jpg)
 
-_Actual application with an owned synthetic fixture. A checked box is not a verified fix; missing measurements stay unknown._
+_A real background backup in an isolated local workspace._
 
-[Get started](#quick-start) · [What it checks](#what-it-checks) · [Local AI](#optional-local-ai) · [CLI gate](#developer-handoff-and-cli) · [2.4 verification](docs/RELEASE-2.4.md) · [Changelog](CHANGELOG.md)
+[Get started](#quick-start) · [What it checks](#what-it-checks) · [Local AI](#optional-local-ai) · [CLI gate](#developer-handoff-and-cli) · [2.5 verification](docs/RELEASE-2.5.md) · [Changelog](CHANGELOG.md)
 
-## New in 2.4: understand what changed
+## New in 2.5 · Local jobs and larger backups
+
+- **Job center:** see progress, busy reasons and recent outcomes for browser checks, AI, exports, backups and maintenance. Cancel supported jobs and open their saved context.
+- **Background backups:** choose the workspace or a single project, monitor progress and download the latest completed archive. The streamed format supports up to 2 GiB of source data and 20,000 evidence images.
+- **Predictable schedules:** resource waits preserve a pending run. After downtime, skip the missed slot or run once when the app is ready.
+- **Redacted diagnostics:** explicitly download local job IDs, phases, error codes and versions without audited URLs, report content or AI prompts.
+
+[Verification and restore details](docs/RELEASE-2.5.md).
+
+<details>
+<summary>What changed in 2.4</summary>
 
 - **Traceable change history:** new, persistent, resolved and recurrent locations, with uncertain mappings/history explicitly separated.
 - **Original before/after proof:** device/state/selector, actual rule measurements, document target and captures beside each location.
@@ -21,6 +31,8 @@ _Actual application with an owned synthetic fixture. A checked box is not a veri
 - **Safe continuity:** schema-3 upgrade backup, original reports intact, persistent problem IDs and complete reference protection across restore.
 
 [Actual screenshots, migration and verification](docs/RELEASE-2.4.md) · [Measurement compatibility matrix](docs/MEASUREMENT-IDENTITY-2.4.md) · [Local model comparison from 2.3](docs/EVALUATION-2.3.md).
+
+</details>
 
 ## A complete repair workflow
 
@@ -135,12 +147,12 @@ The legacy directory is retained across the rename and upgrades. `HUB_DATA_DIR` 
 
 In **System & Setup**, check public release metadata on demand and create a pre-update backup. Extract a reviewed update into a new program folder; preserve the existing data path. There is no automatic code exchange or independently signed updater. Checksums detect changed bytes, not publisher authenticity.
 
-Storage cleanup always starts with a bounded preview. Referenced/active history stays protected. Trash is reversible; permanent removal is a separate explicitly selected/typed action. Optional daily/weekly checks run only while the app is open and idle, with visible missed occurrences and no hidden system service.
+Storage cleanup always starts with a bounded preview. Referenced/active history stays protected. Trash is reversible; permanent removal is a separate explicitly selected/typed action. Optional daily/weekly checks run while the app is open. A due check can wait for resources. Choose whether to skip missed slots during downtime or catch up once after launch.
 
-Portable backups contain a SQLite snapshot, evidence and checksum manifest (250 MiB / 2,000-image limit). For larger workspaces stop the app and back up the directory. Restore trusted backups into a **new nonexistent directory**:
+Start a background backup from **System & Setup → Aufträge**. Its `.sitefenn` archive contains a SQLite snapshot and evidence with SHA-256 integrity checks. The separate pre-update backup uses the legacy ZIP format (250 MiB / 2,000 images). Restore either format into a **new nonexistent directory**.
 
 ```sh
-npm run restore -- /absolute/path/backup.zip /absolute/path/NEW-workspace
+npm run restore -- /absolute/path/backup.sitefenn /absolute/path/NEW-workspace
 ```
 
 Stop the old instance before using `HUB_DATA_DIR` for the restored directory. Schedules are disabled after restore until renewed acknowledgment. Keep the original copy until recovery is checked. [Distribution, update and storage verification](docs/RELEASE-1.9.md).
@@ -151,7 +163,7 @@ Use only **trusted websites you own or are explicitly authorized to test**. Navi
 
 Exports omit URL queries/fragments where documented, but page text, screenshots and selected source snippets may still contain private information. Images are opt-in for portable report ZIPs. Treat website-derived content as untrusted data and review every export before sharing it with another person or AI.
 
-2.4 is released as tested **local web/CLI software**. Independent user pilots, held-out human accuracy evaluation, full screenreader review, real Google authorization and native/Windows distribution remain open. The [release verification](docs/RELEASE-2.4.md) distinguishes actual integration runs, controlled fixtures and unavailable external checks. No general accuracy or SEO-effectiveness certification is claimed.
+2.5 is released as tested **local web/CLI software**. Independent user pilots, held-out human accuracy evaluation, full screenreader review, real Google authorization and native/Windows distribution remain open. The [release verification](docs/RELEASE-2.5.md) distinguishes actual integration runs, controlled fixtures and unavailable external checks. No general accuracy or SEO-effectiveness certification is claimed.
 
 ## Development and contribution
 

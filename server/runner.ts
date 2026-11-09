@@ -1,3 +1,4 @@
+import { failureCode, type Jobs } from "./jobs.js";
 import { fork, type ChildProcess } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import type {
@@ -22,6 +23,7 @@ export class Runner {
   constructor(
     private store: Store,
     private origin: string,
+    private jobs?: Jobs,
   ) {}
   enqueue() {
     void this.next();
@@ -113,6 +115,10 @@ export class Runner {
     if (!scan) return;
     const project = this.store.project(scan.projectId)!;
     this.store.running(scan.id);
+    this.jobs?.browser(scan.id, scan.projectId, "running", {
+      reason: undefined,
+      failure: undefined,
+    });
     this.cancelled.delete(scan.id);
     const workerPath = new URL(
       import.meta.url.endsWith(".ts") ? "./scan-worker.ts" : "./scan-worker.js",
@@ -153,53 +159,103 @@ export class Runner {
         this.stop(child);
       }
     }, 1000);
-    const settle = (error?: string, result?: ScanResult) => {
+    const settle = (
+      error?: string,
+      result?: ScanResult,
+      cause?: ReturnType<typeof failureCode>,
+    ) => {
       if (settled || this.closing) return;
       settled = true;
       clearTimeout(timeout);
-      if (result)
-        this.store.finish(
-          scan.id,
-          result,
-          this.cancelled.has(scan.id) ? "cancelled" : "completed",
-        );
-      else
-        this.store.fail(
-          scan.id,
-          error || "Die Prüfung wurde nicht abgeschlossen.",
-          this.cancelled.has(scan.id) ? "cancelled" : "failed",
-        );
-      this.persistTasks(scan.id);
+      try {
+        if (result)
+          this.store.finish(
+            scan.id,
+            result,
+            this.cancelled.has(scan.id) ? "cancelled" : "completed",
+          );
+        else
+          this.store.fail(
+            scan.id,
+            error || "Die Prüfung wurde nicht abgeschlossen.",
+            this.cancelled.has(scan.id) ? "cancelled" : "failed",
+          );
+        this.persistTasks(scan.id);
+        this.jobs?.update(scan.id, {
+          phase: "cleaning-up",
+          reason: "Browser gibt Ressourcen frei",
+          failure:
+            error && !this.cancelled.has(scan.id)
+              ? (cause ?? "worker")
+              : undefined,
+        });
+      } catch (failure) {
+        this.jobs?.update(scan.id, {
+          phase: "cleaning-up",
+          reason: "Speichern fehlgeschlagen. Browser wird beendet.",
+          failure: failureCode(failure),
+        });
+        try {
+          this.store.fail(
+            scan.id,
+            "Speichern fehlgeschlagen. Gesicherte Zwischenstände können fortgesetzt werden.",
+          );
+        } catch {
+          /* Storage may still be full. */
+        }
+        this.stop(child);
+      }
     };
     child.on(
       "message",
       (message: WorkerEvent | { result?: ScanResult; error?: string }) => {
         if (this.closing || settled) return;
-        if ("type" in message) {
-          if (message.type === "progress") {
-            this.store.progress(scan.id, message.progress);
-            if (message.progress.phase === "paused")
-              this.store.setStatus(scan.id, "paused");
-            else if (this.store.scan(scan.id)?.status === "paused")
-              this.store.setStatus(scan.id, "running");
-          } else if (
-            message.type === "frame" &&
-            message.frame.image.length < 1_500_000
-          )
-            this.frames.set(scan.id, message.frame);
-          else if (message.type === "finding")
-            this.findings.set(
-              scan.id,
-              [
-                ...(this.findings.get(scan.id) || []).filter(
-                  (f) => f.id !== message.finding.id,
-                ),
-                message.finding,
-              ].slice(-2000),
-            );
-          else if (message.type === "checkpoint")
-            this.store.checkpoint(scan.id, message.result);
-        } else settle(message.error, message.result);
+        try {
+          if ("type" in message) {
+            if (message.type === "progress") {
+              this.store.progress(scan.id, message.progress);
+              if (!this.cancelled.has(scan.id))
+                this.jobs?.update(scan.id, {
+                  phase:
+                    message.progress.phase === "paused" ? "paused" : "running",
+                  progress: {
+                    completed: message.progress.completed,
+                    total: message.progress.total,
+                    unit: "steps",
+                  },
+                });
+              if (message.progress.phase === "paused")
+                this.store.setStatus(scan.id, "paused");
+              else if (this.store.scan(scan.id)?.status === "paused")
+                this.store.setStatus(scan.id, "running");
+            } else if (
+              message.type === "frame" &&
+              message.frame.image.length < 1_500_000
+            )
+              this.frames.set(scan.id, message.frame);
+            else if (message.type === "finding")
+              this.findings.set(
+                scan.id,
+                [
+                  ...(this.findings.get(scan.id) || []).filter(
+                    (f) => f.id !== message.finding.id,
+                  ),
+                  message.finding,
+                ].slice(-2000),
+              );
+            else if (message.type === "checkpoint")
+              this.store.checkpoint(scan.id, message.result);
+          } else settle(message.error, message.result);
+        } catch (error) {
+          settle(
+            failureCode(error) === "disk-full"
+              ? "Datenträger voll."
+              : "Zwischenstand konnte nicht gespeichert werden.",
+            undefined,
+            failureCode(error),
+          );
+          this.stop(child);
+        }
       },
     );
     child.on("error", (error) => settle(error.message));
@@ -212,6 +268,18 @@ export class Runner {
       clearTimeout(this.hardStop);
       this.active = undefined;
       this.activeId = undefined;
+      const saved = this.store.scan(scan.id)?.status;
+      const entry = this.jobs?.get(scan.id);
+      this.jobs?.update(scan.id, {
+        phase: this.closing
+          ? "interrupted"
+          : entry?.failure
+            ? "failed"
+            : saved === "completed" || saved === "cancelled"
+              ? saved
+              : "failed",
+        reason: undefined,
+      });
       if (this.frames.size > 5) {
         const first = this.frames.keys().next().value;
         if (first) {
@@ -251,13 +319,18 @@ export class Runner {
           statusCode: 409,
         });
       this.cancelled.add(id);
+      this.jobs?.update(id, {
+        phase: this.activeId === id ? "cancelling" : "cancelled",
+      });
       if (this.activeId === id) {
         this.active?.send({ type: "control", action });
         this.stop(this.active!);
       } else this.store.fail(id, "Vom Nutzer abgebrochen.", "cancelled");
     } else if (action === "pause") {
-      if (scan.status === "queued") this.store.setStatus(id, "paused");
-      else if (this.activeId === id && scan.status === "running")
+      if (scan.status === "queued") {
+        this.store.setStatus(id, "paused");
+        this.jobs?.update(id, { phase: "paused" });
+      } else if (this.activeId === id && scan.status === "running")
         this.active?.send({ type: "control", action });
       else
         throw Object.assign(
@@ -276,6 +349,9 @@ export class Runner {
         !this.activeId
       ) {
         this.store.setStatus(id, "queued");
+        this.jobs?.browser(id, scan.projectId, "queued", {
+          failure: undefined,
+        });
         this.enqueue();
       } else
         throw Object.assign(

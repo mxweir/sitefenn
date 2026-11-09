@@ -1,3 +1,7 @@
+import { Jobs, failureCode } from "./jobs.js";
+import { BackupJobs } from "./backup-jobs.js";
+import { APP_VERSION } from "../shared/version.js";
+import { createReadStream } from "node:fs";
 import { changeEvidence } from "./services/change-evidence.js";
 import {
   compareHistory,
@@ -47,7 +51,7 @@ import Fastify from "fastify";
 import { readFile, access } from "node:fs/promises";
 import { join, resolve, relative } from "node:path";
 import { timingSafeEqual, randomBytes, randomUUID } from "node:crypto";
-import { zipSync, strToU8 } from "fflate";
+import { zip, strToU8 } from "fflate";
 import { Store } from "./store.js";
 import { Runner } from "./runner.js";
 import { dependencies } from "./dependencies.js";
@@ -111,11 +115,36 @@ export async function createApp(options: {
     options.googleDependencies?.fetch,
   );
   const origin = `http://127.0.0.1:${options.port}`;
-  const runner = new Runner(store, origin);
+  const jobs = new Jobs(store);
+  const backupJobs = new BackupJobs(store.dataDir, jobs);
+  const runner = new Runner(store, origin, jobs);
   const session = randomBytes(32).toString("hex");
-  let operation: "discovery" | "ai" | "backup" | "visual" | "source" | null =
-    null;
+  let operation:
+    | "discovery"
+    | "ai"
+    | "backup"
+    | "visual"
+    | "source"
+    | "export"
+    | null = null;
   const aiControllers = new Set<AbortController>();
+  const cancellableAi = new Map<string, AbortController>();
+  const runJob = async <T>(
+    kind: "export" | "backup" | "maintenance",
+    action: () => Promise<T> | T,
+    context?: { scanId?: string; projectId?: string },
+  ) => {
+    const job = jobs.start(kind, context);
+    try {
+      const result = await action();
+      jobs.update(job.id, { phase: "completed" });
+      return result;
+    } catch (error) {
+      jobs.update(job.id, { phase: "failed", failure: failureCode(error) });
+      throw error;
+    }
+  };
+  let closing = false;
   let pageWork: Promise<void> | undefined;
   let activePage: { id: string; controller: AbortController } | undefined;
   const currentReadiness = () =>
@@ -221,6 +250,86 @@ export async function createApp(options: {
           : "Die Anfrage konnte nicht verarbeitet werden. Prüfe den Umfang und versuche es erneut.",
     });
   });
+  app.get("/api/jobs", async () => ({
+    jobs: jobs.list(),
+    readiness: currentReadiness(),
+  }));
+  app.get("/api/jobs/diagnostics", async (_request, reply) =>
+    reply
+      .header(
+        "Content-Disposition",
+        'attachment; filename="sitefenn-diagnostics.json"',
+      )
+      .send({
+        version: APP_VERSION,
+        node: process.version,
+        platform: process.platform,
+        arch: process.arch,
+        jobs: jobs
+          .list()
+          .slice(0, 50)
+          .map(({ id, kind, phase, updatedAt, failure }) => ({
+            id,
+            kind,
+            phase,
+            updatedAt,
+            failure,
+          })),
+      }),
+  );
+  app.post<{ Params: { id: string } }>(
+    "/api/jobs/:id/cancel",
+    async (request) => {
+      const id = request.params.id,
+        job = jobs.get(id);
+      if (!job) throw bad("Auftrag fehlt.", 404);
+      if (job.kind === "browser") runner.control(id, "cancel");
+      else if (job.kind === "ai" && job.cancellable && cancellableAi.has(id)) {
+        jobs.update(id, { phase: "cancelling", cancellable: false });
+        cancellableAi.get(id)!.abort();
+      } else if (!backupJobs.cancel(id))
+        throw bad("Dieser Auftrag kann gerade nicht abgebrochen werden.", 409);
+      return { job: jobs.get(id) };
+    },
+  );
+  app.post("/api/jobs/backup", async (request, reply) => {
+    idle();
+    const body = object(request.body);
+    if (
+      Object.keys(body).some((key) => key !== "projectId") ||
+      (body.projectId !== undefined && typeof body.projectId !== "string")
+    )
+      throw bad("Projekt-ID erwartet.");
+    const projectId = body.projectId as string | undefined;
+    if (projectId !== undefined) requireProject(projectId);
+    const { job, done } = backupJobs.start(projectId);
+    operation = "backup";
+    void done.finally(() => {
+      operation = null;
+    });
+    return reply.code(202).send({ job });
+  });
+  app.get<{ Params: { id: string } }>(
+    "/api/jobs/:id/backup",
+    async (request, reply) => {
+      const job = jobs.get(request.params.id);
+      if (
+        job?.kind !== "backup" ||
+        job.phase !== "completed" ||
+        !job.downloadable
+      )
+        throw bad("Sicherungsdatei fehlt.", 404);
+      const path = join(backupJobs.folder, `${job.id}.sitefenn`);
+      await access(path);
+      return reply
+        .type("application/octet-stream")
+        .header(
+          "Content-Disposition",
+          'attachment; filename="sitefenn-backup.sitefenn"',
+        )
+        .send(createReadStream(path));
+    },
+  );
   app.get("/api/readiness", async () => currentReadiness());
   app.get("/api/bootstrap", async () => {
     const scans = scanHeads(store);
@@ -448,7 +557,18 @@ export async function createApp(options: {
       throw bad((error as Error).message);
     }
     if (retest) normalized.retest = retest;
-    const scan = store.createScan(projectId, normalized);
+    store.db.exec("SAVEPOINT enqueue_job");
+    let scan;
+    try {
+      scan = store.createScan(projectId, normalized);
+      jobs.browser(scan.id, projectId, "queued", {
+        reason: "Wartet auf den Browser-Worker",
+      });
+      store.db.exec("RELEASE enqueue_job");
+    } catch (error) {
+      store.db.exec("ROLLBACK TO enqueue_job; RELEASE enqueue_job");
+      throw error;
+    }
     if (options.runJobs !== false) runner.enqueue();
     return scan;
   };
@@ -781,7 +901,8 @@ export async function createApp(options: {
   }>("/api/scans/:id/export", async (request, reply) => {
     const scan = requireScan(request.params.id),
       project = requireProject(scan.projectId);
-    if (!scan.result?.audit)
+    const report = scan.result?.audit;
+    if (!report)
       throw bad(
         "Für diesen älteren Scan ist kein 1.0-Report verfügbar. Bitte neu prüfen.",
       );
@@ -789,45 +910,73 @@ export async function createApp(options: {
       format = request.query.format || "markdown";
     if (!["markdown", "json", "zip"].includes(format))
       throw bad("Unbekanntes Exportformat.");
-    const includeEvidence =
-      format === "zip" && request.query.includeEvidence === "true";
-    const reportOptions = { includeEvidence };
-    const markdown = buildMarkdownReport(project, scan, tasks, reportOptions),
-      json = buildJsonReport(project, scan, tasks, reportOptions);
-    const extension = format === "markdown" ? "md" : format;
-    reply.header(
-      "Content-Disposition",
-      `attachment; filename="sitefenn-${scan.id}.${extension}"`,
-    );
-    if (format === "markdown")
-      return reply.type("text/markdown; charset=utf-8").send(markdown);
-    if (format === "json") return reply.type("application/json").send(json);
-    const files: Record<string, Uint8Array> = {
-      "REPORT.md": strToU8(markdown),
-      "report.json": strToU8(json),
-    };
-    let size = 0;
-    if (includeEvidence) {
-      const ids = [
-        ...new Set(
-          scan.result.audit.findings.flatMap((finding) =>
-            finding.evidenceId ? [finding.evidenceId] : [],
-          ),
-        ),
-      ];
-      for (const artifact of buildEvidenceManifest(scan.result.audit, ids)) {
-        const bytes = await evidenceBytes(artifact.sourcePath);
-        size += bytes.byteLength;
-        if (size > 100 * 1024 * 1024)
-          throw bad(
-            "Der ZIP-Export überschreitet 100 MiB. Lade Berichte ohne Bilder herunter.",
-          );
-        files[artifact.archivePath] = bytes;
-      }
+    if (format === "zip") {
+      idle();
+      operation = "export";
     }
-    return reply
-      .type("application/zip")
-      .send(Buffer.from(zipSync(files, { level: 1 })));
+    try {
+      return await runJob(
+        "export",
+        async () => {
+          const includeEvidence =
+            format === "zip" && request.query.includeEvidence === "true";
+          const reportOptions = { includeEvidence };
+          const markdown = buildMarkdownReport(
+              project,
+              scan,
+              tasks,
+              reportOptions,
+            ),
+            json = buildJsonReport(project, scan, tasks, reportOptions);
+          const extension = format === "markdown" ? "md" : format;
+          reply.header(
+            "Content-Disposition",
+            `attachment; filename="sitefenn-${scan.id}.${extension}"`,
+          );
+          if (format === "markdown")
+            return reply.type("text/markdown; charset=utf-8").send(markdown);
+          if (format === "json")
+            return reply.type("application/json").send(json);
+          const files: Record<string, Uint8Array> = {
+            "REPORT.md": strToU8(markdown),
+            "report.json": strToU8(json),
+          };
+          let size = 0;
+          if (includeEvidence) {
+            const ids = [
+              ...new Set(
+                report.findings.flatMap((finding) =>
+                  finding.evidenceId ? [finding.evidenceId] : [],
+                ),
+              ),
+            ];
+            for (const artifact of buildEvidenceManifest(report, ids)) {
+              const bytes = await evidenceBytes(artifact.sourcePath);
+              size += bytes.byteLength;
+              if (size > 100 * 1024 * 1024)
+                throw bad(
+                  "Der ZIP-Export überschreitet 100 MiB. Lade Berichte ohne Bilder herunter.",
+                );
+              files[artifact.archivePath] = bytes;
+            }
+          }
+          return reply
+            .type("application/zip")
+            .send(
+              Buffer.from(
+                await new Promise<Uint8Array>((resolve, reject) =>
+                  zip(files, { level: 1 }, (error, bytes) =>
+                    error ? reject(error) : resolve(bytes),
+                  ),
+                ),
+              ),
+            );
+        },
+        { scanId: scan.id, projectId: scan.projectId },
+      );
+    } finally {
+      if (format === "zip") operation = null;
+    }
   });
   app.get<{ Querystring: { before?: string; after?: string } }>(
     "/api/compare",
@@ -1027,6 +1176,12 @@ export async function createApp(options: {
         "Keine bildbelegten Befunde für eine lokale Erklärung vorhanden. Messwerte und Ergebnisse stehen im Report.",
       );
     const controller = new AbortController();
+    const tracked = jobs.start("ai", {
+      scanId: scan.id,
+      projectId: scan.projectId,
+    });
+    jobs.update(tracked.id, { cancellable: true });
+    cancellableAi.set(tracked.id, controller);
     aiControllers.add(controller);
     operation = "ai";
     try {
@@ -1042,8 +1197,15 @@ export async function createApp(options: {
       plan.warnings.push(
         `Diese Erklärung umfasst ${findings.length} ausgewählte bildbelegte Befunde. Weitere und rein numerische Befunde bleiben im regelbasierten Bericht.`,
       );
-      return { plan: store.saveAiPlan(scan.id, plan) };
+      const saved = store.saveAiPlan(scan.id, plan);
+      jobs.update(tracked.id, { phase: "completed", cancellable: false });
+      return { plan: saved };
     } catch (error) {
+      jobs.update(tracked.id, {
+        phase: controller.signal.aborted ? "cancelled" : "failed",
+        failure: controller.signal.aborted ? undefined : failureCode(error),
+        cancellable: false,
+      });
       throw bad(
         error instanceof Error
           ? error.message
@@ -1051,6 +1213,7 @@ export async function createApp(options: {
         422,
       );
     } finally {
+      cancellableAi.delete(tracked.id);
       aiControllers.delete(controller);
       operation = null;
     }
@@ -1197,20 +1360,49 @@ export async function createApp(options: {
         prepared,
         parent?.id,
       );
-      store.savePageAnalysis(job);
+      store.db.exec("SAVEPOINT enqueue_analysis");
+      try {
+        store.savePageAnalysis(job);
+        jobs.start("ai", {
+          id: job.id,
+          scanId: scan.id,
+          projectId: scan.projectId,
+        });
+        store.db.exec("RELEASE enqueue_analysis");
+      } catch (error) {
+        store.db.exec("ROLLBACK TO enqueue_analysis; RELEASE enqueue_analysis");
+        throw error;
+      }
       const controller = new AbortController();
       activePage = { id: job.id, controller };
+      jobs.update(job.id, { cancellable: true });
+      cancellableAi.set(job.id, controller);
       aiControllers.add(controller);
       operation = "ai";
+      let analysisFailure: ReturnType<typeof failureCode>;
       pageWork = runPageAnalysis(
         job,
         prepared,
-        (value) => store.savePageAnalysis(value),
+        (value) => {
+          store.savePageAnalysis(value);
+          jobs.update(job.id, {
+            progress: {
+              completed: value.parts.filter((part) =>
+                ["completed", "failed", "skipped", "cancelled"].includes(
+                  part.status,
+                ),
+              ).length,
+              total: value.parts.length,
+              unit: "steps",
+            },
+          });
+        },
         controller.signal,
         options.aiDependencies,
       )
         .then(() => {})
         .catch((error) => {
+          analysisFailure = failureCode(error);
           job.status = "failed";
           job.stage = "done";
           job.warnings.push(
@@ -1218,9 +1410,31 @@ export async function createApp(options: {
               ? error.message
               : "Seitenanalyse fehlgeschlagen.",
           );
-          store.savePageAnalysis(job);
+          try {
+            store.savePageAnalysis(job);
+          } catch (writeError) {
+            analysisFailure = failureCode(writeError);
+          }
         })
         .finally(() => {
+          const final = store.pageAnalysis(job.id);
+          jobs.update(job.id, {
+            phase: closing
+              ? "interrupted"
+              : controller.signal.aborted
+                ? "cancelled"
+                : final?.status === "completed" || final?.status === "partial"
+                  ? "completed"
+                  : "failed",
+            failure: closing
+              ? "interrupted"
+              : controller.signal.aborted
+                ? undefined
+                : (analysisFailure ??
+                  (final?.status === "failed" ? "operation" : undefined)),
+            cancellable: false,
+          });
+          cancellableAi.delete(job.id);
           aiControllers.delete(controller);
           activePage = undefined;
           operation = null;
@@ -1235,6 +1449,10 @@ export async function createApp(options: {
         throw bad("Seitenanalyse nicht gefunden.", 404);
       if (activePage?.id !== request.params.id)
         throw bad("Diese Auswertung ist nicht aktiv.", 409);
+      jobs.update(request.params.id, {
+        phase: "cancelling",
+        cancellable: false,
+      });
       activePage.controller.abort();
       return { cancelled: true };
     },
@@ -1245,19 +1463,25 @@ export async function createApp(options: {
       const job = store.pageAnalysis(request.params.id);
       if (!job) throw bad("Seitenanalyse nicht gefunden.", 404);
       const scan = requireScan(job.scanId);
-      if (!scan.result?.audit) throw bad("Messbericht fehlt.");
-      return reply
-        .header(
-          "Content-Disposition",
-          'attachment; filename="sitefenn-page-analysis.md"',
-        )
-        .type("text/markdown; charset=utf-8")
-        .send(
-          pageAnalysisMarkdown(job, scan.result.audit, {
-            reviews: store.analysisReviews(job.id),
-            feedback: store.analysisFeedback(job.id),
-          }),
-        );
+      const report = scan.result?.audit;
+      if (!report) throw bad("Messbericht fehlt.");
+      return runJob(
+        "export",
+        () =>
+          reply
+            .header(
+              "Content-Disposition",
+              'attachment; filename="sitefenn-page-analysis.md"',
+            )
+            .type("text/markdown; charset=utf-8")
+            .send(
+              pageAnalysisMarkdown(job, report, {
+                reviews: store.analysisReviews(job.id),
+                feedback: store.analysisFeedback(job.id),
+              }),
+            ),
+        { scanId: scan.id, projectId: scan.projectId },
+      );
     },
   );
   app.get<{ Params: { id: string } }>(
@@ -1431,7 +1655,10 @@ export async function createApp(options: {
     },
   );
   app.post("/api/ai/cancel", async () => {
-    for (const controller of aiControllers) controller.abort();
+    for (const [id, controller] of cancellableAi) {
+      jobs.update(id, { phase: "cancelling", cancellable: false });
+      controller.abort();
+    }
     return { cancelled: true };
   });
   app.post("/api/speech", async (request) => {
@@ -1615,8 +1842,10 @@ export async function createApp(options: {
       throw bad("Zuerst die aktive Arbeit abschließen.", 409);
     operation = "backup";
     try {
-      recoverOperations(store);
-      return { recovered: true };
+      return await runJob("maintenance", () => {
+        recoverOperations(store);
+        return { recovered: true };
+      });
     } finally {
       operation = null;
     }
@@ -1639,7 +1868,7 @@ export async function createApp(options: {
     idle();
     operation = "backup";
     try {
-      return await beforeUpdateBackup(store);
+      return await runJob("backup", () => beforeUpdateBackup(store));
     } finally {
       operation = null;
     }
@@ -1677,14 +1906,18 @@ export async function createApp(options: {
     if (preview.ids.some((id) => protectedIds.has(id) || !store.scan(id)))
       throw bad("Datenstand geändert; Vorschau erneuern.");
     storagePreviews.delete(String(body.token));
-    store.trashScans(preview.ids);
-    return { trashed: preview.ids.length, recoverable: true };
+    return runJob("maintenance", () => {
+      store.trashScans(preview.ids);
+      return { trashed: preview.ids.length, recoverable: true };
+    });
   });
   app.post("/api/storage/restore", async (request) => {
     idle();
     try {
-      store.restoreTrash(String(object(request.body).id));
-      return { restored: true };
+      return await runJob("maintenance", () => {
+        store.restoreTrash(String(object(request.body).id));
+        return { restored: true };
+      });
     } catch (error) {
       throw bad((error as Error).message);
     }
@@ -1705,7 +1938,9 @@ export async function createApp(options: {
       );
     operation = "backup";
     try {
-      return await purgeTrash(store, body.ids as string[]);
+      return await runJob("maintenance", () =>
+        purgeTrash(store, body.ids as string[]),
+      );
     } finally {
       operation = null;
     }
@@ -1724,6 +1959,7 @@ export async function createApp(options: {
           String(body.sourceScanId),
           body.intervalHours,
           body.enabled,
+          body.catchUp,
         ),
       };
     } catch (error) {
@@ -1824,7 +2060,7 @@ export async function createApp(options: {
     idle();
     operation = "backup";
     try {
-      const bytes = await createBackup(store);
+      const bytes = await runJob("backup", () => createBackup(store));
       return reply
         .type("application/zip")
         .header(
@@ -1878,10 +2114,14 @@ export async function createApp(options: {
       );
     }
   }
-  app.addHook("onClose", async () => {
+  app.addHook("preClose", async () => {
+    closing = true;
     scheduler.close();
-    google.close();
     for (const controller of aiControllers) controller.abort();
+    await backupJobs.close();
+  });
+  app.addHook("onClose", async () => {
+    google.close();
     await pageWork;
     stopSpeech();
     await runner.close();

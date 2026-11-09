@@ -2,6 +2,19 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 2.5.0 — 2026-11-09
+
+### Local jobs, diagnostics and larger backups
+
+- Added persistent job history and progress for browser checks, AI, exports, backups and maintenance. Supported jobs can be cancelled, and saved results link back to their context.
+- Added cancellable workspace or single-project streaming backups up to 2 GiB of source data and 20,000 evidence images, with SHA-256 checks and legacy ZIP restore.
+- Added explicit skip or single catch-up behavior after downtime. Resource waits preserve a single pending check.
+- Added on-demand redacted diagnostics with local job IDs, phases, versions and error codes.
+
+Verified a backup and restore of 2,001 synthetic evidence files with a 260 MiB largest file. A real full-volume test verified failure reporting and successful retry. Schedule coverage used a virtual 24-hour clock. [Release verification and limits](docs/RELEASE-2.5.md).
+
+![Actual 2.5 job center with a completed backup](docs/screenshots/2.5-jobs.jpg)
+
 ## 2.4.0 — 2026-11-01
 
 ### Understand what changed

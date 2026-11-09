@@ -120,6 +120,10 @@ export default function App() {
 
   const [scanDetail, setScanDetail] = useState<ScanDetail | null>(null);
   const [data, setData] = useState<Bootstrap>(empty);
+  const updateReadiness = useCallback(
+    (readiness: Readiness) => setData((current) => ({ ...current, readiness })),
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -416,6 +420,14 @@ export default function App() {
               >
                 <span className="online-dot" />
                 {data.readiness.message}
+                {screen !== "system" && (
+                  <button
+                    className="button secondary"
+                    onClick={() => setScreen("system")}
+                  >
+                    Aufträge öffnen
+                  </button>
+                )}
               </div>
             )}
             {((!loading && projectId && !project) || targetError) && (
@@ -453,6 +465,8 @@ export default function App() {
             )}
             {screen === "system" ? (
               <Settings
+                projects={data.projects}
+                onReadiness={updateReadiness}
                 dependencies={data.dependencies}
                 settings={data.settings}
                 speechAvailable={!!data.speechAvailable}

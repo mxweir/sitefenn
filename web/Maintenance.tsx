@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { WorkspaceReadiness } from "./workspace-state.js";
+import { useContext, useEffect, useState } from "react";
 import { api, post, message, stamp } from "./api.js";
 import { Notice, Success } from "./ui.js";
 interface Overview {
@@ -50,6 +51,9 @@ export default function Maintenance({
 }: {
   onChanged: () => void | Promise<void>;
 }) {
+  const readiness = useContext(WorkspaceReadiness);
+  const storageBlocked = !!readiness && !readiness.allowed.startExclusive;
+  const [catchUp, setCatchUp] = useState("skip");
   const [data, setData] = useState<Overview>(),
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false),
@@ -98,6 +102,7 @@ export default function Maintenance({
       <h2>Updates, Speicher & Prüfintervalle</h2>
       {error && <Notice error>{error}</Notice>}
       {success && <Success>{success}</Success>}
+      {storageBlocked && <p className="hint">{readiness?.message}</p>}
       {!!data?.storage.pendingOperations && (
         <Notice error>
           Ein bereits bestätigter Wartungsauftrag ist noch offen. Neue
@@ -152,7 +157,7 @@ export default function Maintenance({
         )}
         <button
           className="button secondary"
-          disabled={busy}
+          disabled={storageBlocked || busy}
           onClick={() =>
             void action(async () => {
               const r = await post<{
@@ -202,7 +207,7 @@ export default function Maintenance({
             />
             <button
               className="button secondary"
-              disabled={busy}
+              disabled={storageBlocked || busy}
               onClick={() =>
                 void action(async () => {
                   setPreview(
@@ -234,7 +239,9 @@ export default function Maintenance({
                 ))}
                 <button
                   className="button secondary"
-                  disabled={busy || !preview.preview.candidates.length}
+                  disabled={
+                    storageBlocked || busy || !preview.preview.candidates.length
+                  }
                   onClick={() =>
                     void action(async () => {
                       const r = await post<{ trashed: number }>(
@@ -277,7 +284,7 @@ export default function Maintenance({
                 </label>
                 <button
                   className="button secondary"
-                  disabled={busy}
+                  disabled={storageBlocked || busy}
                   onClick={() =>
                     void action(async () => {
                       await post("/api/storage/restore", { id: t.id });
@@ -310,7 +317,11 @@ export default function Maintenance({
                 />
                 <button
                   className="button secondary"
-                  disabled={busy || confirmation !== "ENDGÜLTIG LÖSCHEN"}
+                  disabled={
+                    storageBlocked ||
+                    busy ||
+                    confirmation !== "ENDGÜLTIG LÖSCHEN"
+                  }
                   onClick={() =>
                     void action(async () => {
                       await post("/api/storage/purge", {
@@ -371,6 +382,15 @@ export default function Maintenance({
               <option value="24">Täglich · 24 Stunden</option>
               <option value="168">Wöchentlich · 168 Stunden</option>
             </select>
+            <label htmlFor="schedule-catch-up">Nach App-Pause</label>
+            <select
+              id="schedule-catch-up"
+              value={catchUp}
+              onChange={(event) => setCatchUp(event.target.value)}
+            >
+              <option value="skip">Verpasste Termine überspringen</option>
+              <option value="once">Einen Check nachholen</option>
+            </select>
             <label>
               <input
                 type="checkbox"
@@ -390,6 +410,7 @@ export default function Maintenance({
                     projectId: p.projectId,
                     sourceScanId: profile,
                     intervalHours: hours,
+                    catchUp,
                     enabled: true,
                     acknowledged: ack,
                   });
