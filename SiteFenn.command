@@ -6,5 +6,7 @@ if ! command -v node >/dev/null 2>&1; then
   read -r "?Enter zum Schließen …"
   exit 2
 fi
-node scripts/launch.mjs
+node scripts/launch.mjs "$@"
+sitefenn_status=$?
 read -r "?Enter zum Schließen …"
+exit "$sitefenn_status"

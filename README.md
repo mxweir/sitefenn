@@ -6,19 +6,28 @@
 
 **Inspect → understand → hand off → retest.** Manage authorized websites, watch bounded Chromium checks, inspect evidence and turn findings into a practical checklist. SiteFenn keeps measured facts, review candidates and optional local AI suggestions separate. The core workflow needs no model, cloud account or paid service.
 
-![Actual SiteFenn 2.7 page-level visibility comparison](docs/screenshots/2.7-visibility.jpg)
+![Actual SiteFenn 2.8 setup and repair checklist](docs/screenshots/2.8-startup.jpg)
 
-_Two synthetic CSV imports in the real application. Missing page rows stay unknown._
+_The real local app shows runtime, browser and optional model status together._
 
-[Get started](#quick-start) · [What it checks](#what-it-checks) · [Local AI](#optional-local-ai) · [CLI gate](#developer-handoff-and-cli) · [2.7 verification](docs/RELEASE-2.7.md) · [Changelog](CHANGELOG.md)
+[Get started](#quick-start) · [What it checks](#what-it-checks) · [Local AI](#optional-local-ai) · [CLI gate](#developer-handoff-and-cli) · [2.8 verification](docs/RELEASE-2.8.md) · [Changelog](CHANGELOG.md)
 
-## New in 2.7 · Visibility and the Fix Lab
+## New in 2.8 · Reliable startup and recovery
 
-- **Preview before import.** Choose CSV or the experimental Google connector, then review the property, period, filters and available rows before saving.
-- **Compare landingpages and use them in a check.** See deltas for pages measured in both periods and bring selected same-origin URLs into a new check draft.
-- **Try a small CSS change offline.** Compare Chromium measurements and screenshots in the experimental Fix Lab using a local HTML fragment.
+- **Confirm the right server.** The launcher waits for its own process and version before opening the browser. Port conflicts and startup deadlines have explicit error messages.
+- **Diagnose the installation.** Use `--doctor` to start sandboxed Chromium and check optional Ollama without a download.
+- **Verify the way back.** Fresh setup, upgrade from the actual 2.7 package and rollback into a separate workspace are tested with a real report and screenshot.
 
-[Setup, screenshots and verification](docs/RELEASE-2.7.md).
+[Setup, rollback and desktop measurements](docs/RELEASE-2.8.md).
+
+<details>
+<summary>What changed in 2.7</summary>
+
+Preview Search Console imports, compare compatible landingpage periods and move selected pages into a check draft. The experimental offline Fix Lab compares a bounded CSS change with the original local HTML fragment.
+
+[2.7 verification](docs/RELEASE-2.7.md).
+
+</details>
 
 <details>
 <summary>What changed in 2.6</summary>
@@ -92,6 +101,8 @@ cd sitefenn
 node scripts/launch.mjs --setup
 # Later starts, without implicit downloads:
 node scripts/launch.mjs
+# Local diagnostics and a sandboxed Chromium start probe:
+node scripts/launch.mjs --doctor
 ```
 
 Open [http://127.0.0.1:4310](http://127.0.0.1:4310) and choose **Demo laden** to try an owned fixture. Optional Ollama does not block rule checks. macOS `.command` and experimental Windows `.cmd` convenience starters are included; real Windows and signed/native packaging remain unvalidated.
@@ -165,7 +176,7 @@ Returned/imported rows are subsets, not guaranteed complete property totals. Ave
 
 The legacy directory is retained across the rename and upgrades. `HUB_DATA_DIR` selects another directory. Reports/evidence are local but not encrypted by this app; the optional Google credential lives separately in macOS Keychain and is excluded from backup/export.
 
-In **System & Setup**, check public release metadata on demand and create a pre-update backup. Extract a reviewed update into a new program folder; preserve the existing data path. There is no automatic code exchange or independently signed updater. Checksums detect changed bytes, not publisher authenticity.
+In **System & Setup**, check public release metadata on demand and create a pre-update backup. Extract a reviewed update into a new program folder and preserve the existing data path. For rollback, restore the pre-update backup into a separate workspace and open that workspace with the previous release. [Recovery steps](docs/RELEASE-2.8.md#upgrade-and-return-to-the-previous-release). There is no automatic code exchange or independently signed updater. Checksums detect changed bytes, not publisher authenticity.
 
 Storage cleanup always starts with a bounded preview. Referenced/active history stays protected. Trash is reversible; permanent removal is a separate explicitly selected/typed action. Optional daily/weekly checks run while the app is open. A due check can wait for resources. Choose whether to skip missed slots during downtime or catch up once after launch.
 
@@ -183,7 +194,7 @@ Use only **trusted websites you own or are explicitly authorized to test**. Navi
 
 Exports omit URL queries/fragments where documented, but page text, screenshots and selected source snippets may still contain private information. Images are opt-in for portable report ZIPs. Treat website-derived content as untrusted data and review every export before sharing it with another person or AI.
 
-2.7 is released as tested **local web/CLI software**. Independent user pilots, held-out human accuracy evaluation, full screenreader review, real Google authorization and native/Windows distribution remain open. The [release verification](docs/RELEASE-2.7.md) distinguishes actual integration runs, controlled fixtures and unavailable external checks. No general accuracy or SEO-effectiveness certification is claimed.
+2.8 is released as tested **local web/CLI software**. Independent user pilots, held-out human accuracy evaluation, full screenreader review, real Google authorization and native/Windows distribution remain open. The [release verification](docs/RELEASE-2.8.md) distinguishes actual integration runs, controlled fixtures and unavailable external checks. No general accuracy or SEO-effectiveness certification is claimed.
 
 ## Development and contribution
 

@@ -2089,3 +2089,28 @@ test("2.6 mobile release gate separates outcomes and resets on a changed compari
   await page.getByLabel("Nachher", { exact: true }).selectOption("scan-old");
   await expect(page.getByText("Unklar · Exit 2")).toHaveCount(0);
 });
+
+test("2.8 setup exposes repair steps and optional AI at phone width", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockWorkspace(page);
+  await page.goto("/");
+  await page
+    .getByRole("button", { name: "System & Setup", exact: true })
+    .click();
+  const setup = page.getByRole("region", { name: "Start und Einrichtung" });
+  await expect(setup).toBeVisible();
+  await setup.getByText("Starthilfe und Reparatur", { exact: true }).click();
+  await expect(
+    setup.getByText("node scripts/launch.mjs --doctor", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    setup.getByText("node scripts/launch.mjs --setup", { exact: true }),
+  ).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+});

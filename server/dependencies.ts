@@ -21,8 +21,8 @@ export async function dependencies(): Promise<Dependency[]> {
     });
     if (response.ok) {
       const body = (await response.json()) as { models?: unknown[] };
-      ollamaReady = true;
-      models = body.models?.length || 0;
+      ollamaReady = Array.isArray(body.models);
+      models = ollamaReady ? body.models!.length : 0;
     }
   } catch {
     /* optional, never blocks scans */
@@ -39,7 +39,9 @@ export async function dependencies(): Promise<Dependency[]> {
       id: "browser",
       label: "Prüf-Browser",
       status: browserReady ? "ready" : "missing",
-      detail: browserReady ? "Chromium installiert" : "Chromium fehlt",
+      detail: browserReady
+        ? "Chromium-Datei gefunden · Startprobe per --doctor"
+        : "Chromium fehlt",
       instruction: browserReady ? undefined : "npm run browser:install",
     },
     {

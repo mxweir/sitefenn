@@ -174,9 +174,11 @@ export default function Maintenance({
           Vorsicherung vor Update erstellen
         </button>
         <p className="hint">
-          Wiederherstellung erfolgt bei gestoppter App in ein neues
-          Datenverzeichnis. Schlüsselbund-Verbindungen werden nicht exportiert.
-          Keine unabhängig signierten nativen Updates.
+          Für den Rückweg die App stoppen, die Vorsicherung mit{" "}
+          <code>npm run restore</code> in ein neues Datenverzeichnis entpacken
+          und die alte Programmversion mit <code>HUB_DATA_DIR</code> auf diesem
+          Verzeichnis starten. Schlüsselbund-Verbindungen werden getrennt
+          gespeichert.
         </p>
       </details>
       {data && (

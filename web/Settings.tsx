@@ -79,6 +79,73 @@ export default function Settings({
           Status aktualisieren
         </button>
       </section>
+      <section
+        className="panel setup-checklist"
+        aria-label="Start und Einrichtung"
+      >
+        <div className="panel-head">
+          <div>
+            <p className="eyebrow">LOKALER STARTCHECK</p>
+            <h2>Start und Einrichtung</h2>
+            <p>
+              Node.js und Chromium bilden die Basis. Ein Modell ist optional.
+            </p>
+          </div>
+          <ShieldCheck size={23} />
+        </div>
+        <div className="dependency-list">
+          {dependencies.map((dep) => (
+            <article key={dep.id} className="dependency-card">
+              <span className={`dependency-icon ${dep.status}`}>
+                {dep.status === "ready" ? (
+                  <CheckCircle2 />
+                ) : dep.status === "missing" ? (
+                  <CircleAlert />
+                ) : (
+                  <Sparkles />
+                )}
+              </span>
+              <div>
+                <div className="dependency-heading">
+                  <h3>{dep.label}</h3>
+                  <span className={`dependency-state ${dep.status}`}>
+                    {dep.status === "ready"
+                      ? "Bereit"
+                      : dep.status === "missing"
+                        ? "Fehlt"
+                        : "Optional"}
+                  </span>
+                </div>
+                <p>{dep.detail}</p>
+                {dep.instruction && (
+                  <pre>
+                    <code>{dep.instruction}</code>
+                  </pre>
+                )}
+              </div>
+            </article>
+          ))}
+        </div>
+        <details className="plan-note">
+          <summary>Starthilfe und Reparatur</summary>
+          <ol>
+            <li>
+              Bei fehlendem oder beschädigtem Build im SiteFenn-Ordner{" "}
+              <code>node scripts/launch.mjs --setup</code> ausführen. Dieser
+              Schritt lädt Abhängigkeiten und Chromium bewusst herunter.
+            </li>
+            <li>
+              Wenn Chromium vorhanden ist, aber kein Check startet,{" "}
+              <code>node scripts/launch.mjs --doctor</code> ausführen. Die
+              Diagnose prüft einen echten Chromium-Start mit Sandbox.
+            </li>
+            <li>
+              Bei einem belegten Port die bisherige Instanz beenden oder vor dem
+              Start einen freien <code>PORT</code> setzen.
+            </li>
+          </ol>
+        </details>
+      </section>
       <Jobs projects={projects} onReadiness={onReadiness} />
       <Maintenance onChanged={onSaved} />
       <div className="settings-grid">
@@ -268,39 +335,6 @@ export default function Settings({
           </p>
         </section>
       </div>
-      <section className="dependency-list">
-        {dependencies.map((dep) => (
-          <article key={dep.id} className="dependency-card">
-            <span className={`dependency-icon ${dep.status}`}>
-              {dep.status === "ready" ? (
-                <CheckCircle2 />
-              ) : dep.status === "missing" ? (
-                <CircleAlert />
-              ) : (
-                <Sparkles />
-              )}
-            </span>
-            <div>
-              <div className="dependency-heading">
-                <h2>{dep.label}</h2>
-                <span className={`dependency-state ${dep.status}`}>
-                  {dep.status === "ready"
-                    ? "Bereit"
-                    : dep.status === "missing"
-                      ? "Fehlt"
-                      : "Optional"}
-                </span>
-              </div>
-              <p>{dep.detail}</p>
-              {dep.instruction && (
-                <pre>
-                  <code>{dep.instruction}</code>
-                </pre>
-              )}
-            </div>
-          </article>
-        ))}
-      </section>
     </>
   );
 }

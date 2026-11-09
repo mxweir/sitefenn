@@ -54,7 +54,7 @@ for (const p of [
 ])
   await add(p);
 entries["PORTABLE-README.txt"] = strToU8(
-  "SiteFenn local Web/CLI package. Not a signed native installer. Node.js 24 required.\nFirst setup (explicit dependency/Chromium download): node scripts/launch.mjs --setup\nThen: node scripts/launch.mjs\nExisting user data remains in the same legacy workspace directory. Back up before manual updates.\nGoogle connector experimental/macOS Keychain only; Windows/native distribution not validated.\n",
+  "SiteFenn local Web/CLI package. Not a signed native installer. Node.js 24 required.\nFirst setup (explicit dependency/Chromium download): node scripts/launch.mjs --setup\nThen: node scripts/launch.mjs\nLocal diagnostics: node scripts/launch.mjs --doctor\nExisting user data remains in the same legacy workspace directory. Back up before manual updates.\nGoogle connector experimental/macOS Keychain only; Windows/native distribution not validated.\n",
 );
 const bytes = zipSync(entries, { level: 6 });
 const sha = createHash("sha256").update(bytes).digest("hex");

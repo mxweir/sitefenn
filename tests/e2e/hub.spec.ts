@@ -75,11 +75,9 @@ test("real responsive demo produces evidence, a report and persisted history", a
     .locator("option")
     .allTextContents();
   expect(mobileOption.some((value) => value.includes("mobile"))).toBe(true);
-  await description
-    .getByLabel("Fundstelle wählen")
-    .selectOption({
-      label: mobileOption.find((value) => value.includes("mobile"))!,
-    });
+  await description.getByLabel("Fundstelle wählen").selectOption({
+    label: mobileOption.find((value) => value.includes("mobile"))!,
+  });
   await expect
     .poll(() =>
       description
@@ -163,7 +161,9 @@ test("real responsive demo produces evidence, a report and persisted history", a
     "https://github.com/mxweir/sitefenn/blob/main/docs/BASELINE-1.1.md",
   );
   await expect(
-    page.getByText("Chromium installiert", { exact: true }),
+    page.getByText("Chromium-Datei gefunden · Startprobe per --doctor", {
+      exact: true,
+    }),
   ).toBeVisible();
   expect(errors).toEqual([]);
 });

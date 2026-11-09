@@ -2054,7 +2054,7 @@ h1 {
   align-items: center;
   gap: 14px;
 }
-.dependency-heading h2 {
+.dependency-heading h3 {
   font-size: 17px;
 }
 .dependency-state {
@@ -2665,7 +2665,7 @@ h1 {
     flex-wrap: wrap;
     gap: 9px;
   }
-  .dependency-heading h2 {
+  .dependency-heading h3 {
     font-size: 15px;
   }
   .dependency-card p {
@@ -3385,3 +3385,11 @@ h1 {
 .fix-lab figure { margin: 12px 0; }
 .fix-lab figure img { width: 100%; max-width: 420px; max-height: 420px; object-fit: contain; object-position: top left; }
 .search-keys { overflow-wrap: anywhere; }
+
+@media (min-width: 1050px) {
+  .setup-checklist .dependency-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.setup-checklist .dependency-icon { flex-shrink: 0; }
+.setup-checklist .plan-note { overflow-wrap: anywhere; }

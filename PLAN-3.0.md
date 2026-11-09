@@ -1,6 +1,6 @@
 # SiteFenn — Verbesserungsplan bis 3.0
 
-Stand: **9. November 2026**. Status: **2.1–2.7 als lokaler Web-/CLI-Umfang implementiert und geprüft; 2.8–3.0 bleiben Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
+Stand: **9. November 2026**. Status: **2.1–2.8 als lokaler Web-/CLI-Umfang implementiert und geprüft; 2.9–3.0 bleiben Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
 
 Grundlage: drei spezialisierte Agentenreviews für Architektur/Betrieb/Security, Produkt/UX/Frontend und KI/QA/SEO, anschließend gemeinsame Priorisierung. Das ist ein tatsächlicher Code-/Artefaktreview durch Softwareagenten, **keine externe Fachpersonen- oder Nutzerstudie**. Für diese Planung wurden keine neuen Modellläufe, Funktionstests oder Kundenscans ausgeführt.
 
@@ -173,6 +173,8 @@ A und B sind keine gegenseitigen Abhängigkeiten und müssen nicht gemeinsam in 
 - Signierte/notarisierte native Veröffentlichung nur mit verfügbaren Zertifikaten und tatsächlich geprüfter Lieferkette. Windows-Unterstützung erst nach einem echten Windows-Lauf, nicht durch Cross-Compilation erklären.
 
 **Abnahme:** Ein fremder Dienst am Port wird nicht als SiteFenn gestartet erkannt. Auf dem jeweils beanspruchten Zielsystem sind Installation, Datenübernahme und Recovery reproduzierbar. Der lokale Web-/CLI-Kern bleibt eigenständig lieferbar; native Vorschaupakete sind getrennt gekennzeichnet.
+
+**Prüfstand 2.8:** Start-Handshake, Diagnose und Upgrade/Rückweg aus den ausgelieferten Paketen sind geprüft. Der macOS-Sidecar-Spike ist gemessen. Signierte Desktop-Pakete und die Windows-Abnahme stehen aus. [Release-Prüfung](docs/RELEASE-2.8.md).
 
 ### 2.9 — Pilot statt weiterer Wunschliste
 

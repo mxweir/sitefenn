@@ -2,6 +2,18 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 2.8.0 — 2026-11-09
+
+### Reliable local startup and recovery
+
+- Added a child-bound startup handshake, build and frontend checks, a bounded startup deadline and clear loopback port conflict messages.
+- Added `--doctor` for a real sandboxed Chromium start and an optional Ollama check. System & Setup now groups runtime status and repair steps.
+- Verified fresh setup, 2.7 → 2.8 upgrade and rollback using both packaged builds. The test preserves a browser report and checks the evidence image checksum.
+- Measured a headless macOS Swift supervisor around the existing runtime. Distribution remains Web/CLI. [Test details and desktop measurements](docs/RELEASE-2.8.md).
+
+![Actual setup and repair checklist](docs/screenshots/2.8-startup.jpg)
+![Actual verified pre-update backup](docs/screenshots/2.8-recovery.jpg)
+
 ## 2.7.0 — 2026-11-09
 
 ### Visibility and the experimental Fix Lab
