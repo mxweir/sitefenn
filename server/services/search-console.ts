@@ -294,7 +294,13 @@ export function parseSearchConsoleCsv(
     projectId: context?.projectId ?? "",
     importedAt: new Date().toISOString(),
     metadata: {
-      ...metadata,
+      property: metadata.property,
+      startDate: metadata.startDate,
+      endDate: metadata.endDate,
+      dimension: metadata.dimension,
+      source: "csv",
+      dataState: metadata.dataState === "declared" ? "declared" : "unknown",
+      coverage: "csv-export",
       filters: metadata.filters === null ? null : { ...metadata.filters },
     },
     rows,
@@ -321,6 +327,13 @@ export interface SearchDatasetComparison {
   clicksDelta: number | null;
   impressionsDelta: number | null;
   ctrDelta: number | null;
+  pages?: {
+    url: string;
+    before: SearchRow | null;
+    after: SearchRow | null;
+    clicksDelta: number | null;
+    impressionsDelta: number | null;
+  }[];
 }
 
 export function compareSearchDatasets(
@@ -333,6 +346,11 @@ export function compareSearchDatasets(
     Date.parse(meta.endDate) - Date.parse(meta.startDate);
   const compatible =
     a.property === b.property &&
+    (a.source ?? "csv") === (b.source ?? "csv") &&
+    (a.dataState ?? (a.source === "google-api" ? "final" : "unknown")) ===
+      (b.dataState ?? (b.source === "google-api" ? "final" : "unknown")) &&
+    (a.rowLimit ?? null) === (b.rowLimit ?? null) &&
+    a.endDate < b.startDate &&
     a.dimension === b.dimension &&
     a.filters !== null &&
     b.filters !== null &&
@@ -342,12 +360,49 @@ export function compareSearchDatasets(
     return {
       compatible: false,
       reason:
-        "Property, dimension, declared filters, and inclusive period length must match.",
+        "Quelle, Property, Dimension, Datenstand, deklarierte Filter und Periodenlänge müssen übereinstimmen. Der Vorher-Zeitraum muss vor dem Nachher-Zeitraum liegen.",
       clicksDelta: null,
       impressionsDelta: null,
       ctrDelta: null,
     };
-  if (a.dimension !== "date")
+  if (a.dimension === "page") {
+    const oldRows = new Map(before.rows.map((row) => [row.key, row]));
+    const newRows = new Map(after.rows.map((row) => [row.key, row]));
+    const keys = new Set([...newRows.keys(), ...oldRows.keys()]);
+    return {
+      compatible: true,
+      reason:
+        "Deltas gelten für Seiten mit Messwerten in beiden Importen. Fehlende Zeilen bleiben unbekannt.",
+      clicksDelta: null,
+      impressionsDelta: null,
+      ctrDelta: null,
+      pages: [...keys].slice(0, 500).map((url) => {
+        const previous = oldRows.get(url) ?? null,
+          current = newRows.get(url) ?? null;
+        return {
+          url,
+          before: previous,
+          after: current,
+          clicksDelta:
+            previous && current ? current.clicks - previous.clicks : null,
+          impressionsDelta:
+            previous && current
+              ? current.impressions - previous.impressions
+              : null,
+        };
+      }),
+    };
+  }
+  const completeDays = (dataset: SearchDataset) =>
+    new Set(dataset.rows.map((row) => row.key)).size ===
+      duration(dataset.metadata) / 86400000 + 1 &&
+    dataset.rows.every(
+      (row) =>
+        isoDate(row.key) &&
+        row.key >= dataset.metadata.startDate &&
+        row.key <= dataset.metadata.endDate,
+    );
+  if (a.dimension !== "date" || !completeDays(before) || !completeDays(after))
     return {
       compatible: true,
       reason:

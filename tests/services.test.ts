@@ -384,7 +384,7 @@ test("Search Console supports German semicolon CSV and quoted English comma CSV 
   );
   assert.equal(english.rows[0]?.key, 'a, "quoted" query');
   assert.equal(compareSearchDatasets(english, english).clicksDelta, null);
-  assert.equal(compareSearchDatasets(german, german).clicksDelta, 0);
+  assert.equal(compareSearchDatasets(german, german).clicksDelta, null);
 });
 
 test("Search Console rejects malformed quotes, duplicate keys, mismatched dimensions and unknown-filter comparisons", () => {

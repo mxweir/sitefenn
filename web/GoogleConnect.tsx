@@ -1,9 +1,6 @@
-import { useEffect, useState } from "react";
-import type {
-  SearchDataset,
-  SearchDimension,
-  SearchImportMetadata,
-} from "../shared/types.js";
+import { useEffect, useState, type ReactNode } from "react";
+import type { SearchImportMetadata } from "../shared/types.js";
+import type { SearchPreview } from "../shared/search-preview.js";
 import { api, post, message } from "./api.js";
 import { Notice } from "./ui.js";
 interface Status {
@@ -18,11 +15,15 @@ interface Status {
 export default function GoogleConnect({
   projectId,
   metadata,
-  onImport,
+  onPreview,
+  scopeFields,
+  onInvalidate,
 }: {
   projectId: string;
   metadata: SearchImportMetadata;
-  onImport: (dataset: SearchDataset) => void;
+  onPreview: (preview: SearchPreview) => void;
+  scopeFields: ReactNode;
+  onInvalidate: () => void;
 }) {
   const [status, setStatus] = useState<Status>(),
     [error, setError] = useState(""),
@@ -31,7 +32,10 @@ export default function GoogleConnect({
     [properties, setProperties] = useState<
       { siteUrl: string; permissionLevel: string }[]
     >([]),
-    [ack, setAck] = useState(false);
+    [ack, setAck] = useState(false),
+    [property, setProperty] = useState(""),
+    [clientId, setClientId] = useState(""),
+    [clientSecret, setClientSecret] = useState("");
   const refresh = async () =>
     setStatus(await api<Status>("/api/google/status"));
   useEffect(() => {
@@ -45,13 +49,14 @@ export default function GoogleConnect({
       await refresh();
     } catch (e) {
       setError(message(e));
+      await refresh().catch(() => {});
     } finally {
       setBusy(false);
     }
   };
   return (
-    <details className="panel workspace-form">
-      <summary>Google direkt verbinden · experimentell</summary>
+    <section className="panel workspace-form">
+      <h3>Google direkt verbinden · experimentell</h3>
       <p>
         Optionaler rein lesender Zugriff. Desktop-OAuth-Client aus deinem
         Google-Cloud-Projekt und aktivierte Search Console API erforderlich.
@@ -74,32 +79,49 @@ export default function GoogleConnect({
       </label>
       {!status?.configured && (
         <>
-          <label htmlFor="google-client">Desktop-OAuth-JSON auswählen</label>
+          <label htmlFor="google-client-id">Desktop-Client-ID</label>
           <input
-            id="google-client"
-            type="file"
-            accept=".json,application/json"
-            disabled={busy || !ack || status?.available === false}
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
+            id="google-client-id"
+            autoComplete="off"
+            value={clientId}
+            onChange={(event) => setClientId(event.target.value)}
+          />
+          <label htmlFor="google-client-secret">Desktop-Client-Secret</label>
+          <input
+            id="google-client-secret"
+            type="password"
+            autoComplete="off"
+            value={clientSecret}
+            onChange={(event) => setClientSecret(event.target.value)}
+          />
+          <button
+            className="button secondary"
+            type="button"
+            disabled={
+              busy ||
+              !ack ||
+              !clientId.trim() ||
+              !clientSecret.trim() ||
+              status?.available !== true
+            }
+            onClick={() =>
               void action(async () => {
-                if (file.size > 20000)
-                  throw Error("Konfiguration maximal 20 KB.");
-                const json = JSON.parse(await file.text());
                 await post("/api/google/configure", {
                   acknowledged: ack,
                   config: {
                     installed: {
-                      clientId: json.installed?.client_id,
-                      clientSecret: json.installed?.client_secret,
+                      clientId: clientId.trim(),
+                      clientSecret: clientSecret.trim(),
                     },
                   },
                 });
-              });
-              e.target.value = "";
-            }}
-          />
+                setClientId("");
+                setClientSecret("");
+              })
+            }
+          >
+            Desktop-Client speichern
+          </button>
         </>
       )}
       {status?.configured && !status.connected && (
@@ -159,36 +181,66 @@ export default function GoogleConnect({
                 const r = await api<{ properties: typeof properties }>(
                   "/api/google/properties",
                 );
-                setProperties(r.properties);
+                setProperties(
+                  r.properties.filter(
+                    (p) => p.permissionLevel !== "siteUnverifiedUser",
+                  ),
+                );
+                setProperty("");
+                onInvalidate();
               })
             }
           >
             Berechtigte Properties anzeigen
           </button>
-          {properties.map((p) => (
-            <p key={p.siteUrl} className="hint">
-              {p.siteUrl} · {p.permissionLevel}
-            </p>
-          ))}
+          <label htmlFor="google-property">Berechtigte Property</label>
+          <select
+            id="google-property"
+            value={property}
+            disabled={busy}
+            onChange={(event) => {
+              setProperty(event.target.value);
+              onInvalidate();
+            }}
+          >
+            <option value="">Property auswählen</option>
+            {properties.map((p) => (
+              <option key={p.siteUrl} value={p.siteUrl}>
+                {p.siteUrl}
+              </option>
+            ))}
+          </select>
+          {property && scopeFields}
           <p className="hint">
-            Abruf nutzt Property, Zeitraum, Dimension und Filter aus dem
-            Importformular unten. Websuche, finale Daten, maximal 25.000
-            Top-Zeilen. Keine vollständigen Property-Summen.
+            Wähle darunter Zeitraum, Dimension und Filter. Die Vorschau
+            verwendet finale Websuchdaten und maximal 25.000 Top-Zeilen.
           </p>
           <button
             className="button primary"
-            disabled={busy || !ack || !metadata.startDate || !metadata.endDate}
+            disabled={
+              busy ||
+              !ack ||
+              !property ||
+              !metadata.startDate ||
+              !metadata.endDate ||
+              metadata.filters === null
+            }
             onClick={() =>
               void action(async () => {
-                const r = await post<{ dataset: SearchDataset }>(
-                  `/api/projects/${projectId}/search/google`,
-                  { acknowledged: ack, metadata },
+                onInvalidate();
+                const preview = await post<SearchPreview>(
+                  `/api/projects/${projectId}/search/preview`,
+                  {
+                    source: "google-api",
+                    acknowledged: ack,
+                    metadata: { ...metadata, property },
+                  },
                 );
-                onImport(r.dataset);
+                onPreview(preview);
               })
             }
           >
-            Gewählten Umfang von Google abrufen
+            Google-Vorschau abrufen
           </button>
         </>
       )}
@@ -201,12 +253,14 @@ export default function GoogleConnect({
               await post("/api/google/disconnect", { confirmed: true });
               setUrl("");
               setProperties([]);
+              setProperty("");
+              onInvalidate();
             })
           }
         >
           Google-Zugriff widerrufen & Verbindung entfernen
         </button>
       )}
-    </details>
+    </section>
   );
 }

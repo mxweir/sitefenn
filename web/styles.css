@@ -3375,3 +3375,13 @@ h1 {
 .profile-import input[type="file"] {
   max-width: 100%;
 }
+
+.fix-lab fieldset {
+  margin: 16px 0;
+  min-width: 0;
+  border: 1px solid var(--deep);
+}
+.fix-lab :is(textarea, input, select) { max-width: 100%; }
+.fix-lab figure { margin: 12px 0; }
+.fix-lab figure img { width: 100%; max-width: 420px; max-height: 420px; object-fit: contain; object-position: top left; }
+.search-keys { overflow-wrap: anywhere; }

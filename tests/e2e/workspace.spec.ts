@@ -525,8 +525,13 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
       state.settings = request.postDataJSON();
       return json({ settings: state.settings });
     }
-    if (pathname === `/api/projects/${project.id}/search`) {
-      if (request.method() === "GET") return json({ datasets: state.datasets });
+    if (pathname === `/api/projects/${project.id}/search`)
+      return json({ datasets: state.datasets });
+    if (pathname === `/api/projects/${project.id}/search/commit`) {
+      const dataset = state.datasets[0];
+      return json({ dataset });
+    }
+    if (pathname === `/api/projects/${project.id}/search/preview`) {
       const body = request.postDataJSON();
       const dataset: SearchDataset = {
         id: "search-ui",
@@ -552,7 +557,7 @@ async function mockWorkspace(page: Page, initialScans: Scan[] = [scan]) {
         warnings: ["Nur importierte Zeilen."],
       };
       state.datasets.unshift(dataset);
-      return json({ dataset });
+      return json({ ...dataset, count: dataset.rows.length });
     }
     if (pathname.endsWith("/ai"))
       return json({
@@ -707,7 +712,13 @@ test("optional CSV visibility and explicit local model selection work without cl
   await page.getByLabel("Zeitraum von").fill("2026-10-01");
   await page.getByLabel("Zeitraum bis").fill("2026-10-28");
   await page
-    .getByRole("button", { name: "CSV importieren", exact: true })
+    .getByRole("button", { name: "CSV-Vorschau prüfen", exact: true })
+    .click();
+  await expect(
+    page.getByRole("region", { name: "Importvorschau" }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Import bestätigen", exact: true })
     .click();
   await expect(
     page.getByRole("cell", { name: "portfolio", exact: true }),

@@ -30,7 +30,9 @@ test(
       },
     };
     let verifier = "",
-      imports = 0;
+      imports = 0,
+      expired = false,
+      quota = false;
     const request: typeof fetch = async (input, init) => {
       const url = String(input);
       assert.equal(init?.redirect, "error");
@@ -45,6 +47,8 @@ test(
           });
         }
         assert.equal(params.get("refresh_token"), "PRIVATE-REFRESH");
+        if (expired)
+          return Response.json({ error: "invalid_grant" }, { status: 400 });
         return Response.json({ access_token: "PRIVATE-ACCESS" });
       }
       if (url.endsWith("/revoke"))
@@ -58,6 +62,11 @@ test(
       assert.ok(
         url.includes("/sites/sc-domain%3Aexample.org/searchAnalytics/query"),
       );
+      if (quota)
+        return Response.json(
+          { error: { errors: [{ reason: "quotaExceeded" }] } },
+          { status: 403 },
+        );
       imports++;
       assert.equal(
         new Headers(init?.headers).get("authorization"),
@@ -136,12 +145,35 @@ test(
         }),
       );
       assert.equal(imports, 1);
+      quota = true;
+      await assert.rejects(
+        google.import("owned-project", "https://example.org/", metadata),
+        /Kontingent/,
+      );
+      assert.equal((await google.status()).connected, true);
+      quota = false;
       await assert.rejects(google.disconnect(), /Widerruf/);
       assert.equal((await google.status()).connected, true);
       revocationFails = false;
       await google.disconnect();
       assert.equal(secret, null);
       assert.equal((await google.status()).connected, false);
+      await google.configure({
+        installed: {
+          clientId: "123456789.apps.googleusercontent.com",
+          clientSecret: "private-client-secret",
+        },
+      });
+      const renewed = new URL((await google.start()).url);
+      const callback = new URL(renewed.searchParams.get("redirect_uri")!);
+      callback.searchParams.set("state", renewed.searchParams.get("state")!);
+      callback.searchParams.set("code", "owned-code");
+      assert.equal((await fetch(callback)).status, 200);
+      expired = true;
+      await assert.rejects(google.sites(), /abgelaufen/);
+      assert.equal((await google.status()).connected, false);
+      assert.equal((await google.status()).configured, true);
+      assert.ok(!JSON.stringify(secret).includes("PRIVATE-REFRESH"));
     } finally {
       google.close();
     }

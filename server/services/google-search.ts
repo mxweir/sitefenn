@@ -75,6 +75,24 @@ export function propertyContains(property: string, page: string) {
     return false;
   }
 }
+class GoogleHttpError extends Error {
+  constructor(
+    readonly status: number,
+    readonly reason?: string,
+  ) {
+    super(
+      status === 429 ||
+        [
+          "quotaExceeded",
+          "rateLimitExceeded",
+          "dailyLimitExceeded",
+          "userRateLimitExceeded",
+        ].includes(reason ?? "")
+        ? "Google-Kontingent erreicht. Später erneut versuchen."
+        : `Google-Anfrage fehlgeschlagen (HTTP ${status}). API-Freigabe und Property-Berechtigung prüfen.`,
+    );
+  }
+}
 export class GoogleSearch {
   private pending?: { server: Server; timer: ReturnType<typeof setTimeout> };
   private state = "Nicht verbunden";
@@ -103,10 +121,6 @@ export class GoogleSearch {
       redirect: "error",
       signal: AbortSignal.timeout(15000),
     });
-    if (!response.ok)
-      throw Error(
-        `Google-Anfrage fehlgeschlagen (HTTP ${response.status}); Berechtigung, API-Freigabe und Kontingent prüfen.`,
-      );
     const reader = response.body?.getReader();
     if (!reader) throw Error("Google-Antwort fehlt.");
     let size = 0;
@@ -123,10 +137,23 @@ export class GoogleSearch {
     } finally {
       await reader.cancel().catch(() => {});
     }
-    return JSON.parse(Buffer.concat(chunks).toString()) as Record<
-      string,
-      unknown
-    >;
+    let data: Record<string, unknown>;
+    try {
+      data = JSON.parse(Buffer.concat(chunks).toString());
+    } catch {
+      throw new GoogleHttpError(response.status);
+    }
+    if (!response.ok) {
+      const error = data?.error as
+        | { errors?: { reason?: string }[] }
+        | string
+        | undefined;
+      throw new GoogleHttpError(
+        response.status,
+        typeof error === "string" ? error : error?.errors?.[0]?.reason,
+      );
+    }
+    return data;
   }
   async status() {
     try {
@@ -218,7 +245,8 @@ export class GoogleSearch {
         );
         const url = new URL(req.url ?? "/", redirect);
         if (
-          !this.pending || this.pending.server !== server ||
+          !this.pending ||
+          this.pending.server !== server ||
           req.method !== "GET" ||
           req.headers.host !== host ||
           url.pathname !== "/oauth/callback" ||
@@ -330,15 +358,30 @@ export class GoogleSearch {
   private async access() {
     const c = await this.credentials();
     if (!c.refreshToken) throw Error("Nicht mit Google verbunden.");
-    const token = await this.json("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      body: new URLSearchParams({
-        client_id: c.config.clientId,
-        client_secret: c.config.clientSecret,
-        refresh_token: c.refreshToken,
-        grant_type: "refresh_token",
-      }),
-    });
+    let token;
+    try {
+      token = await this.json("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        body: new URLSearchParams({
+          client_id: c.config.clientId,
+          client_secret: c.config.clientSecret,
+          refresh_token: c.refreshToken,
+          grant_type: "refresh_token",
+        }),
+      });
+    } catch (error) {
+      if (
+        error instanceof GoogleHttpError &&
+        error.status === 400 &&
+        error.reason === "invalid_grant"
+      ) {
+        await this.vault.set(JSON.stringify({ config: c.config }));
+        this.state =
+          "Google-Freigabe abgelaufen oder widerrufen. Erneut anmelden.";
+        throw Error(this.state);
+      }
+      throw error;
+    }
     if (
       typeof token.access_token !== "string" ||
       token.access_token.length > 10000
@@ -443,7 +486,9 @@ export class GoogleSearch {
           ctr = Number(row.ctr),
           position = Number(row.position);
         if (
-          ![row.clicks,row.impressions,row.ctr,row.position].every(value=>typeof value === "number") ||
+          ![row.clicks, row.impressions, row.ctr, row.position].every(
+            (value) => typeof value === "number",
+          ) ||
           typeof key !== "string" ||
           !key ||
           key.length > 10000 ||
@@ -474,6 +519,8 @@ export class GoogleSearch {
           ...input,
           filters: { ...input.filters, searchType: "web", dataState: "final" },
           source: "google-api",
+          dataState: "final",
+          coverage: "bounded-top-rows",
           rowLimit: 25000,
         },
         rows: clean,

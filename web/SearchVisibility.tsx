@@ -1,5 +1,5 @@
 import GoogleConnect from "./GoogleConnect.js";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Download, FileUp, Search } from "lucide-react";
 import type {
   Project,
@@ -8,15 +8,36 @@ import type {
 } from "../shared/types.js";
 import { api, message, post, stamp } from "./api.js";
 import { Empty, Notice, Success } from "./ui.js";
-interface SearchComparison {
-  compatible: boolean;
-  reason: string;
-  clicksDelta: number | null;
-  impressionsDelta: number | null;
-  ctrDelta: number | null;
-}
+import type { SearchPreview } from "../shared/search-preview.js";
+import type { SearchDatasetComparison as SearchComparison } from "../server/services/search-console.js";
 
-export default function SearchVisibility({ project }: { project: Project }) {
+function landingPage(key: string, project: Project) {
+  try {
+    const url = new URL(key);
+    if (
+      url.origin !== new URL(project.url).origin ||
+      url.username ||
+      url.password ||
+      [...url.searchParams.keys()].some((name) =>
+        /^(?:access_token|token|password|secret|api_key|authorization)$/i.test(
+          name,
+        ),
+      )
+    )
+      return null;
+    url.hash = "";
+    return url.href;
+  } catch {
+    return null;
+  }
+}
+export default function SearchVisibility({
+  project,
+  onSelectPages,
+}: {
+  project: Project;
+  onSelectPages: (pages: string[]) => void;
+}) {
   const [datasets, setDatasets] = useState<SearchDataset[]>([]);
   const [selected, setSelected] = useState("");
   const [before, setBefore] = useState("");
@@ -25,7 +46,47 @@ export default function SearchVisibility({ project }: { project: Project }) {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
   const [dimension, setDimension] = useState<SearchDimension>("query");
-  const [filters, setFilters] = useState("");
+  const [country, setCountry] = useState("");
+  const [device, setDevice] = useState("");
+  const [source, setSource] = useState<"csv" | "google-api">("csv");
+  const [unknownFilters, setUnknownFilters] = useState(false);
+  const [preview, setPreview] = useState<SearchPreview>();
+  const [pages, setPages] = useState<string[]>([]);
+  const filters = {
+    ...(country ? { country: country.toLowerCase() } : {}),
+    ...(device ? { device } : {}),
+  };
+  const metadata = {
+    property,
+    startDate,
+    endDate,
+    dimension,
+    filters: unknownFilters ? null : filters,
+  };
+  const previewScope = useMemo(
+    () => ({}),
+    [
+      source,
+      csv,
+      property,
+      startDate,
+      endDate,
+      dimension,
+      country,
+      device,
+      unknownFilters,
+    ],
+  );
+  const liveScope = useRef(previewScope);
+  liveScope.current = previewScope;
+  const showPreview = (candidate: SearchPreview) => {
+    if (liveScope.current === previewScope) setPreview(candidate);
+  };
+  const endpoint = `/api/projects/${project.id}/search`;
+  const valid =
+    !!startDate &&
+    endDate >= startDate &&
+    (!country || /^[a-z]{3}$/i.test(country));
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [success, setSuccess] = useState("");
@@ -55,7 +116,24 @@ export default function SearchVisibility({ project }: { project: Project }) {
     };
   }, [project.id, project.url]);
   const dataset = datasets.find((d) => d.id === selected) ?? datasets[0];
-  const baseline = datasets.find((d) => d.id === before);
+  const baseline = datasets.find(
+    (d) => d.id === before && d.id !== dataset?.id,
+  );
+  useEffect(() => {
+    setPages([]);
+  }, [dataset?.id]);
+  useEffect(() => {
+    setPreview(undefined);
+  }, [
+    csv,
+    property,
+    startDate,
+    endDate,
+    dimension,
+    country,
+    device,
+    unknownFilters,
+  ]);
   useEffect(() => {
     setComparison(null);
     setCompareError("");
@@ -78,6 +156,68 @@ export default function SearchVisibility({ project }: { project: Project }) {
     value === null
       ? "—"
       : `${(value * 100).toLocaleString("de-DE", { maximumFractionDigits: 2 })} %`;
+  const scopeFields = (
+    <>
+      <div className="scope-row">
+        <div>
+          <label htmlFor="search-start">Zeitraum von</label>
+          <input
+            id="search-start"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+          />
+        </div>
+        <div>
+          <label htmlFor="search-end">Zeitraum bis</label>
+          <input
+            id="search-end"
+            type="date"
+            value={endDate}
+            min={startDate}
+            onChange={(e) => setEndDate(e.target.value)}
+          />
+        </div>
+      </div>
+      <label htmlFor="search-dimension">Dimension</label>
+      <select
+        id="search-dimension"
+        value={dimension}
+        onChange={(e) => setDimension(e.target.value as SearchDimension)}
+      >
+        <option value="query">Suchanfragen</option>
+        <option value="page">Seiten</option>
+        <option value="date">Datum</option>
+        <option value="country">Länder</option>
+        <option value="device">Geräte</option>
+      </select>
+      <div className="scope-row">
+        <div>
+          <label htmlFor="search-country">Land (ISO-3)</label>
+          <input
+            id="search-country"
+            maxLength={3}
+            placeholder="z. B. DEU"
+            value={country}
+            onChange={(event) => setCountry(event.target.value.trim())}
+          />
+        </div>
+        <div>
+          <label htmlFor="search-device">Gerät</label>
+          <select
+            id="search-device"
+            value={device}
+            onChange={(event) => setDevice(event.target.value)}
+          >
+            <option value="">Alle Geräte</option>
+            <option value="MOBILE">Mobil</option>
+            <option value="DESKTOP">Desktop</option>
+            <option value="TABLET">Tablet</option>
+          </select>
+        </div>
+      </div>
+    </>
+  );
   return (
     <>
       <div className="panel-head">
@@ -91,180 +231,212 @@ export default function SearchVisibility({ project }: { project: Project }) {
         </div>
         <Search size={25} />
       </div>
-      <GoogleConnect
-        projectId={project.id}
-        metadata={{
-          property,
-          startDate,
-          endDate,
-          dimension,
-          filters: (() => {
-            try {
-              return filters.trim() ? JSON.parse(filters) : {};
-            } catch {
-              return null;
-            }
-          })(),
-        }}
-        onImport={(dataset) => {
-          setDatasets((current) => [dataset, ...current]);
-          setSelected(dataset.id);
-        }}
-      />
-      <div className="two-column">
-        <section className="panel workspace-form">
-          <div className="panel-head">
-            <h3>Search-Console-Daten importieren</h3>
-            <FileUp size={20} />
-          </div>
-          <label htmlFor="search-csv">CSV-Datei</label>
-          <input
-            id="search-csv"
-            type="file"
-            accept=".csv,text/csv"
-            onChange={async (e) => {
-              const file = e.target.files?.[0];
-              if (!file) return;
-              if (file.size > 2 * 1024 * 1024) {
-                setError("Bitte eine CSV-Datei unter 2 MiB wählen.");
-                return;
-              }
-              setCsv(await file.text());
-              setSuccess("");
-            }}
-          />
-          <p className="hint">
-            Originaldaten aus deiner berechtigten Search-Console-Property. Der
-            Import benötigt den Zeitraum und die zur Datei passenden Filter.
-          </p>
-          <label htmlFor="search-property">Property</label>
-          <input
-            id="search-property"
-            value={property}
-            onChange={(e) => setProperty(e.target.value)}
-            placeholder="https://example.de/ oder sc-domain:example.de"
-          />
-          <div className="scope-row">
-            <div>
-              <label htmlFor="search-start">Zeitraum von</label>
-              <input
-                id="search-start"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-              />
-            </div>
-            <div>
-              <label htmlFor="search-end">Zeitraum bis</label>
-              <input
-                id="search-end"
-                type="date"
-                value={endDate}
-                min={startDate}
-                onChange={(e) => setEndDate(e.target.value)}
-              />
-            </div>
-          </div>
-          <label htmlFor="search-dimension">Dimension der CSV</label>
-          <select
-            id="search-dimension"
-            value={dimension}
-            onChange={(e) => setDimension(e.target.value as SearchDimension)}
-          >
-            <option value="query">Suchanfragen</option>
-            <option value="page">Seiten</option>
-            <option value="date">Datum</option>
-            <option value="country">Länder</option>
-            <option value="device">Geräte</option>
-          </select>
-          <label htmlFor="search-filters">
-            Angewendete Filter als JSON (optional)
-          </label>
-          <textarea
-            id="search-filters"
-            rows={2}
-            placeholder={'{"country":"deu","device":"MOBILE"}'}
-            value={filters}
-            onChange={(e) => setFilters(e.target.value)}
-          />
-          {error && <Notice error>{error}</Notice>}
-          {success && <Success>{success}</Success>}
-          <button
-            className="button primary"
-            disabled={busy || !csv || !property || !startDate || !endDate}
-            onClick={async () => {
-              setBusy(true);
-              setError("");
-              setSuccess("");
-              try {
-                const parsed: unknown = filters.trim()
-                  ? JSON.parse(filters)
-                  : null;
-                if (
-                  parsed !== null &&
-                  (typeof parsed !== "object" ||
-                    Array.isArray(parsed) ||
-                    Object.values(parsed).some((v) => typeof v !== "string"))
-                )
-                  throw new Error(
-                    "Filter müssen ein JSON-Objekt mit Textwerten sein.",
-                  );
-                const result = await post<{ dataset: SearchDataset }>(
-                  `/api/projects/${project.id}/search`,
-                  {
-                    csv,
-                    metadata: {
-                      property,
-                      startDate,
-                      endDate,
-                      dimension,
-                      filters: parsed,
-                    },
-                  },
-                );
-                setDatasets((current) => [result.dataset, ...current]);
-                setSelected(result.dataset.id);
-                setSuccess("Search-Console-Daten wurden lokal importiert.");
-              } catch (err) {
-                setError(message(err));
-              } finally {
-                setBusy(false);
-              }
-            }}
-          >
-            <FileUp size={16} />
-            {busy ? "Import wird geprüft …" : "CSV importieren"}
-          </button>
-        </section>
-        <aside className="panel">
-          <p className="eyebrow">WAS DIE ZAHLEN BEDEUTEN</p>
-          <h3>Sichtbarkeit ist kein fixer Platz.</h3>
-          <p className="hint">
-            Search Console zeigt Klicks, Impressionen, CTR und eine
-            durchschnittliche Position für den gewählten Zeitraum und Umfang.
-            Das ist kein universeller Live-Rang für jede Person und jeden
-            Standort.
-          </p>
-          <p className="hint">
-            Anonymisierte oder fehlende Suchanfragen, begrenzte Exportzeilen und
-            Filter können Daten einschränken. Unterschiedliche Dimensionsexporte
-            nicht zusammenaddieren.
-          </p>
-          <p className="plan-note">
-            Google-Daten verändern deinen Audit-Score nicht. Technisch bessere
-            Seiten müssen nicht unmittelbar höher ranken.
-          </p>
-          <a
-            className="button secondary"
-            href="https://search.google.com/search-console"
-            target="_blank"
-            rel="noreferrer"
-          >
-            <Download size={15} />
-            Search Console öffnen
-          </a>
-        </aside>
+      <div className="panel workspace-form">
+        <label htmlFor="search-source">Importquelle</label>
+        <select
+          id="search-source"
+          value={source}
+          disabled={busy}
+          onChange={(event) => {
+            setSource(
+              event.target.value === "google-api" ? "google-api" : "csv",
+            );
+            setPreview(undefined);
+            setError("");
+          }}
+        >
+          <option value="csv">Search-Console-CSV</option>
+          <option value="google-api">
+            Google Search Console · experimentell
+          </option>
+        </select>
       </div>
+      {source === "google-api" ? (
+        <GoogleConnect
+          projectId={project.id}
+          metadata={{ ...metadata, filters: valid ? filters : null }}
+          scopeFields={scopeFields}
+          onPreview={showPreview}
+          onInvalidate={() => setPreview(undefined)}
+        />
+      ) : (
+        <div className="two-column">
+          <section className="panel workspace-form">
+            <div className="panel-head">
+              <h3>Search-Console-Daten importieren</h3>
+              <FileUp size={20} />
+            </div>
+            <label htmlFor="search-csv">CSV-Datei</label>
+            <input
+              id="search-csv"
+              type="file"
+              accept=".csv,text/csv"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                if (file.size > 2 * 1024 * 1024) {
+                  setError("Bitte eine CSV-Datei unter 2 MiB wählen.");
+                  return;
+                }
+                setCsv(await file.text());
+                setSuccess("");
+              }}
+            />
+            <p className="hint">
+              Originaldaten aus deiner berechtigten Search-Console-Property. Der
+              Import benötigt den Zeitraum und die zur Datei passenden Filter.
+            </p>
+            <label htmlFor="search-property">Property</label>
+            <input
+              id="search-property"
+              value={property}
+              onChange={(e) => setProperty(e.target.value)}
+              placeholder="https://example.de/ oder sc-domain:example.de"
+            />
+            {scopeFields}
+            <label className="checklist-field">
+              <input
+                type="checkbox"
+                checked={unknownFilters}
+                onChange={(event) => setUnknownFilters(event.target.checked)}
+              />
+              Filter dieses CSV-Exports sind unbekannt
+            </label>
+            {error && <Notice error>{error}</Notice>}
+
+            <button
+              className="button primary"
+              disabled={busy || !csv || !property || !valid}
+              onClick={async () => {
+                setBusy(true);
+                setError("");
+                setSuccess("");
+                try {
+                  setPreview(undefined);
+                  showPreview(
+                    await post<SearchPreview>(`${endpoint}/preview`, {
+                      source: "csv",
+                      csv,
+                      metadata,
+                    }),
+                  );
+                } catch (err) {
+                  setError(message(err));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              <FileUp size={16} />
+              {busy ? "Import wird geprüft …" : "CSV-Vorschau prüfen"}
+            </button>
+          </section>
+          <aside className="panel">
+            <p className="eyebrow">WAS DIE ZAHLEN BEDEUTEN</p>
+            <h3>Sichtbarkeit ist kein fixer Platz.</h3>
+            <p className="hint">
+              Search Console zeigt Klicks, Impressionen, CTR und eine
+              durchschnittliche Position für den gewählten Zeitraum und Umfang.
+              Das ist kein universeller Live-Rang für jede Person und jeden
+              Standort.
+            </p>
+            <p className="hint">
+              Anonymisierte oder fehlende Suchanfragen, begrenzte Exportzeilen
+              und Filter können Daten einschränken. Unterschiedliche
+              Dimensionsexporte nicht zusammenaddieren.
+            </p>
+            <p className="plan-note">
+              Google-Daten verändern deinen Audit-Score nicht. Technisch bessere
+              Seiten müssen nicht unmittelbar höher ranken.
+            </p>
+            <a
+              className="button secondary"
+              href="https://search.google.com/search-console"
+              target="_blank"
+              rel="noreferrer"
+            >
+              <Download size={15} />
+              Search Console öffnen
+            </a>
+          </aside>
+        </div>
+      )}
+      {preview && (
+        <section className="panel" aria-label="Importvorschau">
+          {source === "google-api" && error && <Notice error>{error}</Notice>}
+          <h3>
+            Importvorschau ·{" "}
+            {preview.metadata.source === "google-api"
+              ? "Google Search Console"
+              : "CSV"}
+          </h3>
+          <p>
+            {preview.metadata.property} · {preview.metadata.startDate} bis{" "}
+            {preview.metadata.endDate} · {preview.metadata.dimension}
+          </p>
+          <p>
+            {preview.count} Zeilen · {preview.summary.clicks} Klicks ·{" "}
+            {preview.summary.impressions} Impressionen im Ausschnitt
+          </p>
+          <p>
+            {preview.metadata.filters === null
+              ? "Filter unbekannt"
+              : Object.entries(preview.metadata.filters)
+                  .map(([name, value]) => `${name}: ${value}`)
+                  .join(" · ") || "Keine Filter angegeben"}
+          </p>
+          {preview.rows.length > 0 && (
+            <ul className="search-keys">
+              {preview.rows.map((row) => (
+                <li key={row.key}>
+                  {row.key} · {row.clicks} Klicks
+                </li>
+              ))}
+            </ul>
+          )}
+          {preview.warnings.map((warning) => (
+            <p className="hint" key={warning}>
+              {warning}
+            </p>
+          ))}
+          <div className="button-row">
+            <button
+              className="button primary"
+              type="button"
+              disabled={busy}
+              onClick={async () => {
+                setBusy(true);
+                setError("");
+                try {
+                  const { dataset } = await post<{ dataset: SearchDataset }>(
+                    `${endpoint}/commit`,
+                    { id: preview.id },
+                  );
+                  setDatasets((current) => [dataset, ...current]);
+                  setSelected(dataset.id);
+                  setPreview(undefined);
+                  setSuccess("Search-Console-Daten wurden lokal importiert.");
+                } catch (error) {
+                  setError(message(error));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              Import bestätigen
+            </button>
+            <button
+              className="button secondary"
+              type="button"
+              disabled={busy}
+              onClick={() => setPreview(undefined)}
+            >
+              Vorschau verwerfen
+            </button>
+          </div>
+        </section>
+      )}
+      {success && <Success>{success}</Success>}
       {dataset ? (
         <section className="panel search-results">
           <div className="panel-head">
@@ -315,6 +487,18 @@ export default function SearchVisibility({ project }: { project: Project }) {
             />
           </div>
           <p className="hint">{dataset.summary.label}</p>
+          <p className="hint">
+            Quelle:{" "}
+            {dataset.metadata.source === "google-api"
+              ? "Google API · finale Top-Zeilen"
+              : "CSV · Exportausschnitt"}{" "}
+            · Importiert: {stamp(dataset.importedAt)} ·{" "}
+            {dataset.metadata.filters === null
+              ? "Filter unbekannt"
+              : Object.entries(dataset.metadata.filters)
+                  .map(([name, value]) => `${name}: ${value}`)
+                  .join(" · ") || "Keine Filter angegeben"}
+          </p>
           {dataset.warnings.map((warning, i) => (
             <Notice key={i}>{warning}</Notice>
           ))}
@@ -379,6 +563,35 @@ export default function SearchVisibility({ project }: { project: Project }) {
                           {(comparison.ctrDelta * 100).toFixed(2)} Prozentpunkte
                         </p>
                       )}
+                      {comparison.pages && (
+                        <div className="data-table-wrap">
+                          <table className="data-table">
+                            <thead>
+                              <tr>
+                                <th>Landingpage</th>
+                                <th>Klicks vorher</th>
+                                <th>Klicks nachher</th>
+                                <th>Δ Klicks</th>
+                                <th>Δ Impressionen</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {comparison.pages.slice(0, 100).map((row) => (
+                                <tr key={row.url}>
+                                  <td>{row.url}</td>
+                                  <td>{row.before?.clicks ?? "Unbekannt"}</td>
+                                  <td>{row.after?.clicks ?? "Unbekannt"}</td>
+                                  <td>{row.clicksDelta ?? "Unbekannt"}</td>
+                                  <td>{row.impressionsDelta ?? "Unbekannt"}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                          <p className="hint">
+                            Bis zu 100 Zeilen des Vergleichs sichtbar.
+                          </p>
+                        </div>
+                      )}
                       {comparison.clicksDelta === null && (
                         <p>
                           Für diese Dimension wird kein aggregiertes Delta
@@ -390,6 +603,18 @@ export default function SearchVisibility({ project }: { project: Project }) {
                   {compareError && <Notice error>{compareError}</Notice>}
                 </div>
               )}
+            </div>
+          )}
+          {dataset.metadata.dimension === "page" && (
+            <div className="button-row">
+              <button
+                className="button primary"
+                type="button"
+                disabled={!pages.length}
+                onClick={() => onSelectPages(pages)}
+              >
+                {pages.length} Landingpages für einen Check auswählen
+              </button>
             </div>
           )}
           <div className="data-table-wrap">
@@ -406,7 +631,32 @@ export default function SearchVisibility({ project }: { project: Project }) {
               <tbody>
                 {dataset.rows.slice(0, 100).map((row, i) => (
                   <tr key={`${row.key}-${i}`}>
-                    <td>{row.key}</td>
+                    <td>
+                      {dataset.metadata.dimension === "page" &&
+                        (() => {
+                          const url = landingPage(row.key, project);
+                          return (
+                            url && (
+                              <input
+                                type="checkbox"
+                                aria-label={`Für Check auswählen: ${row.key}`}
+                                checked={pages.includes(url)}
+                                disabled={
+                                  !pages.includes(url) && pages.length >= 30
+                                }
+                                onChange={(event) =>
+                                  setPages((current) =>
+                                    event.target.checked
+                                      ? [...new Set([...current, url])]
+                                      : current.filter((item) => item !== url),
+                                  )
+                                }
+                              />
+                            )
+                          );
+                        })()}{" "}
+                      {row.key}
+                    </td>
                     <td>{row.clicks}</td>
                     <td>{row.impressions}</td>
                     <td>{percent(row.ctr)}</td>

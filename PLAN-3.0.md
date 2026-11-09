@@ -1,6 +1,6 @@
 # SiteFenn — Verbesserungsplan bis 3.0
 
-Stand: **9. November 2026**. Status: **2.1–2.6 implementiert und lokal geprüft; 2.7–3.0 bleiben Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
+Stand: **9. November 2026**. Status: **2.1–2.7 als lokaler Web-/CLI-Umfang implementiert und geprüft; 2.8–3.0 bleiben Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
 
 Grundlage: drei spezialisierte Agentenreviews für Architektur/Betrieb/Security, Produkt/UX/Frontend und KI/QA/SEO, anschließend gemeinsame Priorisierung. Das ist ein tatsächlicher Code-/Artefaktreview durch Softwareagenten, **keine externe Fachpersonen- oder Nutzerstudie**. Für diese Planung wurden keine neuen Modellläufe, Funktionstests oder Kundenscans ausgeführt.
 
@@ -159,6 +159,8 @@ Jede Version soll einen benutzbaren vertikalen Ablauf liefern. Die Nummern sind 
 **Abnahme B:** ID-/Klassentausch und wirkungslose Mindestbreite werden an eigenen positiven/negativen Fällen sichtbar; erreichbare Inhalte und relevante Zustände bleiben geprüft. Änderung ist rückstandsfrei zurücksetzbar. Bei unzureichender Messbarkeit bleibt dieses Paket außerhalb des stabilen 3.0-Kerns.
 
 A und B sind keine gegenseitigen Abhängigkeiten und müssen nicht gemeinsam in ein Release gepresst werden.
+
+**Prüfstand 2.7:** CSV-Vorschau, Seitenvergleich und Prüfentwurf sind lokal geprüft. Der direkte Google-Abruf bleibt bis zur Abnahme mit berechtigtem Konto experimentell. Das Fix-Labor ist auf eine isolierte HTML-Kopie begrenzt und bleibt experimentell. CrUX wurde zurückgestellt. [Release-Prüfung](docs/RELEASE-2.7.md).
 
 ### 2.8 — Ein verlässlicher Einstieg
 

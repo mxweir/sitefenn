@@ -2,6 +2,20 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 2.7.0 — 2026-11-09
+
+### Visibility and the experimental Fix Lab
+
+- Added guided CSV and Google property selection, period and filter controls, and preview before import.
+- Added matching-period landingpage deltas and explicit unknowns for missing rows. Selected same-origin pages can populate a check draft.
+- Added distinct OAuth expiry and quota handling. Live Google acceptance remains pending.
+- Added an offline Chromium experiment for selected CSS changes on local HTML. Compare screenshots, overflow and side effects without editing project files.
+
+[Release checks and limits](docs/RELEASE-2.7.md).
+
+![Actual SiteFenn landingpage comparison](docs/screenshots/2.7-visibility.jpg)
+![Actual SiteFenn Fix Lab result](docs/screenshots/2.7-fix-lab.jpg)
+
 ## 2.6.0 — 2026-11-09
 
 ### Developer preview gate

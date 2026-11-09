@@ -1,3 +1,4 @@
+import FixLab from "./FixLab.js";
 import { WorkspaceReadiness, useWorkspaceRoute } from "./workspace-state.js";
 import type { WorkspaceTab } from "../shared/workspace-route.js";
 import type { ProjectStats } from "../shared/workspace.js";
@@ -94,6 +95,10 @@ const tabs = [
 ] as const;
 
 export default function App() {
+  const [searchPages, setSearchPages] = useState<{
+    projectId: string;
+    pages: string[];
+  }>();
   const { route, navigate, reset } = useWorkspaceRoute();
   const projectId = route.projectId,
     scanId = route.scanId,
@@ -903,6 +908,14 @@ export default function App() {
                               <ScanConfig
                                 key={project.id}
                                 project={project}
+                                selectedLandingPages={
+                                  searchPages?.projectId === project.id
+                                    ? searchPages.pages
+                                    : undefined
+                                }
+                                onLandingPagesApplied={() =>
+                                  setSearchPages(undefined)
+                                }
                                 disabled={
                                   scans.some(active) ||
                                   missing.length > 0 ||
@@ -997,13 +1010,23 @@ export default function App() {
                           </>
                         )}
                         {tab === "report" && (
-                          <Report
-                            scan={selectedScan}
-                            score={score}
-                            onExplain={explain}
-                            initialFindingId={reportFinding}
-                            tasks={tasks}
-                          />
+                          <>
+                            <Report
+                              scan={selectedScan}
+                              score={score}
+                              onExplain={explain}
+                              initialFindingId={reportFinding}
+                              tasks={tasks}
+                            />
+                            <FixLab
+                              key={project.id}
+                              projectId={project.id}
+                              disabled={
+                                !!data.readiness &&
+                                !data.readiness.allowed.startExclusive
+                              }
+                            />
+                          </>
                         )}
                         {tab === "seo" && (
                           <SeoReport
@@ -1098,6 +1121,10 @@ export default function App() {
                           <SearchVisibility
                             key={project.id}
                             project={project}
+                            onSelectPages={(pages) => {
+                              setSearchPages({ projectId: project.id, pages });
+                              setTab("overview");
+                            }}
                           />
                         )}
                       </section>

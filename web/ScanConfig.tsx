@@ -19,10 +19,14 @@ export default function ScanConfig({
   project,
   disabled,
   onStarted,
+  selectedLandingPages,
+  onLandingPagesApplied,
 }: {
   project: Project;
   disabled: boolean;
   onStarted: (scan: Scan) => void | Promise<void>;
+  selectedLandingPages?: string[];
+  onLandingPagesApplied?: () => void;
 }) {
   const [pages, setPages] = useState<string[]>([project.url]);
   const [discovered, setDiscovered] = useState<string[]>([project.url]);
@@ -86,6 +90,17 @@ export default function ScanConfig({
     setProfileConfirmed(false);
     setProfileError("");
   }, [project.id, project.url]);
+  useEffect(() => {
+    if (!selectedLandingPages?.length) return;
+    setPages(selectedLandingPages);
+    setDiscovered([
+      project.url,
+      ...selectedLandingPages.filter((url) => url !== project.url),
+    ]);
+    if (selectedLandingPages.length > maxPages)
+      setMaxPages(selectedLandingPages.length);
+    onLandingPagesApplied?.();
+  }, [selectedLandingPages]);
   const exclusions = excluded
     .split("\n")
     .map((s) => s.trim())

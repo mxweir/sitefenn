@@ -39,6 +39,7 @@ import {
   selectedFindings,
   handoffMarkdown,
 } from "./services/developer-handoff.js";
+import { runFixLab } from "./services/fix-lab.js";
 import { DEFAULT_GATE, releaseGate } from "./services/release-gate.js";
 import { parseCheckProfile } from "./services/check-profile.js";
 import { baselineReview, reviewedBaseline } from "./services/cli-baseline.js";
@@ -91,6 +92,7 @@ import type {
   HubSettings,
   Scan,
   SearchImportMetadata,
+  SearchDataset,
   TaskStatus,
 } from "../shared/types.js";
 
@@ -127,6 +129,7 @@ export async function createApp(options: {
     | "backup"
     | "visual"
     | "source"
+    | "lab"
     | "export"
     | null = null;
   const aiControllers = new Set<AbortController>();
@@ -1714,6 +1717,26 @@ export async function createApp(options: {
     stopSpeech();
     return { stopped: true };
   });
+  app.post<{ Params: { id: string } }>(
+    "/api/projects/:id/fix-lab",
+    async (request, reply) => {
+      requireProject(request.params.id);
+      idle();
+      operation = "lab";
+      try {
+        const result = await runFixLab(request.body);
+        return reply.header("Cache-Control", "no-store").send(result);
+      } catch (error) {
+        throw bad(
+          error instanceof Error
+            ? error.message.split("\n")[0]!
+            : "Fix-Labor fehlgeschlagen.",
+        );
+      } finally {
+        operation = null;
+      }
+    },
+  );
   app.get<{ Params: { id: string } }>(
     "/api/projects/:id/search",
     async (request) => {
@@ -1721,31 +1744,87 @@ export async function createApp(options: {
       return { datasets: store.searchDatasets(request.params.id) };
     },
   );
+  const parseCsvImport = (projectId: string, body: Record<string, unknown>) => {
+    if (
+      typeof body.csv !== "string" ||
+      Buffer.byteLength(body.csv) > 2 * 1024 * 1024
+    )
+      throw bad("CSV-Datei maximal 2 MiB.");
+    try {
+      return parseSearchConsoleCsv(
+        body.csv,
+        body.metadata as SearchImportMetadata,
+        { id: randomUUID(), projectId },
+      );
+    } catch (error) {
+      throw bad((error as Error).message);
+    }
+  };
+  const saveSearchImport = (dataset: SearchDataset) => {
+    if (store.searchDatasets(dataset.projectId).length >= 50)
+      throw bad("Maximal 50 Importe pro Projekt.");
+    store.saveSearchDataset(dataset);
+    return { dataset };
+  };
+  const searchPreviews = new Map<
+    string,
+    { dataset: SearchDataset; expires: number }
+  >();
   app.post<{ Params: { id: string } }>(
     "/api/projects/:id/search",
     async (request) => {
       requireProject(request.params.id);
+      return saveSearchImport(
+        parseCsvImport(request.params.id, object(request.body)),
+      );
+    },
+  );
+  app.post<{ Params: { id: string } }>(
+    "/api/projects/:id/search/preview",
+    async (request) => {
+      const project = requireProject(request.params.id);
       const body = object(request.body);
+      let dataset: SearchDataset;
+      if (body.source === "csv") dataset = parseCsvImport(project.id, body);
+      else if (body.source === "google-api" && body.acknowledged === true)
+        dataset = await googleAction(() =>
+          google.import(
+            project.id,
+            project.url,
+            body.metadata as SearchImportMetadata,
+          ),
+        );
+      else throw bad("Importquelle und gegebenenfalls Google-Abruf auswählen.");
+      const expires = Date.now() + 5 * 60_000;
+      searchPreviews.delete(project.id);
+      searchPreviews.set(project.id, { dataset, expires });
+      if (searchPreviews.size > 4)
+        searchPreviews.delete(searchPreviews.keys().next().value!);
+      return {
+        id: dataset.id,
+        metadata: dataset.metadata,
+        summary: dataset.summary,
+        count: dataset.rows.length,
+        rows: dataset.rows.slice(0, 5),
+        warnings: dataset.warnings,
+      };
+    },
+  );
+  app.post<{ Params: { id: string } }>(
+    "/api/projects/:id/search/commit",
+    async (request) => {
+      requireProject(request.params.id);
+      const body = object(request.body);
+      const preview = searchPreviews.get(request.params.id);
       if (
-        typeof body.csv !== "string" ||
-        Buffer.byteLength(body.csv) > 2 * 1024 * 1024
+        !preview ||
+        preview.expires <= Date.now() ||
+        body.id !== preview.dataset.id
       )
-        throw bad("CSV-Datei maximal 2 MiB.");
-      if (store.searchDatasets(request.params.id).length >= 50)
-        throw bad(
-          "Pro Projekt maximal 50 Importe. Sichere ältere Daten vor weiteren Importen.",
-        );
-      try {
-        const dataset = parseSearchConsoleCsv(
-          body.csv,
-          body.metadata as SearchImportMetadata,
-          { id: randomBytes(16).toString("hex"), projectId: request.params.id },
-        );
-        store.saveSearchDataset(dataset);
-        return { dataset };
-      } catch (error) {
-        throw bad((error as Error).message);
-      }
+        throw bad("Vorschau abgelaufen oder ersetzt. Erneut prüfen.", 409);
+      const result = saveSearchImport(preview.dataset);
+      searchPreviews.delete(request.params.id);
+      return result;
     },
   );
   app.get<{
@@ -2092,7 +2171,13 @@ export async function createApp(options: {
   app.post("/api/google/disconnect", (request) => {
     if (object(request.body).confirmed !== true)
       throw bad("Widerruf bestätigen.");
-    return googleAction(() => google.disconnect());
+    return googleAction(async () => {
+      const status = await google.disconnect();
+      for (const [id, preview] of searchPreviews)
+        if (preview.dataset.metadata.source === "google-api")
+          searchPreviews.delete(id);
+      return status;
+    });
   });
   app.get("/api/google/properties", () => googleAction(() => google.sites()));
   app.post<{ Params: { id: string } }>(
@@ -2111,8 +2196,7 @@ export async function createApp(options: {
           body.metadata as SearchImportMetadata,
         ),
       );
-      store.saveSearchDataset(dataset);
-      return { dataset };
+      return saveSearchImport(dataset);
     },
   );
   app.post<{ Params: { id: string } }>(

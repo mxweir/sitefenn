@@ -501,6 +501,8 @@ export type SearchDimension = "date" | "page" | "query" | "country" | "device";
 export interface SearchImportMetadata {
   source?: "google-api" | "csv";
   rowLimit?: number;
+  dataState?: "final" | "declared" | "unknown";
+  coverage?: "bounded-top-rows" | "csv-export";
   property: string;
   startDate: string;
   endDate: string;

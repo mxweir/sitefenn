@@ -6,19 +6,28 @@
 
 **Inspect → understand → hand off → retest.** Manage authorized websites, watch bounded Chromium checks, inspect evidence and turn findings into a practical checklist. SiteFenn keeps measured facts, review candidates and optional local AI suggestions separate. The core workflow needs no model, cloud account or paid service.
 
-![Actual SiteFenn 2.6 release gate reporting a measured layout regression](docs/screenshots/2.6-release-gate.jpg)
+![Actual SiteFenn 2.7 page-level visibility comparison](docs/screenshots/2.7-visibility.jpg)
 
-_Actual measurements from an isolated preview project._
+_Two synthetic CSV imports in the real application. Missing page rows stay unknown._
 
-[Get started](#quick-start) · [What it checks](#what-it-checks) · [Local AI](#optional-local-ai) · [CLI gate](#developer-handoff-and-cli) · [2.6 verification](docs/RELEASE-2.6.md) · [Changelog](CHANGELOG.md)
+[Get started](#quick-start) · [What it checks](#what-it-checks) · [Local AI](#optional-local-ai) · [CLI gate](#developer-handoff-and-cli) · [2.7 verification](docs/RELEASE-2.7.md) · [Changelog](CHANGELOG.md)
 
-## New in 2.6 · Catch regressions before merge
+## New in 2.7 · Visibility and the Fix Lab
 
-- **One release gate in the project and CLI.** New blockers, existing blockers and measurement gaps appear separately.
-- **Reusable profiles and named baselines.** Review the measured scope, approve a candidate and replace a compatible baseline deliberately.
-- **CI with predictable outputs.** Pin the tool revision, run against a fixed preview origin and publish a compact status summary. Detailed reports and screenshots stay on the runner.
+- **Preview before import.** Choose CSV or the experimental Google connector, then review the property, period, filters and available rows before saving.
+- **Compare landingpages and use them in a check.** See deltas for pages measured in both periods and bring selected same-origin URLs into a new check draft.
+- **Try a small CSS change offline.** Compare Chromium measurements and screenshots in the experimental Fix Lab using a local HTML fragment.
 
-[Setup, screenshots and verification](docs/RELEASE-2.6.md) · [GitHub Actions template](examples/sitefenn-check.yml).
+[Setup, screenshots and verification](docs/RELEASE-2.7.md).
+
+<details>
+<summary>What changed in 2.6</summary>
+
+The project and CLI share a release gate with separate new blockers, existing blockers and measurement gaps. Reuse named profiles, review reference replacements and run the pinned GitHub Actions template against a fixed preview origin.
+
+[2.6 verification](docs/RELEASE-2.6.md) · [GitHub Actions template](examples/sitefenn-check.yml).
+
+</details>
 
 <details>
 <summary>What changed in 2.5</summary>
@@ -142,7 +151,7 @@ npm run audit:check -- --profile profile.json --baseline baseline.json --out nex
 
 ## Search visibility and useful priorities
 
-Import your authorized Search Console CSV with property, dates, dimension and filters, or explicitly enable the **experimental** read-only Desktop OAuth connector on macOS. The direct connector uses PKCE, bounded requests and Keychain refresh-token storage. **Live Google account authorization/import/revocation is still unvalidated**; CSV remains available on other systems. [Setup and limitations](docs/RELEASE-1.7.md).
+Open **Verlauf → Sichtbarkeit** to preview an authorized Search Console CSV or connect through experimental macOS Desktop OAuth. Compare compatible page periods and select same-origin landingpages for a check draft. OAuth uses a read-only scope and Keychain storage. Live Google account acceptance is pending. [Visibility setup and limits](docs/RELEASE-2.7.md).
 
 Returned/imported rows are subsets, not guaranteed complete property totals. Average position stays historical/aggregated. Low CTR/high impressions are investigation candidates, not a proven technical cause. No SERP scraping, CrUX or promised ranking gain. In the actions workspace, explicitly select a page dataset and project weights to explain work ordering; unknown reach remains unknown.
 
@@ -174,7 +183,7 @@ Use only **trusted websites you own or are explicitly authorized to test**. Navi
 
 Exports omit URL queries/fragments where documented, but page text, screenshots and selected source snippets may still contain private information. Images are opt-in for portable report ZIPs. Treat website-derived content as untrusted data and review every export before sharing it with another person or AI.
 
-2.6 is released as tested **local web/CLI software**. Independent user pilots, held-out human accuracy evaluation, full screenreader review, real Google authorization and native/Windows distribution remain open. The [release verification](docs/RELEASE-2.6.md) distinguishes actual integration runs, controlled fixtures and unavailable external checks. No general accuracy or SEO-effectiveness certification is claimed.
+2.7 is released as tested **local web/CLI software**. Independent user pilots, held-out human accuracy evaluation, full screenreader review, real Google authorization and native/Windows distribution remain open. The [release verification](docs/RELEASE-2.7.md) distinguishes actual integration runs, controlled fixtures and unavailable external checks. No general accuracy or SEO-effectiveness certification is claimed.
 
 ## Development and contribution
 

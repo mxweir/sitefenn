@@ -82,10 +82,13 @@ test("Search Console API persists CSV imports and compares only declared matchin
       assert.equal(response.statusCode, 200, response.body);
       return response.json<{ dataset: SearchDataset }>().dataset;
     };
-    const before = await importDataset(csv("2026-01-01"), metadata());
+    const before = await importDataset(
+      csv("2026-01-01"),
+      metadata("2026-01-01", "2026-01-01"),
+    );
     const after = await importDataset(
       csv("2026-01-03", 20, 200),
-      metadata("2026-01-03", "2026-01-04"),
+      metadata("2026-01-03", "2026-01-03"),
     );
     assert.equal(
       before.summary.position,
@@ -417,6 +420,86 @@ test("backup API produces a portable archive restoring report, checklist, CSV da
     );
   } finally {
     restored?.close();
+    await hub.close();
+  }
+});
+
+test("page preview is unsaved, scoped and single-use; comparison preserves missing landingpages", async () => {
+  const hub = await workspace();
+  try {
+    const other = hub.store.createProject(
+      "Other",
+      "https://other.test/",
+      "production",
+    );
+    const base = `/api/projects/${hub.project.id}/search`;
+    const post = (url: string, payload: object) =>
+      hub.app.inject({ url, method: "POST", payload, headers: hub.headers });
+    const rows = (which: string, value: number) =>
+      `Page,Clicks,Impressions,CTR,Position\nhttps://example.test/,${value},100,10%,2\nhttps://example.test/${which},3,50,6%,4`;
+    const preview = (
+      which: string,
+      date: string,
+      value: number,
+      filters = {},
+    ) =>
+      post(`${base}/preview`, {
+        source: "csv",
+        metadata: { ...metadata(date, date, filters), dimension: "page" },
+        csv: rows(which, value),
+      });
+    const old = await preview("old", "2026-01-01", 10);
+    assert.equal(old.statusCode, 200, old.body);
+    const oldId = old.json().id;
+    assert.equal(hub.store.searchDatasets(hub.project.id).length, 0);
+    assert.equal(
+      (await post(`/api/projects/${other.id}/search/commit`, { id: oldId }))
+        .statusCode,
+      409,
+    );
+    assert.equal((await post(`${base}/commit`, { id: oldId })).statusCode, 200);
+    assert.equal((await post(`${base}/commit`, { id: oldId })).statusCode, 409);
+    const stale = (await preview("new", "2026-01-02", 12)).json().id;
+    const current = (await preview("new", "2026-01-02", 12)).json().id;
+    assert.equal((await post(`${base}/commit`, { id: stale })).statusCode, 409);
+    assert.equal(
+      (await post(`${base}/commit`, { id: current })).statusCode,
+      200,
+    );
+    const compare = async (after: string) =>
+      (
+        await hub.app.inject({
+          url: `${base}/compare?before=${oldId}&after=${after}`,
+          headers: hub.headers,
+        })
+      ).json();
+    const result = await compare(current);
+    assert.equal(result.compatible, true);
+    assert.equal(
+      result.pages.find(
+        (row: { url: string }) => row.url === "https://example.test/",
+      ).clicksDelta,
+      2,
+    );
+    assert.equal(
+      result.pages.find((row: { url: string }) => row.url.endsWith("/old"))
+        .clicksDelta,
+      null,
+    );
+    assert.equal(
+      result.pages.find((row: { url: string }) => row.url.endsWith("/new"))
+        .before,
+      null,
+    );
+    const filtered = (
+      await preview("new", "2026-01-03", 12, { country: "deu" })
+    ).json().id;
+    assert.equal(
+      (await post(`${base}/commit`, { id: filtered })).statusCode,
+      200,
+    );
+    assert.equal((await compare(filtered)).compatible, false);
+  } finally {
     await hub.close();
   }
 });
