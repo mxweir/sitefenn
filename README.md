@@ -6,13 +6,22 @@
 
 **Inspect → understand → hand off → retest.** Manage authorized websites, watch bounded Chromium checks, inspect evidence and turn findings into a practical checklist. SiteFenn keeps measured facts, review candidates and optional local AI suggestions separate. The core workflow needs no model, cloud account or paid service.
 
-![Actual SiteFenn 2.5 job center with a completed background backup](docs/screenshots/2.5-jobs.jpg)
+![Actual SiteFenn 2.6 release gate reporting a measured layout regression](docs/screenshots/2.6-release-gate.jpg)
 
-_A real background backup in an isolated local workspace._
+_Actual measurements from an isolated preview project._
 
-[Get started](#quick-start) · [What it checks](#what-it-checks) · [Local AI](#optional-local-ai) · [CLI gate](#developer-handoff-and-cli) · [2.5 verification](docs/RELEASE-2.5.md) · [Changelog](CHANGELOG.md)
+[Get started](#quick-start) · [What it checks](#what-it-checks) · [Local AI](#optional-local-ai) · [CLI gate](#developer-handoff-and-cli) · [2.6 verification](docs/RELEASE-2.6.md) · [Changelog](CHANGELOG.md)
 
-## New in 2.5 · Local jobs and larger backups
+## New in 2.6 · Catch regressions before merge
+
+- **One release gate in the project and CLI.** New blockers, existing blockers and measurement gaps appear separately.
+- **Reusable profiles and named baselines.** Review the measured scope, approve a candidate and replace a compatible baseline deliberately.
+- **CI with predictable outputs.** Pin the tool revision, run against a fixed preview origin and publish a compact status summary. Detailed reports and screenshots stay on the runner.
+
+[Setup, screenshots and verification](docs/RELEASE-2.6.md) · [GitHub Actions template](examples/sitefenn-check.yml).
+
+<details>
+<summary>What changed in 2.5</summary>
 
 - **Job center:** see progress, busy reasons and recent outcomes for browser checks, AI, exports, backups and maintenance. Cancel supported jobs and open their saved context.
 - **Background backups:** choose the workspace or a single project, monitor progress and download the latest completed archive. The streamed format supports up to 2 GiB of source data and 20,000 evidence images.
@@ -20,6 +29,8 @@ _A real background backup in an isolated local workspace._
 - **Redacted diagnostics:** explicitly download local job IDs, phases, error codes and versions without audited URLs, report content or AI prompts.
 
 [Verification and restore details](docs/RELEASE-2.5.md).
+
+</details>
 
 <details>
 <summary>What changed in 2.4</summary>
@@ -118,16 +129,16 @@ No screenshot images, raw DOM/page dump, cookies, source repository or browser t
 
 Each action can export **1–20 selected findings** with measured scope and a reproducible acceptance test. Optional read-only Git-root scanning excludes ignored/sensitive paths and symlinks, within explicit file/byte limits. Only selected literal ID/test-ID candidates are exported; hashes are checked again. A literal source hit is **not proof of runtime mapping or cause**. Review snippets for embedded secrets. No project script, commit or patch is executed. [Handoff limits](docs/RELEASE-1.8.md).
 
-Download a check profile in the export dialog, then:
+Download the named profile under **Verlauf → Vergleich → Release-Gate und CLI-Baseline**. For a fresh baseline, run a first check and review its candidate before approving the reported digest.
 
 ```sh
-# First run produces a report; exit 2 because no baseline exists yet:
 npm run audit:check -- --profile profile.json --out first-run --authorized
-# Review and use the baseline under the same tool/browser/OS identity:
-npm run audit:check -- --profile profile.json --out next-run --baseline first-run/report.json --authorized
+npm run audit:check -- baseline-review --profile profile.json --candidate first-run/report.json
+npm run audit:check -- baseline-adopt --profile profile.json --candidate first-run/report.json --name "Preview baseline" --confirm REVIEWED_SHA256 --out baseline.json
+npm run audit:check -- --profile profile.json --baseline baseline.json --out next-run --authorized
 ```
 
-Exit **0**: no new measured blockers under the explicit compatible policy. **1**: new measured regression. **2**: missing/incompatible/error. Non-success document responses cannot yield a layout-only green result. This gate does not claim a flawless site or fix existing baseline problems. [GitHub Actions template](examples/sitefenn-check.yml) deliberately includes no automatic private artifact upload.
+**0** means no new measured blockers in the selected compatible policy. **1** means regression. **2** means inconclusive. Keep the exact target origin and measurement identity across runs. [Baseline lifecycle and CI setup](docs/RELEASE-2.6.md).
 
 ## Search visibility and useful priorities
 
@@ -163,7 +174,7 @@ Use only **trusted websites you own or are explicitly authorized to test**. Navi
 
 Exports omit URL queries/fragments where documented, but page text, screenshots and selected source snippets may still contain private information. Images are opt-in for portable report ZIPs. Treat website-derived content as untrusted data and review every export before sharing it with another person or AI.
 
-2.5 is released as tested **local web/CLI software**. Independent user pilots, held-out human accuracy evaluation, full screenreader review, real Google authorization and native/Windows distribution remain open. The [release verification](docs/RELEASE-2.5.md) distinguishes actual integration runs, controlled fixtures and unavailable external checks. No general accuracy or SEO-effectiveness certification is claimed.
+2.6 is released as tested **local web/CLI software**. Independent user pilots, held-out human accuracy evaluation, full screenreader review, real Google authorization and native/Windows distribution remain open. The [release verification](docs/RELEASE-2.6.md) distinguishes actual integration runs, controlled fixtures and unavailable external checks. No general accuracy or SEO-effectiveness certification is claimed.
 
 ## Development and contribution
 

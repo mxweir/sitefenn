@@ -65,6 +65,7 @@ try {
         "4 · Wieder aufgetreten",
       ][index]!,
       profileName: "Mobile QA · 390 × 844",
+      gate: { minimumPriority: "important", categories: ["layout", "seo"] },
     });
     scans.push(store.scan(scan.id)!);
     console.log(
@@ -101,6 +102,82 @@ try {
     );
     assert.ok(current);
     assert.notEqual(current.id, old.id);
+  }
+  const current = scans[3]!,
+    previous = scans[2]!;
+  const host = `127.0.0.1:${port}`;
+  const session = await app.inject({ url: "/", headers: { host } });
+  const headers = {
+    host,
+    cookie: String(session.headers["set-cookie"]).split(";")[0]!,
+    "x-hub-request": "1",
+  };
+  const gate = await app.inject({
+    headers,
+    url: `/api/scans/${current.id}/release-gate?baseline=${previous.id}`,
+  });
+  assert.equal(gate.statusCode, 200, gate.body);
+  assert.equal(gate.json().status, "regression");
+  assert.ok(
+    gate
+      .json()
+      .blockers.some(
+        (finding: { ruleId: string }) =>
+          finding.ruleId === "horizontal-overflow",
+      ),
+  );
+  const profileReply = await app.inject({
+    headers,
+    url: `/api/scans/${previous.id}/check-profile`,
+  });
+  assert.equal(profileReply.statusCode, 200, profileReply.body);
+  const profile = profileReply.json();
+  assert.deepEqual(profile.gate, current.labels!.gate);
+  const post = (url: string, payload: object) =>
+    app.inject({
+      method: "POST",
+      url,
+      headers,
+      payload,
+    });
+  const candidate = `/api/scans/${previous.id}/cli-baseline-review`;
+  const review = await post(candidate, { baselineId: scans[1]!.id });
+  assert.equal(review.statusCode, 200, review.body);
+  assert.equal(review.json().review.eligible, true);
+  const approved = await post(candidate, {
+    baselineId: scans[1]!.id,
+    name: "Mobile QA control",
+    confirm: review.json().review.sha256,
+  });
+  assert.equal(approved.statusCode, 200, approved.body);
+  assert.equal(
+    approved.json().baseline.report.result.screenshotPath,
+    "[image omitted]",
+  );
+  const start = `/api/projects/${project.id}/profile-check`;
+  assert.equal(
+    (await post(start, { profile, confirmed: false })).statusCode,
+    400,
+  );
+  const otherTarget = "http://127.0.0.1:7/";
+  assert.equal(
+    (
+      await post(start, {
+        profile: {
+          ...profile,
+          url: otherTarget,
+          options: { ...profile.options, pages: [otherTarget] },
+        },
+        confirmed: true,
+      })
+    ).statusCode,
+    400,
+  );
+  if (!preview) {
+    const queued = await post(start, { profile, confirmed: true });
+    assert.equal(queued.statusCode, 202, queued.body);
+    assert.equal(queued.json().scan.labels.profileName, profile.name);
+    assert.deepEqual(queued.json().scan.labels.gate, profile.gate);
   }
   const summary = {
     kind: "actual-owned-browser-acceptance-2.4",

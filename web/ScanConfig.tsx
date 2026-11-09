@@ -1,3 +1,4 @@
+import type { CheckProfile } from "../shared/check-profile.js";
 import { useProjectDraft } from "./workspace-state.js";
 import JourneyBuilder from "./JourneyBuilder.js";
 import type { Journey } from "../shared/types.js";
@@ -67,6 +68,9 @@ export default function ScanConfig({
     "scan:repetitions",
     1,
   );
+  const [imported, setImported] = useState<CheckProfile>();
+  const [profileConfirmed, setProfileConfirmed] = useState(false);
+  const [profileError, setProfileError] = useState("");
   const [busy, setBusy] = useState("");
   const [error, setError] = useState("");
   const [warnings, setWarnings] = useState<string[]>([]);
@@ -78,6 +82,9 @@ export default function ScanConfig({
     setDiscovered([project.url]);
     setError("");
     setWarnings([]);
+    setImported(undefined);
+    setProfileConfirmed(false);
+    setProfileError("");
   }, [project.id, project.url]);
   const exclusions = excluded
     .split("\n")
@@ -373,6 +380,110 @@ export default function ScanConfig({
           entfernen, bevor du den Check startest.
         </Notice>
       )}
+      <details className="plan-note profile-import">
+        <summary>Gespeichertes CLI-Prüfprofil verwenden</summary>
+        <p>
+          Lade ein Profil aus diesem Projekt. Ziel, Umfeld und Port müssen
+          übereinstimmen. Die aktuelle manuelle Auswahl bleibt erhalten.
+        </p>
+        <label htmlFor="cli-profile-file">Prüfprofil als JSON</label>
+        <input
+          id="cli-profile-file"
+          type="file"
+          accept=".json,application/json"
+          disabled={!!busy}
+          onChange={async (event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            setImported(undefined);
+            setProfileConfirmed(false);
+            setProfileError("");
+            if (!file) return;
+            try {
+              if (file.size > 100000)
+                throw Error("Prüfprofil ist größer als 100 KB.");
+              const profile = JSON.parse(await file.text()) as CheckProfile;
+              if (
+                profile?.version !== "sitefenn-profile-1" ||
+                typeof profile.url !== "string" ||
+                !Array.isArray(profile.options?.pages) ||
+                !profile.options.pages.every(
+                  (page) => typeof page === "string",
+                ) ||
+                !Array.isArray(profile.options?.viewports) ||
+                (profile.name !== undefined && typeof profile.name !== "string")
+              )
+                throw Error("Ungültiges SiteFenn-Prüfprofil.");
+              if (
+                profile.projectId !== project.id ||
+                profile.environment !== project.environment
+              )
+                throw Error(
+                  "Profil gehört zu einem anderen Projekt oder Umfeld.",
+                );
+              setImported(profile);
+            } catch (error) {
+              setProfileError(message(error));
+            }
+          }}
+        />
+        {imported && (
+          <>
+            <p>
+              <strong>{imported.name || "Unbenanntes Profil"}</strong> ·{" "}
+              {imported.environment} · {imported.url}
+            </p>
+            <p>
+              {imported.options.pages.length} Seiten ·{" "}
+              {imported.options.viewports.length} Geräteprofile
+            </p>
+            <ul>
+              {imported.options.pages.map((page, index) => (
+                <li key={index}>{page}</li>
+              ))}
+            </ul>
+            {(imported.options.journeys?.length ?? 0) > 0 && (
+              <Notice>
+                Dieses Profil enthält gespeicherte Seitenaktionen. Prüfe deren
+                Details in der JSON-Datei vor der Freigabe.
+              </Notice>
+            )}
+            <label className="checklist-field">
+              <input
+                type="checkbox"
+                checked={profileConfirmed}
+                disabled={!!busy}
+                onChange={(event) => setProfileConfirmed(event.target.checked)}
+              />
+              Ich habe Umfang, Ziele und enthaltene Seitenaktionen geprüft und
+              freigegeben.
+            </label>
+            <button
+              className="button secondary"
+              type="button"
+              disabled={disabled || !!busy || !profileConfirmed}
+              onClick={async () => {
+                setBusy("profile");
+                setProfileError("");
+                try {
+                  const { scan } = await post<{ scan: Scan }>(
+                    `/api/projects/${project.id}/profile-check`,
+                    { profile: imported, confirmed: profileConfirmed },
+                  );
+                  await onStarted(scan);
+                } catch (error) {
+                  setProfileError(message(error));
+                } finally {
+                  setBusy("");
+                }
+              }}
+            >
+              Check mit Profil starten
+            </button>
+          </>
+        )}
+        {profileError && <Notice error>{profileError}</Notice>}
+      </details>
       {error && <Notice error>{error}</Notice>}
       <div className="scan-config-actions">
         <button

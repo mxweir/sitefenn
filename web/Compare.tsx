@@ -1,3 +1,4 @@
+import ReleaseGate from "./ReleaseGate.js";
 import ChangeEvidence from "./ChangeEvidence.js";
 import BaselinePanel from "./BaselinePanel.js";
 import ScanDetails, { scanLabel } from "./ScanDetails.js";
@@ -85,6 +86,9 @@ export default function Compare({
     return (
       <>
         {pagination}
+        {completed[0] && (
+          <ReleaseGate key={completed[0].id} after={completed[0]} />
+        )}
         {completed.length > 0 && (
           <details className="panel">
             <summary>Bildvergleich und visuelle Referenzen</summary>
@@ -192,6 +196,17 @@ export default function Compare({
             ) : null;
           })}
       </div>
+      {completed.find((scan) => scan.id === after) && (
+        <ReleaseGate
+          key={`${before}:${after}`}
+          after={completed.find((scan) => scan.id === after)!}
+          before={
+            before !== after
+              ? completed.find((scan) => scan.id === before)
+              : undefined
+          }
+        />
+      )}
       <BaselinePanel
         projectId={projectId}
         beforeId={before}

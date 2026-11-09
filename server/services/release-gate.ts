@@ -9,7 +9,7 @@ export const DEFAULT_GATE: GatePolicy = {
   minimumPriority: "critical",
   categories: ["layout", "accessibility", "seo", "runtime"],
 };
-export function releaseGate(after: Scan, before?: Scan, policy = DEFAULT_GATE) {
+export function gateCoverage(after: Scan, policy = DEFAULT_GATE) {
   const unknown: string[] = [];
   const report = after.result?.audit;
   if (after.status !== "completed" || !report)
@@ -26,6 +26,10 @@ export function releaseGate(after: Scan, before?: Scan, policy = DEFAULT_GATE) {
     )
       unknown.push(
         "Dokumentantwort fehlt oder ist kein erfolgreicher HTTP-Status; keine belastbare Layout-Freigabe.",
+      );
+    if (after.options?.pages.some((url) => !report.options.pages.includes(url)))
+      unknown.push(
+        "Mindestens eine ausgewählte URL fehlt im gemessenen Umfang.",
       );
     if (
       report.options.retest ||
@@ -48,23 +52,16 @@ export function releaseGate(after: Scan, before?: Scan, policy = DEFAULT_GATE) {
     )
       unknown.push("Freigegebener Seitenzustand nicht bestätigt.");
   }
+  return unknown;
+}
+
+export function releaseGate(after: Scan, before?: Scan, policy = DEFAULT_GATE) {
+  const unknown = gateCoverage(after, policy);
+  const report = after.result?.audit;
   if (!before) unknown.push("Keine kompatible Baseline ausgewählt.");
-  let comparison;
+  let comparison: ReturnType<typeof compareScans> | undefined;
   if (before && report) {
-    if (
-      before.result?.audit &&
-      (before.result.audit.pages.some(
-        (p) =>
-          p.state === "initial" &&
-          (p.statusCode === null || p.statusCode < 200 || p.statusCode >= 300),
-      ) ||
-        before.result.audit.coverage.completed !==
-          before.result.audit.coverage.planned ||
-        before.result.audit.rules.some(
-          (r) =>
-            policy.categories.includes(r.category) && r.status === "not_run",
-        ))
-    )
+    if (gateCoverage(before, policy).length)
       unknown.push("Baseline enthält fehlende erforderliche Messungen.");
     try {
       comparison = compareScans(before, after);
@@ -76,25 +73,50 @@ export function releaseGate(after: Scan, before?: Scan, policy = DEFAULT_GATE) {
       unknown.push("Baseline nicht vergleichbar.");
     }
   }
-  const newIds = new Set(
-    comparison?.entries
-      .filter((e) => e.state === "new")
-      .map((e) => e.afterFindingId) ?? [],
-  );
   const ranks: Record<Priority, number> = {
     critical: 0,
     important: 1,
     "nice-to-have": 2,
   };
-  const blockers =
+  const eligible =
     report?.findings.filter(
       (f) =>
-        newIds.has(f.id) &&
         f.evidenceStatus === "measured" &&
         policy.categories.includes(f.category) &&
         ranks[f.priority] <= ranks[policy.minimumPriority],
     ) ?? [];
-  const status = unknown.length
+  const eligibleIds = new Set(eligible.map((finding) => finding.id));
+  if (
+    comparison?.comparable &&
+    comparison.entries.some(
+      (entry) =>
+        entry.state === "mapping-review" &&
+        entry.afterFindingIds?.some((id) => eligibleIds.has(id)),
+    )
+  )
+    unknown.push("Mindestens eine relevante Befundzuordnung ist mehrdeutig.");
+  const ids = (state: "new" | "persistent") =>
+    new Set(
+      comparison?.entries
+        .filter((e) => e.state === state)
+        .map((e) => e.afterFindingId) ?? [],
+    );
+  const describe = (finding: (typeof eligible)[number]) => ({
+    id: finding.id,
+    ruleId: finding.ruleId,
+    pageUrl: finding.pageUrl,
+    viewportId: finding.viewportId,
+    state: finding.state,
+    priority: finding.priority,
+    title: finding.title,
+  });
+  const newIds = ids("new"),
+    persistentIds = ids("persistent");
+  const blockers = eligible.filter((f) => newIds.has(f.id)).map(describe);
+  const existing = eligible
+    .filter((f) => persistentIds.has(f.id))
+    .map(describe);
+  const status: "inconclusive" | "regression" | "pass" = unknown.length
     ? "inconclusive"
     : blockers.length
       ? "regression"
@@ -105,15 +127,8 @@ export function releaseGate(after: Scan, before?: Scan, policy = DEFAULT_GATE) {
     exitCode: status === "pass" ? 0 : status === "regression" ? 1 : 2,
     policy,
     unknown,
-    blockers: blockers.map((f) => ({
-      id: f.id,
-      ruleId: f.ruleId,
-      pageUrl: f.pageUrl,
-      viewportId: f.viewportId,
-      state: f.state,
-      priority: f.priority,
-      title: f.title,
-    })),
+    blockers,
+    existing,
     comparison: comparison
       ? { comparable: comparison.comparable, entries: comparison.entries }
       : null,

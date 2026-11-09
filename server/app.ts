@@ -39,7 +39,9 @@ import {
   selectedFindings,
   handoffMarkdown,
 } from "./services/developer-handoff.js";
-import { DEFAULT_GATE } from "./services/release-gate.js";
+import { DEFAULT_GATE, releaseGate } from "./services/release-gate.js";
+import { parseCheckProfile } from "./services/check-profile.js";
+import { baselineReview, reviewedBaseline } from "./services/cli-baseline.js";
 import {
   GoogleSearch,
   nativeVault,
@@ -529,6 +531,7 @@ export async function createApp(options: {
     projectId: string,
     rawOptions?: unknown,
     retest?: RetestScope,
+    labels?: Scan["labels"],
   ) => {
     if (!currentReadiness().allowed.enqueueScan)
       throw bad(
@@ -561,6 +564,7 @@ export async function createApp(options: {
     let scan;
     try {
       scan = store.createScan(projectId, normalized);
+      if (labels) scan = store.annotateScan(scan.id, labels);
       jobs.browser(scan.id, projectId, "queued", {
         reason: "Wartet auf den Browser-Worker",
       });
@@ -578,6 +582,38 @@ export async function createApp(options: {
       reply
         .code(202)
         .send({ scan: startScan(request.params.id, request.body) }),
+  );
+  app.post<{ Params: { id: string } }>(
+    "/api/projects/:id/profile-check",
+    async (request, reply) => {
+      const project = requireProject(request.params.id);
+      const body = object(request.body);
+      let profile;
+      try {
+        profile = parseCheckProfile(body.profile);
+      } catch (error) {
+        throw bad((error as Error).message);
+      }
+      if (
+        profile.projectId !== project.id ||
+        profile.environment !== project.environment ||
+        profile.url !== new URL(projectUrl(project.id)).href
+      )
+        throw bad(
+          "Das Profil gehört zu einem anderen Projekt, Ziel oder Umfeld. Auch ein anderer Port braucht ein eigenes Profil.",
+        );
+      if (body.confirmed !== true)
+        throw bad(
+          "Prüfumfang und etwaige Seitenaktionen ausdrücklich bestätigen.",
+        );
+      return reply.code(202).send({
+        scan: startScan(project.id, profile.options, undefined, {
+          name: "",
+          profileName: profile.name?.trim() ?? "",
+          gate: profile.gate,
+        }),
+      });
+    },
   );
   app.post<{ Params: { id: string } }>(
     "/api/tasks/:id/retest",
@@ -1037,6 +1073,7 @@ export async function createApp(options: {
         );
       return {
         scan: store.annotateScan(request.params.id, {
+          ...requireScan(request.params.id).labels,
           name: body.name.trim(),
           profileName: body.profileName.trim(),
         }),
@@ -1723,6 +1760,21 @@ export async function createApp(options: {
       throw bad("Zwei gültige unterschiedliche Datenimporte auswählen.");
     return compareSearchDatasets(before, after);
   });
+  app.get<{ Params: { id: string }; Querystring: { baseline?: string } }>(
+    "/api/scans/:id/release-gate",
+    async (request) => {
+      const after = requireScan(request.params.id);
+      const before = request.query.baseline
+        ? requireScan(request.query.baseline)
+        : undefined;
+      if (
+        before &&
+        (before.id === after.id || before.projectId !== after.projectId)
+      )
+        throw bad("Zwei unterschiedliche Checks desselben Projekts wählen.");
+      return releaseGate(after, before, after.labels?.gate ?? DEFAULT_GATE);
+    },
+  );
   app.get<{ Params: { id: string } }>(
     "/api/scans/:id/check-profile",
     async (request, reply) => {
@@ -1742,7 +1794,7 @@ export async function createApp(options: {
           url: projectUrl(project.id),
           environment: project.environment,
           options: scan.options,
-          gate: DEFAULT_GATE,
+          gate: scan.labels?.gate ?? DEFAULT_GATE,
         });
     },
   );
@@ -1756,14 +1808,58 @@ export async function createApp(options: {
         scan.options?.retest
       )
         throw bad("Abgeschlossenen vollständigen Check wählen.");
-      const copy = structuredClone(scan);
-      for (const e of copy.result!.audit!.evidence) e.path = "[image omitted]";
+      const copy = baselineCandidate(scan);
       return reply
         .header(
           "Content-Disposition",
           'attachment; filename="sitefenn-baseline.json"',
         )
         .send(copy);
+    },
+  );
+  const baselineCandidate = (scan: Scan) => {
+    const copy = structuredClone(scan);
+    for (const evidence of copy.result?.audit?.evidence ?? [])
+      evidence.path = "[image omitted]";
+    if (copy.result) copy.result.screenshotPath = "[image omitted]";
+    return copy;
+  };
+  app.post<{ Params: { id: string } }>(
+    "/api/scans/:id/cli-baseline-review",
+    async (request) => {
+      const scan = requireScan(request.params.id);
+      const body = object(request.body);
+      if (body.baselineId !== undefined && typeof body.baselineId !== "string")
+        throw bad("Ungültige Baseline-ID.");
+      const before =
+        typeof body.baselineId === "string" && body.baselineId
+          ? requireScan(body.baselineId)
+          : undefined;
+      if (
+        before &&
+        (scan.id === before.id || scan.projectId !== before.projectId)
+      )
+        throw bad("Eine andere Baseline desselben Projekts wählen.");
+      const candidate = baselineCandidate(scan);
+      const incumbent = before ? baselineCandidate(before) : undefined;
+      const gate = scan.labels?.gate ?? DEFAULT_GATE;
+      try {
+        if (body.confirm === undefined)
+          return { review: baselineReview(candidate, gate, incumbent) };
+        if (typeof body.confirm !== "string" || typeof body.name !== "string")
+          throw Error("Name und bestätigte Kandidaten-Prüfsumme erforderlich.");
+        return {
+          baseline: reviewedBaseline(
+            candidate,
+            body.name,
+            gate,
+            body.confirm,
+            incumbent,
+          ),
+        };
+      } catch (error) {
+        throw bad((error as Error).message);
+      }
     },
   );
   app.post<{ Params: { id: string } }>(

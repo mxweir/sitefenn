@@ -3343,3 +3343,35 @@ h1 {
 .compare-item {min-width:0;overflow-wrap:anywhere;}
 @media(max-width:700px){.change-proof-columns{grid-template-columns:1fr;}.baseline-workspace,.scan-identity{padding:16px;}}
 .compare-item:has(.change-evidence[open]){grid-column:1/-1;}
+
+.release-gate > summary {
+  font-weight: 700;
+}
+.release-gate-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+  margin-block: 12px;
+}
+.release-gate-field {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+.release-gate-field :is(input, select) {
+  min-width: 0;
+  max-width: 100%;
+  padding: 9px;
+}
+.release-gate .plan-note {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.profile-import {
+  overflow-wrap: anywhere;
+}
+.profile-import input[type="file"] {
+  max-width: 100%;
+}

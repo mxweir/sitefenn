@@ -1,32 +1,81 @@
-# Copy to YOUR repository's .github/workflows after reviewing your authorized profile.
-# Pin SiteFenn's full release commit and Node 24; never run untrusted PR app code with secrets.
-name: Authorized website regression check
-on: [workflow_dispatch]
+# Copy into your repository after adapting the authorized preview command.
+# See docs/RELEASE-2.6.md for the first baseline and replacement workflow.
+name: SiteFenn preview gate
+on:
+  pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
 jobs:
   sitefenn:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      SITEFENN_TOOL_SHA: ${{ vars.SITEFENN_TOOL_SHA }}
+      PREVIEW_URL: http://127.0.0.1:4173/
     steps:
+      - name: Refuse to run fork code in the shared preview runner
+        if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository
+        run: |
+          printf '## SiteFenn · inconclusive\n\nFork preview requires a separate sandbox.\n' >> "$GITHUB_STEP_SUMMARY"
+          exit 2
       - uses: actions/checkout@v4
-      - name: Get a reviewed SiteFenn release
+        with:
+          path: app
+          persist-credentials: false
+      - name: Read reviewed gate inputs from the base branch
         uses: actions/checkout@v4
         with:
+          ref: ${{ github.event.pull_request.base.sha || github.sha }}
+          path: policy
+          persist-credentials: false
+      - name: Require a full SiteFenn revision
+        shell: bash
+        run: '[[ "$SITEFENN_TOOL_SHA" =~ ^[0-9a-f]{40}$ ]]'
+      - uses: actions/checkout@v4
+        with:
           repository: mxweir/sitefenn
-          ref: v1.8.0 # Replace with reviewed full commit SHA for a pinned workflow.
-          path: .sitefenn-tool
+          ref: ${{ vars.SITEFENN_TOOL_SHA }}
+          path: tool
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-      - run: npm ci
-        working-directory: .sitefenn-tool
-      - run: npx playwright install --with-deps chromium
-        working-directory: .sitefenn-tool
-      - run: node .github/scripts/setup-browser-sandbox.mjs
-        working-directory: .sitefenn-tool
-      - name: Check explicitly authorized targets
-        # Profile/baseline must be authored/reviewed, same tool/browser/OS identity.
-        # First run without baseline exits 2; review locally and establish a baseline.
-        run: npm run audit:check -- --profile ../sitefenn-profile.json --baseline ../sitefenn-baseline.json --out ../sitefenn-result --authorized
-        working-directory: .sitefenn-tool
-      # No upload-artifact step: reports/screenshots may be private.
+      - name: Install SiteFenn and Chromium
+        working-directory: tool
+        run: |
+          test "$(git rev-parse HEAD)" = "$SITEFENN_TOOL_SHA"
+          npm ci
+          npx playwright install --with-deps chromium
+          node .github/scripts/setup-browser-sandbox.mjs
+      - name: Start the project's isolated preview
+        working-directory: app
+        env:
+          PORT: 4173
+        run: |
+          npm ci
+          npm run preview:sitefenn > "$RUNNER_TEMP/sitefenn-preview.log" 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent "$PREVIEW_URL" > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          printf '## SiteFenn · inconclusive\n\nPreview unavailable.\n' >> "$GITHUB_STEP_SUMMARY"
+          exit 2
+      - name: Compare against the reviewed baseline
+        working-directory: tool
+        shell: bash
+        run: |
+          result="$RUNNER_TEMP/sitefenn-result"
+          profile=../policy/sitefenn/profile.json
+          baseline=../policy/sitefenn/baseline.json
+          test -f "$profile" && test -f "$baseline"
+          jq -e --arg url "$PREVIEW_URL" '.url == $url and .environment == "local"' "$profile" > /dev/null
+          code=0
+          npm run audit:check -- --profile "$profile" --baseline "$baseline" --out "$result" --source-repo ../app --authorized > "$RUNNER_TEMP/sitefenn-cli.log" 2>&1 || code=$?
+          if [ -f "$result/summary.md" ]; then
+            cat "$result/summary.md" >> "$GITHUB_STEP_SUMMARY"
+          else
+            printf '## SiteFenn · inconclusive\n\nGate output unavailable.\n' >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$code"
+      # Reports, baseline candidates, screenshots, source and logs remain on the runner.

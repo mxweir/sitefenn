@@ -1,6 +1,6 @@
 # SiteFenn — Verbesserungsplan bis 3.0
 
-Stand: **9. November 2026**. Status: **2.1–2.5 implementiert und lokal geprüft; 2.6–3.0 bleiben Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
+Stand: **9. November 2026**. Status: **2.1–2.6 implementiert und lokal geprüft; 2.7–3.0 bleiben Plan**, ohne Kalender- oder Release-Zusage. Ausgangspunkt ist Commit `7c54d84f3987f34e1034e3cb823b846732dd4039`. Dessen macOS-/Ubuntu-CI ist inzwischen vollständig erfolgreich.
 
 Grundlage: drei spezialisierte Agentenreviews für Architektur/Betrieb/Security, Produkt/UX/Frontend und KI/QA/SEO, anschließend gemeinsame Priorisierung. Das ist ein tatsächlicher Code-/Artefaktreview durch Softwareagenten, **keine externe Fachpersonen- oder Nutzerstudie**. Für diese Planung wurden keine neuen Modellläufe, Funktionstests oder Kundenscans ausgeführt.
 
@@ -136,6 +136,8 @@ Jede Version soll einen benutzbaren vertikalen Ablauf liefern. Die Nummern sind 
 - Arbeitspakete mit erlaubtem Umfang, minimalen ausgewählten Nachweisen und Abnahmetest. Keine automatische Übertragung privater Screenshots oder Quelltexte.
 
 **Abnahme:** In einem eigenen Testrepository wird eine echte Regression vor Merge rot, eine Korrektur grün und ein Browser-/Abdeckungsfehler gesondert unbekannt. Baseline-Erzeugung und -Wechsel funktionieren ohne private Artefakte ungefragt zu veröffentlichen. Unbestätigte Quelltreffer bleiben unbestätigt.
+
+**Prüfstand 2.6:** Ein isoliertes Git-Testrepository lieferte eine echte Regression, eine Korrektur und den getrennten Status bei fehlender Browserabdeckung. Die Beispielvorlage und ihr Baseline-Ablauf sind dokumentiert. Die Aktivierung als Pflichtprüfung in einem externen Repository steht aus. [Release-Prüfung](docs/RELEASE-2.6.md).
 
 ### 2.7 — Zwei getrennte Mehrwertpakete
 

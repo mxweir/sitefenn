@@ -90,20 +90,41 @@ test("source preview is read-only, excludes ignored/sensitive/symlink files, lab
 });
 test(
   "actual CLI establishes baseline, detects regression, passes fix and returns distinct unknown on browser failure",
-  { timeout: 60000 },
+  { timeout: 120000 },
   async () => {
-    let broken = false;
-    const fixture = createServer((_req, res) => {
-      res.setHeader("content-type", "text/html");
-      res.end(
-        `<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Owned CLI fixture"><title>Owned CLI fixture</title><style>body{margin:0}#menu{width:${broken ? 680 : 300}px}</style></head><body><main><h1>Owned fixture</h1><nav id="menu">One readable navigation</nav></main></body></html>`,
+    const dir = await mkdtemp(join(tmpdir(), "sitefenn-cli-"));
+    const source = join(dir, "source");
+    await mkdir(source);
+    const git = async (...args: string[]) =>
+      (await exec("git", ["-C", source, ...args])).stdout.trim();
+    await git("init", "-q");
+    const pagePath = join(source, "index.html");
+    const commit = async (width: number, label: string) => {
+      await writeFile(
+        pagePath,
+        `<!doctype html><html lang="en"><head><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="description" content="Owned CLI fixture"><title>Owned CLI fixture</title><style>body{margin:0}#menu{width:${width}px}</style></head><body><main><h1>Owned fixture</h1><nav id="menu">One readable navigation</nav></main></body></html>`,
       );
+      await git("add", "index.html");
+      await git(
+        "-c",
+        "user.name=SiteFenn fixture",
+        "-c",
+        "user.email=fixture@example.invalid",
+        "commit",
+        "-qm",
+        label,
+      );
+      return git("rev-parse", "HEAD");
+    };
+    await commit(300, "Reviewed base");
+    const fixture = createServer(async (_req, res) => {
+      res.setHeader("content-type", "text/html");
+      res.end(await readFile(pagePath));
     });
     await new Promise<void>((r) => fixture.listen(0, "127.0.0.1", r));
     const address = fixture.address();
     assert.ok(address && typeof address !== "string");
-    const url = `http://127.0.0.1:${address.port}/`,
-      dir = await mkdtemp(join(tmpdir(), "sitefenn-cli-"));
+    const url = `http://127.0.0.1:${address.port}/`;
     let closed = false;
     const profile = {
       version: "sitefenn-profile-1",
@@ -117,7 +138,7 @@ test(
       gate: { minimumPriority: "important", categories: ["layout"] },
     };
     await writeFile(join(dir, "profile.json"), JSON.stringify(profile));
-    const run = async (name: string, baseline?: string) => {
+    const runCli = async (args: string[]) => {
       try {
         const r = await exec(
           process.execPath,
@@ -125,29 +146,60 @@ test(
             "--import",
             "tsx",
             "scripts/check-site.ts",
+            ...args,
             "--profile",
             join(dir, "profile.json"),
-            "--out",
-            join(dir, name),
-            "--authorized",
-            ...(baseline
-              ? ["--baseline", join(dir, baseline, "report.json")]
-              : []),
           ],
           { timeout: 20000, maxBuffer: 20000 },
         );
         return { code: 0, stdout: r.stdout };
       } catch (error) {
-        const e = error as { code: number; stdout: string };
-        return { code: e.code, stdout: e.stdout };
+        const e = error as { code: number; stdout: string; stderr: string };
+        return { code: e.code, stdout: e.stdout, stderr: e.stderr };
       }
     };
+    const old = join(dir, "approved.json");
+    const run = (name: string, baseline?: string) =>
+      runCli([
+        "--out",
+        join(dir, name),
+        "--authorized",
+        "--source-repo",
+        source,
+        ...(baseline ? ["--baseline", baseline] : []),
+      ]);
+    const review = (name: string, baseline?: string) => [
+      "--candidate",
+      join(dir, name, "report.json"),
+      ...(baseline ? ["--baseline", baseline] : []),
+    ];
+    const adopt = (
+      name: string,
+      digest: string,
+      destination: string,
+      baseline?: string,
+    ) =>
+      runCli([
+        "baseline-adopt",
+        ...review(name, baseline),
+        "--name",
+        "Mobile preview",
+        "--confirm",
+        digest,
+        "--out",
+        destination,
+      ]);
     try {
       assert.equal((await run("baseline")).code, 2);
-      const unchanged = await run("unchanged", "baseline");
+      const first = await runCli(["baseline-review", ...review("baseline")]);
+      assert.equal(first.code, 0, first.stderr);
+      const digest = JSON.parse(first.stdout).sha256;
+      assert.equal((await adopt("baseline", "0".repeat(64), old)).code, 2);
+      assert.equal((await adopt("baseline", digest, old)).code, 0);
+      const unchanged = await run("unchanged", old);
       assert.equal(unchanged.code, 0, unchanged.stdout);
-      broken = true;
-      assert.equal((await run("regression", "baseline")).code, 1);
+      const regressionRevision = await commit(680, "Introduce regression");
+      assert.equal((await run("regression", old)).code, 1);
       const regression = JSON.parse(
         await readFile(join(dir, "regression/gate.json"), "utf8"),
       );
@@ -157,8 +209,70 @@ test(
           (f: Finding) => f.ruleId === "horizontal-overflow",
         ),
       );
-      broken = false;
-      assert.equal((await run("fixed", "baseline")).code, 0);
+      assert.equal(regression.sourceCheckout.revision, regressionRevision);
+      const summary = await readFile(
+        join(dir, "regression/summary.md"),
+        "utf8",
+      );
+      assert.match(summary, /regression/);
+      assert.doesNotMatch(summary, /127\.0\.0\.1|Owned CLI fixture/);
+      assert.equal(
+        (await runCli(["baseline-review", ...review("regression", old)])).code,
+        2,
+      );
+      const brokenCandidate = await runCli([
+        "baseline-review",
+        ...review("regression"),
+      ]);
+      const brokenBaseline = join(dir, "existing-debt.json");
+      assert.equal(
+        (
+          await adopt(
+            "regression",
+            JSON.parse(brokenCandidate.stdout).sha256,
+            brokenBaseline,
+          )
+        ).code,
+        0,
+      );
+      assert.equal((await run("existing", brokenBaseline)).code, 0);
+      assert.ok(
+        JSON.parse(await readFile(join(dir, "existing/gate.json"), "utf8"))
+          .existing.length,
+      );
+      await commit(300, "Fix regression");
+      assert.equal((await run("fixed", old)).code, 0);
+      const replacement = await runCli([
+        "baseline-review",
+        ...review("fixed", old),
+      ]);
+      assert.equal(replacement.code, 0, replacement.stderr);
+      const replacementDigest = JSON.parse(replacement.stdout).sha256;
+      assert.equal((await adopt("fixed", replacementDigest, old, old)).code, 2);
+      const next = join(dir, "approved-next.json");
+      assert.equal(
+        (await adopt("fixed", replacementDigest, next, old)).code,
+        0,
+      );
+      const promoted = JSON.parse(await readFile(next, "utf8"));
+      assert.equal(promoted.previousSha256, digest);
+      promoted.report.labels = { name: "tampered" };
+      const tampered = join(dir, "tampered.json");
+      await writeFile(tampered, JSON.stringify(promoted));
+      assert.equal((await run("tampered", tampered)).code, 2);
+      await writeFile(
+        join(dir, "profile.json"),
+        JSON.stringify({
+          ...profile,
+          url: "http://127.0.0.1:7/",
+          options: { ...profile.options, pages: ["http://127.0.0.1:7/"] },
+        }),
+      );
+      assert.equal(
+        (await runCli(["baseline-review", ...review("fixed")])).code,
+        2,
+      );
+      await writeFile(join(dir, "profile.json"), JSON.stringify(profile));
       const baseline = JSON.parse(
         await readFile(join(dir, "baseline/report.json"), "utf8"),
       ) as Scan;
@@ -175,8 +289,13 @@ test(
       );
       await new Promise<void>((r) => fixture.close(() => r()));
       closed = true;
-      const unreachable = await run("unreachable", "baseline");
+      const unreachable = await run("unreachable", old);
       assert.equal(unreachable.code, 2, unreachable.stdout);
+      assert.equal(
+        JSON.parse(await readFile(join(dir, "unreachable/gate.json"), "utf8"))
+          .status,
+        "inconclusive",
+      );
     } finally {
       if (!closed) await new Promise<void>((r) => fixture.close(() => r()));
       await rm(dir, { recursive: true, force: true });

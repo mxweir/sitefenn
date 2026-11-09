@@ -23,7 +23,12 @@ export interface ScanResult {
   audit?: AuditReport;
 }
 export interface Scan {
-  labels?: { name: string; profileName: string };
+  sourceCheckout?: { revision: string; kind: "local-tracked-checkout" };
+  labels?: {
+    name: string;
+    profileName: string;
+    gate?: import("./check-profile.js").CheckProfile["gate"];
+  };
   id: string;
   projectId: string;
   status:

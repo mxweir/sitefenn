@@ -2032,3 +2032,49 @@ for (const width of [320, 390, 768, 1280])
       }),
     ).toBeDisabled();
   });
+
+test("2.6 mobile release gate separates outcomes and resets on a changed comparison", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await mockWorkspace(page, [
+    scan,
+    { ...scan, id: "scan-old", createdAt: "2026-10-20T10:00:00Z" },
+  ]);
+  await page.route("**/api/scans/*/release-gate?*", (route) =>
+    route.fulfill({
+      json: {
+        status: "inconclusive",
+        exitCode: 2,
+        policy: { minimumPriority: "important", categories: ["layout"] },
+        blockers: [],
+        existing: [
+          {
+            id: "old",
+            title: "Bekanntes Problem",
+            viewportId: "mobile",
+            state: "initial",
+          },
+        ],
+        unknown: ["Abdeckung fehlt"],
+      },
+    }),
+  );
+  await page.goto("/");
+  await openContext(page, "Vergleich");
+  await page
+    .getByText("Release-Gate und CLI-Baseline", { exact: true })
+    .click();
+  await page.getByRole("button", { name: "Release-Gate auswerten" }).click();
+  await expect(page.getByText("Unklar · Exit 2")).toBeVisible();
+  await expect(page.getByText("Abdeckung fehlt")).toBeVisible();
+  await page.getByText("Bestehende Blocker", { exact: true }).click();
+  await expect(page.getByText(/Bekanntes Problem/)).toBeVisible();
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.getByLabel("Nachher", { exact: true }).selectOption("scan-old");
+  await expect(page.getByText("Unklar · Exit 2")).toHaveCount(0);
+});

@@ -2,6 +2,20 @@
 
 Changes, migrations and tested limits for each release. See [GitHub Releases](https://github.com/mxweir/sitefenn/releases) for publication details.
 
+## 2.6.0 — 2026-11-09
+
+### Developer preview gate
+
+- Added a project release gate with the same policy and comparison logic as the CLI. New blockers, existing blockers and coverage gaps are shown separately.
+- Added named profile import and confirmed baseline review, adoption and compatible replacement. A changed local port requires a separate reference.
+- Added detailed JSON, a counts-only Markdown summary, optional verified Git checkout revision and a pinned GitHub Actions preview template with no artifact upload.
+- Added recorded viewport dimensions to selected work packages when available. Literal source matches remain unconfirmed.
+
+Verified a real regression, correction and unavailable preview in an isolated Git repository. [Setup and verification](docs/RELEASE-2.6.md).
+
+![Actual 2.6 project release gate](docs/screenshots/2.6-release-gate.jpg)
+![Actual 2.6 baseline review and approval](docs/screenshots/2.6-baseline-review.jpg)
+
 ## 2.5.0 — 2026-11-09
 
 ### Local jobs, diagnostics and larger backups

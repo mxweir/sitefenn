@@ -211,7 +211,13 @@ export function handoffMarkdown(
       u.password = "";
       url = u.href;
     } catch {}
-    out += `## ${safe(f.title)}\n\n- Befund: ${f.id}\n- Regel / Erkenntnis: ${f.ruleId} / ${f.evidenceStatus}\n- Seite: ${url} (Query/Fragment entfernt; bei benötigten Parametern lokal den Originalcheck verwenden)\n- Gerät / Zustand: ${f.viewportId} / ${f.state}\n- Beobachteter Selektor: ${safe(f.selector ?? "nicht verfügbar")}\n- Nachweisreferenz: ${f.evidenceId ?? "kein Bildnachweis"}\n\n${safe(f.detail)}\n\n### Nächster Schritt\n\n${safe(f.recommendation)}\n\n### Reproduzierbarer Abnahmetest\n\n${safe(f.acceptance)} Gleiche URL, Gerätegröße und freigegebenen Zustand nachtesten. Unbekannte Messwerte sind kein bestandener Test.\n\n`;
+    const viewport = report.options?.viewports?.find(
+      (profile) => profile.id === f.viewportId,
+    );
+    const dimensions = viewport
+      ? ` (${viewport.width} × ${viewport.height} CSS px)`
+      : "";
+    out += `## ${safe(f.title)}\n\n- Befund: ${f.id}\n- Regel / Erkenntnis: ${f.ruleId} / ${f.evidenceStatus}\n- Seite: ${url} (Query/Fragment entfernt; bei benötigten Parametern lokal den Originalcheck verwenden)\n- Gerät / Zustand: ${safe(f.viewportId)}${dimensions} / ${safe(f.state)}\n- Beobachteter Selektor: ${safe(f.selector ?? "nicht verfügbar")}\n- Nachweisreferenz: ${f.evidenceId ?? "kein Bildnachweis"}\n\n${safe(f.detail)}\n\n### Nächster Schritt\n\n${safe(f.recommendation)}\n\n### Reproduzierbarer Abnahmetest\n\n${safe(f.acceptance)} Gleiche URL, Gerätegröße und freigegebenen Zustand nachtesten. Die Messung der oben genannten Regel und Fundstelle muss den erwarteten Zustand bestätigen. Fehlende Abdeckung als offen dokumentieren.\n\n`;
     const matches = sources.filter((c) => c.findingIds.includes(f.id));
     if (!matches.length)
       out +=

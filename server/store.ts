@@ -544,7 +544,7 @@ export class Store {
       | { scanId: string; findingId: string }
       | undefined;
   }
-  annotateScan(id: string, labels: { name: string; profileName: string }) {
+  annotateScan(id: string, labels: NonNullable<Scan["labels"]>) {
     if (!this.scan(id)) throw Error("Check fehlt.");
     this.db
       .prepare("UPDATE scans SET annotation=? WHERE id=?")
